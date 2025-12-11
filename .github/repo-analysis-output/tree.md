@@ -13,5 +13,38 @@
     └── tree.md
   └── workflows
     └── af_maintenance.yml
+├── docs
+  ├── database.md
+  ├── logging.md
+  └── setup.md
+├── prisma
+  ├── migrations
+    ├── 20241211000000_initial_setup
+      └── migration.sql
+    ├── migration_lock.toml
+    └── README.md
+  └── schema.prisma
+├── scripts
+  ├── create-migration.sh
+  └── validate-db.sh
+├── src
+  ├── config
+    ├── index.test.ts
+    └── index.ts
+  ├── db
+    ├── index.test.ts
+    └── index.ts
+  ├── utils
+    ├── logger.test.ts
+    └── logger.ts
+  ├── server.test.ts
+  └── server.ts
+├── .env.example
+├── .eslintrc.js
+├── .gitignore
+├── docker-compose.yml
+├── jest.config.js
 ├── LICENSE
-└── README.md
+├── package.json
+├── README.md
+└── tsconfig.json

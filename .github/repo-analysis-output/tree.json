@@ -63,12 +63,162 @@
       ]
     },
     {
+      "type": "directory",
+      "name": "docs",
+      "children": [
+        {
+          "type": "file",
+          "name": "database.md"
+        },
+        {
+          "type": "file",
+          "name": "logging.md"
+        },
+        {
+          "type": "file",
+          "name": "setup.md"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "prisma",
+      "children": [
+        {
+          "type": "directory",
+          "name": "migrations",
+          "children": [
+            {
+              "type": "directory",
+              "name": "20241211000000_initial_setup",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
+              "type": "file",
+              "name": "migration_lock.toml"
+            },
+            {
+              "type": "file",
+              "name": "README.md"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "name": "schema.prisma"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "scripts",
+      "children": [
+        {
+          "type": "file",
+          "name": "create-migration.sh"
+        },
+        {
+          "type": "file",
+          "name": "validate-db.sh"
+        }
+      ]
+    },
+    {
+      "type": "directory",
+      "name": "src",
+      "children": [
+        {
+          "type": "directory",
+          "name": "config",
+          "children": [
+            {
+              "type": "file",
+              "name": "index.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "index.ts"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "db",
+          "children": [
+            {
+              "type": "file",
+              "name": "index.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "index.ts"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "utils",
+          "children": [
+            {
+              "type": "file",
+              "name": "logger.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "logger.ts"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "name": "server.test.ts"
+        },
+        {
+          "type": "file",
+          "name": "server.ts"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": ".env.example"
+    },
+    {
+      "type": "file",
+      "name": ".eslintrc.js"
+    },
+    {
+      "type": "file",
+      "name": ".gitignore"
+    },
+    {
+      "type": "file",
+      "name": "docker-compose.yml"
+    },
+    {
+      "type": "file",
+      "name": "jest.config.js"
+    },
+    {
       "type": "file",
       "name": "LICENSE"
     },
     {
       "type": "file",
+      "name": "package.json"
+    },
+    {
+      "type": "file",
       "name": "README.md"
+    },
+    {
+      "type": "file",
+      "name": "tsconfig.json"
     }
   ]
 }

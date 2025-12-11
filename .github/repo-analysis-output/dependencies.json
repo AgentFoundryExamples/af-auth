@@ -1,10 +1,167 @@
 {
-  "nodes": [],
-  "edges": [],
+  "nodes": [
+    {
+      "id": ".eslintrc.js",
+      "path": ".eslintrc.js",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "jest.config.js",
+      "path": "jest.config.js",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/config/index.test.ts",
+      "path": "src/config/index.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/config/index.ts",
+      "path": "src/config/index.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "path"
+        ],
+        "third-party": [
+          "dotenv"
+        ]
+      }
+    },
+    {
+      "id": "src/db/index.test.ts",
+      "path": "src/db/index.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/db/index.ts",
+      "path": "src/db/index.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "@prisma/client"
+        ]
+      }
+    },
+    {
+      "id": "src/server.test.ts",
+      "path": "src/server.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/server.ts",
+      "path": "src/server.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "http"
+        ],
+        "third-party": [
+          "express",
+          "pino-http"
+        ]
+      }
+    },
+    {
+      "id": "src/utils/logger.test.ts",
+      "path": "src/utils/logger.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/utils/logger.ts",
+      "path": "src/utils/logger.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "pino"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "src/config/index.test.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/db/index.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/db/index.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/db/index.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/server.test.ts",
+      "target": "src/server.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/utils/logger.test.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/utils/logger.ts",
+      "target": "src/config/index.ts"
+    }
+  ],
   "external_dependencies_summary": {
-    "stdlib": [],
-    "third-party": [],
-    "stdlib_count": 0,
-    "third-party_count": 0
+    "stdlib": [
+      "http",
+      "path"
+    ],
+    "third-party": [
+      "@prisma/client",
+      "dotenv",
+      "express",
+      "pino",
+      "pino-http",
+      "supertest"
+    ],
+    "stdlib_count": 2,
+    "third-party_count": 6
   }
 }
