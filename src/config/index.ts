@@ -45,6 +45,14 @@ interface Config {
     secret: string;
     maxAge: number;
   };
+  jwt: {
+    privateKeyPath: string;
+    publicKeyPath: string;
+    expiresIn: string;
+    issuer: string;
+    audience: string;
+    clockTolerance: number;
+  };
   ui: {
     adminContactEmail: string;
     adminContactName: string;
@@ -136,6 +144,20 @@ export const config: Config = {
   session: {
     secret: getRequiredEnv('SESSION_SECRET'),
     maxAge: getOptionalNumericEnv('SESSION_MAX_AGE_MS', 600000), // 10 minutes default
+  },
+  jwt: {
+    privateKeyPath: getOptionalEnv(
+      'JWT_PRIVATE_KEY_PATH',
+      path.resolve(__dirname, 'keys/jwt-private.pem')
+    ),
+    publicKeyPath: getOptionalEnv(
+      'JWT_PUBLIC_KEY_PATH',
+      path.resolve(__dirname, 'keys/jwt-public.pem')
+    ),
+    expiresIn: getOptionalEnv('JWT_EXPIRES_IN', '30d'), // 30 days as per requirements
+    issuer: getOptionalEnv('JWT_ISSUER', baseUrl),
+    audience: getOptionalEnv('JWT_AUDIENCE', baseUrl),
+    clockTolerance: getOptionalNumericEnv('JWT_CLOCK_TOLERANCE_SECONDS', 60), // 60 seconds tolerance
   },
   ui: {
     adminContactEmail: getOptionalEnv('ADMIN_CONTACT_EMAIL', 'admin@example.com'),

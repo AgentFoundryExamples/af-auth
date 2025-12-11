@@ -25,6 +25,7 @@ import {
   getGitHubUser,
   calculateTokenExpiration,
 } from '../services/github-oauth';
+import { generateJWT } from '../services/jwt';
 import { LoginPage } from '../pages/login';
 import { UnauthorizedPage } from '../pages/unauthorized';
 import { TokenReadyPage } from '../pages/token-ready';
@@ -192,13 +193,24 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     
     // Check whitelist status and render appropriate page
     if (user.isWhitelisted) {
-      logger.info({ userId: user.id }, 'User is whitelisted, rendering token-ready page');
+      logger.info({ userId: user.id }, 'User is whitelisted, generating JWT and rendering token-ready page');
+      
+      // Generate JWT for the user
+      let jwtToken: string | undefined;
+      try {
+        jwtToken = await generateJWT(user.id);
+        logger.debug({ userId: user.id }, 'JWT generated successfully for whitelisted user');
+      } catch (error) {
+        logger.error({ error, userId: user.id }, 'Failed to generate JWT for whitelisted user');
+        // Continue without token - user can still get it via API
+      }
       
       const html = renderPage(
         React.createElement(TokenReadyPage, {
           userId: user.id,
           githubLogin: githubUser.login,
           serviceName: 'AF Auth',
+          token: jwtToken,
         })
       );
       

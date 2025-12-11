@@ -44,3 +44,8 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+
+# Security - JWT private keys (NEVER commit these)
+src/config/keys/jwt-private*.pem
+*.key
+*.private.pem

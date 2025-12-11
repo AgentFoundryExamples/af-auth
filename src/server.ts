@@ -92,6 +92,13 @@ import authRoutes from './routes/auth';
 app.use('/auth', authRoutes);
 
 /**
+ * JWT routes
+ */
+import jwtRoutes from './routes/jwt';
+app.use('/api', jwtRoutes);
+app.use('/.well-known', jwtRoutes);
+
+/**
  * 404 handler for undefined routes.
  */
 app.use((req: Request, res: Response) => {
