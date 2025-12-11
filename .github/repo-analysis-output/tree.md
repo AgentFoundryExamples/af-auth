@@ -1,4 +1,4 @@
-# agent-foundry-template
+# af-auth
 
 ├── .github
   ├── af-config
