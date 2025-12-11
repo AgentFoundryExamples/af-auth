@@ -100,11 +100,16 @@ function getOptionalBooleanEnv(key: string, defaultValue: boolean): boolean {
  * Centralized application configuration.
  * All configuration is loaded from environment variables with appropriate defaults.
  */
+
+// Extract port and construct default base URL once
+const port = getOptionalNumericEnv('PORT', 3000);
+const defaultBaseUrl = `http://localhost:${port}`;
+
 export const config: Config = {
   env: getOptionalEnv('NODE_ENV', 'development'),
-  port: getOptionalNumericEnv('PORT', 3000),
+  port,
   host: getOptionalEnv('HOST', '0.0.0.0'),
-  baseUrl: getOptionalEnv('BASE_URL', `http://localhost:${getOptionalNumericEnv('PORT', 3000)}`),
+  baseUrl: getOptionalEnv('BASE_URL', defaultBaseUrl),
   database: {
     url: getRequiredEnv('DATABASE_URL'),
     pool: {
@@ -122,7 +127,10 @@ export const config: Config = {
   github: {
     clientId: getRequiredEnv('GITHUB_CLIENT_ID'),
     clientSecret: getRequiredEnv('GITHUB_CLIENT_SECRET'),
-    callbackUrl: getOptionalEnv('GITHUB_CALLBACK_URL', `${getOptionalEnv('BASE_URL', `http://localhost:${getOptionalNumericEnv('PORT', 3000)}`)}/auth/github/callback`),
+    callbackUrl: getOptionalEnv(
+      'GITHUB_CALLBACK_URL',
+      `${getOptionalEnv('BASE_URL', defaultBaseUrl)}/auth/github/callback`
+    ),
   },
   session: {
     secret: getRequiredEnv('SESSION_SECRET'),
