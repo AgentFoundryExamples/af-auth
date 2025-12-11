@@ -146,13 +146,14 @@ router.get('/jwks', (_req: Request, res: Response) => {
 });
 
 /**
- * GET /.well-known/jwks.json
+ * GET /jwks.json
  * Standard JWKS endpoint (returns public key in PEM format for simplicity)
+ * Note: Should be mounted at /.well-known/jwks.json via app.use('/.well-known', jwtRoutes)
  * 
- * Response: Public key in PEM format (text/plain)
+ * Response: Public key in PEM format (application/json)
  * Note: In production, this should return proper JWK format
  */
-router.get('/.well-known/jwks.json', (_req: Request, res: Response) => {
+router.get('/jwks.json', (_req: Request, res: Response) => {
   try {
     const publicKey = getPublicKey();
     
