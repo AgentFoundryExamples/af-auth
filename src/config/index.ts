@@ -21,6 +21,7 @@ interface Config {
   env: string;
   port: number;
   host: string;
+  baseUrl: string;
   database: {
     url: string;
     pool: {
@@ -34,6 +35,19 @@ interface Config {
   logging: {
     level: string;
     pretty: boolean;
+  };
+  github: {
+    clientId: string;
+    clientSecret: string;
+    callbackUrl: string;
+  };
+  session: {
+    secret: string;
+    maxAge: number;
+  };
+  ui: {
+    adminContactEmail: string;
+    adminContactName: string;
   };
 }
 
@@ -90,6 +104,7 @@ export const config: Config = {
   env: getOptionalEnv('NODE_ENV', 'development'),
   port: getOptionalNumericEnv('PORT', 3000),
   host: getOptionalEnv('HOST', '0.0.0.0'),
+  baseUrl: getOptionalEnv('BASE_URL', `http://localhost:${getOptionalNumericEnv('PORT', 3000)}`),
   database: {
     url: getRequiredEnv('DATABASE_URL'),
     pool: {
@@ -103,6 +118,19 @@ export const config: Config = {
   logging: {
     level: getOptionalEnv('LOG_LEVEL', 'info'),
     pretty: getOptionalBooleanEnv('LOG_PRETTY', process.env.NODE_ENV !== 'production'),
+  },
+  github: {
+    clientId: getRequiredEnv('GITHUB_CLIENT_ID'),
+    clientSecret: getRequiredEnv('GITHUB_CLIENT_SECRET'),
+    callbackUrl: getOptionalEnv('GITHUB_CALLBACK_URL', `${getOptionalEnv('BASE_URL', `http://localhost:${getOptionalNumericEnv('PORT', 3000)}`)}/auth/github/callback`),
+  },
+  session: {
+    secret: getRequiredEnv('SESSION_SECRET'),
+    maxAge: getOptionalNumericEnv('SESSION_MAX_AGE_MS', 600000), // 10 minutes default
+  },
+  ui: {
+    adminContactEmail: getOptionalEnv('ADMIN_CONTACT_EMAIL', 'admin@example.com'),
+    adminContactName: getOptionalEnv('ADMIN_CONTACT_NAME', 'Administrator'),
   },
 };
 

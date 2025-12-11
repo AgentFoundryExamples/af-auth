@@ -1,0 +1,188 @@
+import axios from 'axios';
+import crypto from 'crypto';
+import { config } from '../config';
+import logger from '../utils/logger';
+
+/**
+ * GitHub OAuth token response
+ */
+export interface GitHubTokenResponse {
+  access_token: string;
+  token_type: string;
+  scope: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+}
+
+/**
+ * GitHub user information
+ */
+export interface GitHubUser {
+  id: number;
+  login: string;
+  email: string | null;
+  name: string | null;
+  avatar_url: string;
+}
+
+/**
+ * OAuth state with CSRF protection
+ */
+export interface OAuthState {
+  state: string;
+  timestamp: number;
+}
+
+/**
+ * In-memory storage for OAuth states with expiration
+ * In production, this should be replaced with Redis or similar
+ */
+const oauthStates = new Map<string, number>();
+
+/**
+ * Clean up expired OAuth states (older than session max age)
+ */
+function cleanupExpiredStates(): void {
+  const now = Date.now();
+  const maxAge = config.session.maxAge;
+  
+  for (const [state, timestamp] of oauthStates.entries()) {
+    if (now - timestamp > maxAge) {
+      oauthStates.delete(state);
+    }
+  }
+}
+
+// Run cleanup every minute
+// Use unref() to prevent this timer from keeping the process alive during tests
+setInterval(cleanupExpiredStates, 60000).unref();
+
+/**
+ * Generate a cryptographically secure random state token for CSRF protection
+ */
+export function generateState(): string {
+  const state = crypto.randomBytes(32).toString('hex');
+  oauthStates.set(state, Date.now());
+  
+  logger.debug({ stateLength: state.length }, 'Generated OAuth state token');
+  
+  return state;
+}
+
+/**
+ * Validate OAuth state token
+ * Returns true if valid, false otherwise
+ */
+export function validateState(state: string): boolean {
+  const timestamp = oauthStates.get(state);
+  
+  if (!timestamp) {
+    logger.warn({ state }, 'OAuth state not found');
+    return false;
+  }
+  
+  const age = Date.now() - timestamp;
+  const maxAge = config.session.maxAge;
+  
+  if (age > maxAge) {
+    logger.warn({ state, age, maxAge }, 'OAuth state expired');
+    oauthStates.delete(state);
+    return false;
+  }
+  
+  // Remove state after successful validation (one-time use)
+  oauthStates.delete(state);
+  
+  logger.debug({ state }, 'OAuth state validated successfully');
+  return true;
+}
+
+/**
+ * Get GitHub OAuth authorization URL
+ */
+export function getAuthorizationUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: config.github.clientId,
+    redirect_uri: config.github.callbackUrl,
+    state,
+    scope: 'user:email',
+  });
+  
+  const url = `https://github.com/login/oauth/authorize?${params.toString()}`;
+  
+  logger.info({ state }, 'Generated GitHub OAuth authorization URL');
+  
+  return url;
+}
+
+/**
+ * Exchange authorization code for access token
+ */
+export async function exchangeCodeForToken(code: string): Promise<GitHubTokenResponse> {
+  try {
+    logger.info('Exchanging authorization code for access token');
+    
+    const response = await axios.post<GitHubTokenResponse>(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: config.github.clientId,
+        client_secret: config.github.clientSecret,
+        code,
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
+    
+    if (!response.data.access_token) {
+      throw new Error('No access token in GitHub response');
+    }
+    
+    logger.info('Successfully exchanged code for token');
+    
+    return response.data;
+  } catch (error) {
+    logger.error({ error }, 'Failed to exchange code for token');
+    throw new Error('Failed to exchange authorization code for token');
+  }
+}
+
+/**
+ * Get GitHub user information using access token
+ */
+export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
+  try {
+    logger.info('Fetching GitHub user information');
+    
+    const response = await axios.get<GitHubUser>(
+      'https://api.github.com/user',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
+    
+    logger.info({ githubUserId: response.data.id }, 'Successfully fetched GitHub user');
+    
+    return response.data;
+  } catch (error) {
+    logger.error({ error }, 'Failed to fetch GitHub user information');
+    throw new Error('Failed to fetch GitHub user information');
+  }
+}
+
+/**
+ * Calculate token expiration date
+ */
+export function calculateTokenExpiration(expiresIn?: number): Date | null {
+  if (!expiresIn) {
+    return null;
+  }
+  
+  return new Date(Date.now() + expiresIn * 1000);
+}
