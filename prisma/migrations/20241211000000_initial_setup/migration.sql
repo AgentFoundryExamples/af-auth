@@ -1,6 +1,15 @@
 -- CreateTable: users table for GitHub OAuth authentication
 -- This migration is idempotent and safe to re-run
 
+-- ⚠️  SECURITY WARNING ⚠️
+-- GitHub access tokens and refresh tokens are stored as PLAINTEXT in this schema.
+-- This is NOT SECURE for production use. Before deploying to production:
+-- 1. Implement application-level encryption for token fields
+-- 2. Use a key management service (e.g., Google Cloud KMS, AWS KMS)
+-- 3. Consider using PostgreSQL pgcrypto extension for database-level encryption
+-- 4. Ensure proper key rotation and access controls
+-- DO NOT store production tokens without encryption at rest!
+
 -- Create extension for UUID generation if not exists
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -46,8 +55,8 @@ CREATE TRIGGER update_users_updated_at
 COMMENT ON TABLE "users" IS 'Stores user authentication and GitHub OAuth data';
 COMMENT ON COLUMN "users"."id" IS 'Primary key - UUID v4';
 COMMENT ON COLUMN "users"."github_user_id" IS 'GitHub user ID from OAuth - must be unique';
-COMMENT ON COLUMN "users"."github_access_token" IS 'GitHub OAuth access token - should be encrypted at rest';
-COMMENT ON COLUMN "users"."github_refresh_token" IS 'GitHub OAuth refresh token - should be encrypted at rest';
+COMMENT ON COLUMN "users"."github_access_token" IS '⚠️  WARNING: Currently stored as PLAINTEXT! Must implement encryption before production. GitHub OAuth access token.';
+COMMENT ON COLUMN "users"."github_refresh_token" IS '⚠️  WARNING: Currently stored as PLAINTEXT! Must implement encryption before production. GitHub OAuth refresh token.';
 COMMENT ON COLUMN "users"."github_token_expires_at" IS 'Token expiration timestamp in UTC';
 COMMENT ON COLUMN "users"."is_whitelisted" IS 'Whether user is whitelisted for access - defaults to false';
 COMMENT ON COLUMN "users"."created_at" IS 'Record creation timestamp in UTC';

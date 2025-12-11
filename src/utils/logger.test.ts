@@ -140,13 +140,14 @@ describe('Logger Redaction', () => {
       expect(result.headers.cookie).toBe('[REDACTED]');
     });
 
-    it('should redact fields ending with sensitive words', () => {
+    it('should redact fields ending with sensitive words with proper boundaries', () => {
       const input = {
         password: 'secret',
         userPassword: 'secret123',
         user_password: 'secret456',
-        passwordHint: 'hint123', // contains but doesn't end with 'password'
-        hasPassword: true, // ends with 'password'
+        passwordHint: 'hint123', // contains but not at camelCase boundary
+        hasPassword: 'true', // has password but 'has' is not lowercase before 'Password'
+        mypassword: 'secret789', // ends with 'password' but no boundary
         accessToken: 'token123',
         user_token: 'token456',
       };
@@ -154,12 +155,13 @@ describe('Logger Redaction', () => {
       const result = redactSensitiveData(input);
 
       expect(result.password).toBe('[REDACTED]');
-      expect(result.userPassword).toBe('[REDACTED]'); // ends with 'password'
-      expect(result.user_password).toBe('[REDACTED]'); // ends with '_password'
-      expect(result.passwordHint).toBe('hint123'); // doesn't end with 'password'
-      expect(result.hasPassword).toBe('[REDACTED]'); // ends with 'password'
-      expect(result.accessToken).toBe('[REDACTED]'); // ends with 'token'
-      expect(result.user_token).toBe('[REDACTED]'); // ends with '_token'
+      expect(result.userPassword).toBe('[REDACTED]'); // camelCase boundary
+      expect(result.user_password).toBe('[REDACTED]'); // underscore boundary
+      expect(result.passwordHint).toBe('hint123'); // not a proper boundary
+      expect(result.hasPassword).toBe('[REDACTED]'); // camelCase boundary (s->P)
+      expect(result.mypassword).toBe('secret789'); // no boundary
+      expect(result.accessToken).toBe('[REDACTED]'); // camelCase boundary
+      expect(result.user_token).toBe('[REDACTED]'); // underscore boundary
     });
 
     it('should redact multiple sensitive fields in complex objects', () => {

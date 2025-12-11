@@ -1,10 +1,12 @@
 import express, { Request, Response, NextFunction } from 'express';
+import http from 'http';
 import pinoHttp from 'pino-http';
 import { config } from './config';
 import logger from './utils/logger';
 import db from './db';
 
 const app = express();
+const server = http.createServer(app);
 
 // Middleware
 app.use(express.json());
@@ -96,17 +98,31 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 /**
  * Graceful shutdown handler.
  */
-async function shutdown(signal: string) {
+async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, 'Received shutdown signal, closing server gracefully...');
   
-  try {
-    await db.disconnect();
-    logger.info('Database disconnected');
-    process.exit(0);
-  } catch (error) {
-    logger.error({ error }, 'Error during shutdown');
+  server.close(async (err) => {
+    if (err) {
+      logger.error({ error: err }, 'Error closing server');
+    } else {
+      logger.info('HTTP server closed');
+    }
+    
+    try {
+      await db.disconnect();
+      logger.info('Database disconnected');
+      process.exit(err ? 1 : 0);
+    } catch (error) {
+      logger.error({ error }, 'Error during shutdown');
+      process.exit(1);
+    }
+  });
+  
+  // Force shutdown after timeout
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
     process.exit(1);
-  }
+  }, 10000);
 }
 
 // Register shutdown handlers
@@ -124,7 +140,7 @@ async function start() {
     await db.connect();
 
     // Start HTTP server
-    app.listen(config.port, config.host, () => {
+    server.listen(config.port, config.host, () => {
       logger.info(
         { port: config.port, host: config.host, env: config.env },
         'Server started successfully'
@@ -138,14 +154,14 @@ async function start() {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  logger.fatal({ error }, 'Uncaught exception');
-  process.exit(1);
+  logger.fatal({ error }, 'Uncaught exception, initiating shutdown...');
+  shutdown('uncaughtException').catch(() => process.exit(1));
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  logger.fatal({ reason, promise }, 'Unhandled promise rejection');
-  process.exit(1);
+  logger.fatal({ reason, promise }, 'Unhandled promise rejection, initiating shutdown...');
+  shutdown('unhandledRejection').catch(() => process.exit(1));
 });
 
 // Start the server if this file is run directly
@@ -153,5 +169,5 @@ if (require.main === module) {
   start();
 }
 
-export { app, start };
+export { app, server, start };
 export default app;

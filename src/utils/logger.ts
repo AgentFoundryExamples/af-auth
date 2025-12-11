@@ -57,12 +57,26 @@ function redactSensitiveData(obj: any, visited = new WeakSet()): any {
   const redacted: any = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
-    // Check if the key exactly matches or ends with a sensitive field pattern
+    // Check if the key matches sensitive patterns with proper word boundaries
+    // Matches: exact name, ends with _field, or is in camelCase/PascalCase ending with field
     const isSensitive = SENSITIVE_FIELDS.some(field => {
       const lowerField = field.toLowerCase();
-      return lowerKey === lowerField || 
-             lowerKey.endsWith('_' + lowerField) ||
-             lowerKey.endsWith(lowerField);
+      // Exact match
+      if (lowerKey === lowerField) return true;
+      // Ends with underscore + field (e.g., user_password, github_access_token)
+      if (lowerKey.endsWith('_' + lowerField)) return true;
+      // CamelCase/PascalCase pattern (e.g., userPassword, githubAccessToken)
+      // Check if it ends with the field and there's a proper camelCase boundary
+      if (lowerKey.endsWith(lowerField) && lowerKey.length > lowerField.length) {
+        const prefixEndIndex = key.length - lowerField.length;
+        // Get the original case at the boundary
+        const boundaryChar = key[prefixEndIndex];
+        // It's a camelCase boundary if the field part starts with uppercase
+        // (e.g., userPassword has 'P', hasPassword has 'P')
+        // but mypassword has 'p' (not camelCase)
+        return boundaryChar === boundaryChar.toUpperCase() && boundaryChar !== boundaryChar.toLowerCase();
+      }
+      return false;
     });
 
     if (isSensitive) {
