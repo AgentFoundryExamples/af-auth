@@ -145,6 +145,8 @@ export async function generateJWT(userId: string): Promise<string> {
   
   const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
     sub: user.id,
+    // Convert BigInt to string for JSON compatibility
+    // GitHub user IDs are within safe integer range, so no precision loss expected
     githubId: user.githubUserId.toString(),
     isWhitelisted: user.isWhitelisted,
   };
@@ -204,24 +206,23 @@ export function getPublicKey(): string {
 
 /**
  * Get public key in JWK format for JWKS endpoint
+ * Note: This returns a minimal JWKS structure. The actual public key is provided
+ * in PEM format via the publicKeyPEM field. For full JWK compliance, use a library
+ * like node-jose or pem-jwk to convert the PEM key to proper JWK format with n and e parameters.
  */
 export function getJWKS(): object {
   // Load public key to ensure it exists
   loadPublicKey();
   
-  // For production, you would convert the PEM key to JWK format
-  // For now, we'll return a basic JWKS structure
-  // External consumers can use the PEM key directly via GET /api/jwks
-  
   return {
+    note: 'This is a simplified JWKS response. For verification, use the PEM key from the publicKeyPEM field or /api/jwks endpoint.',
     keys: [
       {
         kty: 'RSA',
         use: 'sig',
         alg: 'RS256',
         kid: 'default',
-        // In production, include n and e parameters from the RSA public key
-        // For now, consumers should use the PEM endpoint
+        // To include proper 'n' and 'e' parameters, convert PEM to JWK using a library like pem-jwk
       },
     ],
   };

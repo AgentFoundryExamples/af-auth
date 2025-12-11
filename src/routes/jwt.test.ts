@@ -262,6 +262,8 @@ describe('JWT Routes', () => {
       expect(response.body).toHaveProperty('publicKeyEndpoint', '/api/jwks');
       expect(response.body).toHaveProperty('algorithm', 'RS256');
       expect(response.body).toHaveProperty('publicKeyPEM', publicKey);
+      expect(response.body).toHaveProperty('keys');
+      expect(Array.isArray(response.body.keys)).toBe(true);
       expect(mockJwtService.getPublicKey).toHaveBeenCalled();
     });
 

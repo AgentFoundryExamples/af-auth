@@ -150,8 +150,9 @@ router.get('/jwks', (_req: Request, res: Response) => {
  * Standard JWKS endpoint (returns public key in PEM format for simplicity)
  * Note: Should be mounted at /.well-known/jwks.json via app.use('/.well-known', jwtRoutes)
  * 
- * Response: Public key in PEM format (application/json)
- * Note: In production, this should return proper JWK format
+ * Response: Simplified JWKS with PEM key (application/json)
+ * Note: This is not a fully compliant JWKS. For standard JWKS with n/e parameters,
+ * convert the PEM key using a library like pem-jwk or node-jose.
  */
 router.get('/jwks.json', (_req: Request, res: Response) => {
   try {
@@ -159,14 +160,24 @@ router.get('/jwks.json', (_req: Request, res: Response) => {
     
     logger.debug('JWKS endpoint requested');
     
-    // For now, return PEM format with instructions
-    // In production, convert to proper JWK format
+    // Return simplified JWKS with PEM key
+    // For full JWKS compliance, consumers should convert the PEM key to JWK format
     res.setHeader('Content-Type', 'application/json');
     return res.json({
-      note: 'For verification, use the public key in PEM format from /api/jwks',
+      note: 'Simplified JWKS response. For JWT verification, use the public key in PEM format from the publicKeyPEM field or /api/jwks endpoint.',
       publicKeyEndpoint: '/api/jwks',
       algorithm: 'RS256',
       publicKeyPEM: publicKey,
+      keys: [
+        {
+          kty: 'RSA',
+          use: 'sig',
+          alg: 'RS256',
+          kid: 'default',
+          // To include proper 'n' and 'e' parameters, convert PEM to JWK
+          // using a library like pem-jwk or node-jose
+        },
+      ],
     });
   } catch (error) {
     logger.error({ error }, 'Failed to retrieve JWKS');

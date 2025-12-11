@@ -286,7 +286,7 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
             <div className="token-container">
               <div className="token-label">Your JWT Token (Valid for 30 days)</div>
               <div className="token-value" id="jwt-token">{token}</div>
-              <button className="copy-button" id="copy-button" onClick={() => {}}>
+              <button className="copy-button" id="copy-button">
                 Copy JWT Token
               </button>
               <div className="copy-success" id="copy-success">
