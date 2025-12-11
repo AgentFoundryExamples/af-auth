@@ -140,6 +140,28 @@ describe('Logger Redaction', () => {
       expect(result.headers.cookie).toBe('[REDACTED]');
     });
 
+    it('should redact fields ending with sensitive words', () => {
+      const input = {
+        password: 'secret',
+        userPassword: 'secret123',
+        user_password: 'secret456',
+        passwordHint: 'hint123', // contains but doesn't end with 'password'
+        hasPassword: true, // ends with 'password'
+        accessToken: 'token123',
+        user_token: 'token456',
+      };
+
+      const result = redactSensitiveData(input);
+
+      expect(result.password).toBe('[REDACTED]');
+      expect(result.userPassword).toBe('[REDACTED]'); // ends with 'password'
+      expect(result.user_password).toBe('[REDACTED]'); // ends with '_password'
+      expect(result.passwordHint).toBe('hint123'); // doesn't end with 'password'
+      expect(result.hasPassword).toBe('[REDACTED]'); // ends with 'password'
+      expect(result.accessToken).toBe('[REDACTED]'); // ends with 'token'
+      expect(result.user_token).toBe('[REDACTED]'); // ends with '_token'
+    });
+
     it('should redact multiple sensitive fields in complex objects', () => {
       const input = {
         userId: 'user123',

@@ -26,11 +26,11 @@ interface Config {
 
 /**
  * Retrieves a required environment variable.
- * Throws an error if the variable is not set.
+ * Throws an error if the variable is not set or is an empty string.
  */
 function getRequiredEnv(key: string): string {
   const value = process.env[key];
-  if (!value) {
+  if (!value || value.trim() === '') {
     throw new Error(`Missing required environment variable: ${key}`);
   }
   return value;

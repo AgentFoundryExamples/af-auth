@@ -57,9 +57,13 @@ function redactSensitiveData(obj: any, visited = new WeakSet()): any {
   const redacted: any = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();
-    const isSensitive = SENSITIVE_FIELDS.some(field => 
-      lowerKey.includes(field.toLowerCase())
-    );
+    // Check if the key exactly matches or ends with a sensitive field pattern
+    const isSensitive = SENSITIVE_FIELDS.some(field => {
+      const lowerField = field.toLowerCase();
+      return lowerKey === lowerField || 
+             lowerKey.endsWith('_' + lowerField) ||
+             lowerKey.endsWith(lowerField);
+    });
 
     if (isSensitive) {
       redacted[key] = '[REDACTED]';
