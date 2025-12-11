@@ -1,0 +1,96 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+interface Config {
+  env: string;
+  port: number;
+  host: string;
+  database: {
+    url: string;
+    pool: {
+      min: number;
+      max: number;
+    };
+    connectionTimeout: number;
+    maxRetries: number;
+    retryDelay: number;
+  };
+  logging: {
+    level: string;
+    pretty: boolean;
+  };
+}
+
+/**
+ * Retrieves a required environment variable.
+ * Throws an error if the variable is not set.
+ */
+function getRequiredEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+}
+
+/**
+ * Retrieves an optional environment variable with a default value.
+ */
+function getOptionalEnv(key: string, defaultValue: string): string {
+  return process.env[key] || defaultValue;
+}
+
+/**
+ * Retrieves an optional numeric environment variable with a default value.
+ */
+function getOptionalNumericEnv(key: string, defaultValue: number): number {
+  const value = process.env[key];
+  if (!value) {
+    return defaultValue;
+  }
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) {
+    throw new Error(`Environment variable ${key} must be a valid number`);
+  }
+  return parsed;
+}
+
+/**
+ * Retrieves an optional boolean environment variable with a default value.
+ */
+function getOptionalBooleanEnv(key: string, defaultValue: boolean): boolean {
+  const value = process.env[key];
+  if (!value) {
+    return defaultValue;
+  }
+  return value.toLowerCase() === 'true';
+}
+
+/**
+ * Centralized application configuration.
+ * All configuration is loaded from environment variables with appropriate defaults.
+ */
+export const config: Config = {
+  env: getOptionalEnv('NODE_ENV', 'development'),
+  port: getOptionalNumericEnv('PORT', 3000),
+  host: getOptionalEnv('HOST', '0.0.0.0'),
+  database: {
+    url: getRequiredEnv('DATABASE_URL'),
+    pool: {
+      min: getOptionalNumericEnv('DB_POOL_MIN', 2),
+      max: getOptionalNumericEnv('DB_POOL_MAX', 10),
+    },
+    connectionTimeout: getOptionalNumericEnv('DB_CONNECTION_TIMEOUT_MS', 5000),
+    maxRetries: getOptionalNumericEnv('DB_MAX_RETRIES', 3),
+    retryDelay: getOptionalNumericEnv('DB_RETRY_DELAY_MS', 1000),
+  },
+  logging: {
+    level: getOptionalEnv('LOG_LEVEL', 'info'),
+    pretty: getOptionalBooleanEnv('LOG_PRETTY', process.env.NODE_ENV !== 'production'),
+  },
+};
+
+export default config;
