@@ -182,6 +182,153 @@ gcloud run deploy af-auth \
   --update-secrets SESSION_SECRET=session-secret:latest
 ```
 
+## Production Deployment Considerations
+
+> **⚠️ IMPORTANT**: The current implementation has known limitations for production multi-instance deployments. Review and address these before deploying to production with auto-scaling or multiple instances.
+
+### 1. OAuth State Storage (Multi-Instance Issue)
+
+**Issue**: OAuth state tokens are stored in an in-memory Map, which does NOT work correctly with multiple service instances (Cloud Run auto-scaling, Kubernetes replicas, load-balanced deployments).
+
+**Impact**: When a user initiates OAuth on instance A but the callback is handled by instance B, the state token won't be found, causing authentication failures.
+
+**Solution Required**: Replace the in-memory Map with a distributed cache:
+
+```typescript
+// Example: Redis implementation for state storage
+import { createClient } from 'redis';
+
+const redis = createClient({ url: process.env.REDIS_URL });
+
+// Store state with TTL
+async function generateState(): Promise<string> {
+  const state = crypto.randomBytes(32).toString('hex');
+  await redis.setex(
+    `oauth:state:${state}`, 
+    config.session.maxAge / 1000, 
+    Date.now().toString()
+  );
+  return state;
+}
+
+// Validate and consume state (atomic operation)
+async function validateState(state: string): Promise<boolean> {
+  const timestamp = await redis.getdel(`oauth:state:${state}`);
+  if (!timestamp) return false;
+  
+  const age = Date.now() - parseInt(timestamp);
+  return age <= config.session.maxAge;
+}
+```
+
+**Alternative Solutions**:
+- Google Cloud Memorystore (Redis-compatible)
+- AWS ElastiCache
+- Memcached with appropriate TTL
+
+### 2. Rate Limiting
+
+**Issue**: OAuth endpoints (`/auth/github` and `/auth/github/callback`) lack rate limiting, making them vulnerable to abuse.
+
+**Impact**: Attackers could:
+- Exhaust OAuth state storage
+- Cause denial of service
+- Attempt to enumerate valid callback codes
+
+**Solution Required**: Add rate limiting middleware:
+
+```bash
+npm install express-rate-limit
+```
+
+```typescript
+import rateLimit from 'express-rate-limit';
+
+// Apply to auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/auth', authLimiter, authRoutes);
+```
+
+### 3. Token Storage Encryption
+
+**Issue**: GitHub access tokens and refresh tokens are stored in plaintext in the PostgreSQL database.
+
+**Impact**: If database access is compromised, tokens can be used to access user GitHub accounts.
+
+**Solution Recommended**: Implement encryption at rest:
+
+```typescript
+import crypto from 'crypto';
+
+// Encryption configuration
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex'); // 32 bytes
+const ALGORITHM = 'aes-256-gcm';
+
+function encryptToken(token: string): string {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+  
+  let encrypted = cipher.update(token, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+  
+  // Store: iv:authTag:encrypted
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+function decryptToken(encryptedData: string): string {
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  
+  const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
+```
+
+**Database Migration Required**:
+```sql
+-- Add encrypted columns
+ALTER TABLE users ADD COLUMN github_access_token_encrypted TEXT;
+ALTER TABLE users ADD COLUMN github_refresh_token_encrypted TEXT;
+
+-- Migrate existing data
+-- DROP old columns after migration
+```
+
+### 4. Development vs Production Configuration
+
+For development and single-instance deployments, the current implementation is sufficient. For production:
+
+**Minimum Requirements**:
+- ✅ Single instance deployment (e.g., Cloud Run with min/max instances set to 1)
+- ✅ Development/testing environments
+- ✅ Low-traffic applications
+
+**Requires Updates**:
+- ❌ Multi-instance deployments with auto-scaling
+- ❌ Kubernetes with horizontal pod autoscaling
+- ❌ Load-balanced deployments
+- ❌ High-traffic production applications
+
+### Implementation Priority
+
+1. **Critical** (required for multi-instance): Distributed state storage
+2. **High** (security): Rate limiting on auth endpoints
+3. **Medium** (security): Token encryption at rest
+4. **Low** (enhancement): Session persistence, token refresh flow
+
 ## Testing the Setup
 
 ### 1. Start the Service

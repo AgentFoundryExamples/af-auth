@@ -36,7 +36,29 @@ export interface OAuthState {
 
 /**
  * In-memory storage for OAuth states with expiration
- * In production, this should be replaced with Redis or similar
+ * 
+ * PRODUCTION WARNING: This in-memory Map will NOT work correctly in multi-instance
+ * deployments (e.g., Cloud Run auto-scaling, Kubernetes replicas). State tokens 
+ * generated on one instance will not be accessible on another instance, causing
+ * OAuth callback validation failures.
+ * 
+ * For production deployments with multiple instances, replace this with a distributed
+ * cache such as:
+ * - Redis with TTL support
+ * - Memcached
+ * - Cloud Memorystore (GCP)
+ * - ElastiCache (AWS)
+ * 
+ * The distributed cache should:
+ * 1. Store state tokens with automatic expiration (SESSION_MAX_AGE_MS)
+ * 2. Support atomic delete operations for one-time use tokens
+ * 3. Be accessible from all service instances
+ * 
+ * Example Redis implementation:
+ * ```typescript
+ * await redisClient.setex(`oauth:state:${state}`, SESSION_MAX_AGE_MS / 1000, Date.now().toString());
+ * const timestamp = await redisClient.getdel(`oauth:state:${state}`); // Atomic get-and-delete
+ * ```
  */
 const oauthStates = new Map<string, number>();
 
