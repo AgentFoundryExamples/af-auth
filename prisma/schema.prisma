@@ -1,0 +1,24 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String    @id @default(uuid()) @db.Uuid
+  githubUserId           BigInt    @unique @map("github_user_id")
+  githubAccessToken      String?   @map("github_access_token") @db.Text
+  githubRefreshToken     String?   @map("github_refresh_token") @db.Text
+  githubTokenExpiresAt   DateTime? @map("github_token_expires_at") @db.Timestamptz(6)
+  isWhitelisted          Boolean   @default(false) @map("is_whitelisted")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
