@@ -32,9 +32,10 @@ const SENSITIVE_FIELDS = [
 /**
  * Recursively redacts sensitive fields from an object.
  * @param obj - The object to redact
+ * @param visited - Set of visited objects to prevent circular references
  * @returns A new object with sensitive fields redacted
  */
-function redactSensitiveData(obj: any): any {
+function redactSensitiveData(obj: any, visited = new WeakSet()): any {
   if (obj === null || obj === undefined) {
     return obj;
   }
@@ -43,8 +44,14 @@ function redactSensitiveData(obj: any): any {
     return obj;
   }
 
+  // Prevent circular references
+  if (visited.has(obj)) {
+    return '[Circular]';
+  }
+  visited.add(obj);
+
   if (Array.isArray(obj)) {
-    return obj.map(item => redactSensitiveData(item));
+    return obj.map(item => redactSensitiveData(item, visited));
   }
 
   const redacted: any = {};
@@ -57,7 +64,7 @@ function redactSensitiveData(obj: any): any {
     if (isSensitive) {
       redacted[key] = '[REDACTED]';
     } else if (typeof value === 'object' && value !== null) {
-      redacted[key] = redactSensitiveData(value);
+      redacted[key] = redactSensitiveData(value, visited);
     } else {
       redacted[key] = value;
     }
