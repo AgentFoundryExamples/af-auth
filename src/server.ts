@@ -86,6 +86,12 @@ app.get('/live', (_req: Request, res: Response) => {
 });
 
 /**
+ * Authentication routes
+ */
+import authRoutes from './routes/auth';
+app.use('/auth', authRoutes);
+
+/**
  * 404 handler for undefined routes.
  */
 app.use((req: Request, res: Response) => {
