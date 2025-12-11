@@ -8,6 +8,8 @@
   ├── repo-analysis-output
     ├── dependencies.json
     ├── dependencies.md
+    ├── file-summaries.json
+    ├── file-summaries.md
     ├── SUMMARY.md
     ├── tree.json
     └── tree.md
@@ -15,8 +17,10 @@
     └── af_maintenance.yml
 ├── docs
   ├── database.md
+  ├── github-app-setup.md
   ├── logging.md
-  └── setup.md
+  ├── setup.md
+  └── ui.md
 ├── prisma
   ├── migrations
     ├── 20241211000000_initial_setup
@@ -34,6 +38,17 @@
   ├── db
     ├── index.test.ts
     └── index.ts
+  ├── pages
+    ├── error.tsx
+    ├── login.tsx
+    ├── token-ready.tsx
+    └── unauthorized.tsx
+  ├── routes
+    ├── auth.test.ts
+    └── auth.ts
+  ├── services
+    ├── github-oauth.test.ts
+    └── github-oauth.ts
   ├── utils
     ├── logger.test.ts
     └── logger.ts

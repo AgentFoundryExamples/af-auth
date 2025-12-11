@@ -38,6 +38,14 @@
             },
             {
               "type": "file",
+              "name": "file-summaries.json"
+            },
+            {
+              "type": "file",
+              "name": "file-summaries.md"
+            },
+            {
+              "type": "file",
               "name": "SUMMARY.md"
             },
             {
@@ -72,11 +80,19 @@
         },
         {
           "type": "file",
+          "name": "github-app-setup.md"
+        },
+        {
+          "type": "file",
           "name": "logging.md"
         },
         {
           "type": "file",
           "name": "setup.md"
+        },
+        {
+          "type": "file",
+          "name": "ui.md"
         }
       ]
     },
@@ -157,6 +173,56 @@
             {
               "type": "file",
               "name": "index.ts"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "pages",
+          "children": [
+            {
+              "type": "file",
+              "name": "error.tsx"
+            },
+            {
+              "type": "file",
+              "name": "login.tsx"
+            },
+            {
+              "type": "file",
+              "name": "token-ready.tsx"
+            },
+            {
+              "type": "file",
+              "name": "unauthorized.tsx"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "routes",
+          "children": [
+            {
+              "type": "file",
+              "name": "auth.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "auth.ts"
+            }
+          ]
+        },
+        {
+          "type": "directory",
+          "name": "services",
+          "children": [
+            {
+              "type": "file",
+              "name": "github-oauth.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "github-oauth.ts"
             }
           ]
         },

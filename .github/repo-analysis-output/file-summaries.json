@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 10,
+  "total_files": 14,
   "files": [
     {
       "schema_version": "2.0",
@@ -53,8 +53,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 3140,
-        "loc": 87,
+        "size_bytes": 4128,
+        "loc": 121,
         "todo_count": 0
       }
     },
@@ -88,6 +88,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/routes/auth.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 10201,
+        "loc": 241,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/routes/auth.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 7338,
+        "loc": 173,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/server.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -109,8 +137,36 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5019,
-        "loc": 140,
+        "size_bytes": 5123,
+        "loc": 145,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/github-oauth.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 3615,
+        "loc": 86,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/github-oauth.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 6123,
+        "loc": 176,
         "todo_count": 0
       }
     },

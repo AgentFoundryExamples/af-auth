@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 10
+Total files: 14
 
 ## .eslintrc.js
 **Language:** JavaScript  
@@ -38,8 +38,8 @@ Total files: 10
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 3.07 KB  
-**LOC:** 87  
+**Size:** 4.03 KB  
+**LOC:** 121  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -60,6 +60,24 @@ Total files: 10
 **LOC:** 122  
 **TODOs/FIXMEs:** 0  
 
+## src/routes/auth.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 9.96 KB  
+**LOC:** 241  
+**TODOs/FIXMEs:** 0  
+
+## src/routes/auth.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 7.17 KB  
+**LOC:** 173  
+**TODOs/FIXMEs:** 0  
+
 ## src/server.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -74,8 +92,26 @@ Total files: 10
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 4.90 KB  
-**LOC:** 140  
+**Size:** 5.00 KB  
+**LOC:** 145  
+**TODOs/FIXMEs:** 0  
+
+## src/services/github-oauth.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 3.53 KB  
+**LOC:** 86  
+**TODOs/FIXMEs:** 0  
+
+## src/services/github-oauth.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.98 KB  
+**LOC:** 176  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/logger.test.ts
