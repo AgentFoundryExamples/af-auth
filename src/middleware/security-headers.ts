@@ -73,7 +73,18 @@ function getSecurityHeadersConfig(): SecurityHeadersConfig {
   
   // Get GitHub OAuth callback URL domain for CSP allowlist
   const githubCallbackUrl = process.env.GITHUB_CALLBACK_URL || config.github.callbackUrl;
-  const githubDomain = new URL(githubCallbackUrl).origin;
+  let githubDomain: string;
+  try {
+    githubDomain = new URL(githubCallbackUrl).origin;
+  } catch (error) {
+    console.error(
+      'FATAL: Invalid GITHUB_CALLBACK_URL. Could not parse origin.',
+      { url: githubCallbackUrl, error: error instanceof Error ? error.message : String(error) }
+    );
+    // Fallback to localhost for development, but log the error
+    githubDomain = 'http://localhost:3000';
+    console.warn(`Falling back to default GitHub domain: ${githubDomain}`);
+  }
 
   // Check if CSP is disabled and warn
   const cspEnabled = process.env.CSP_ENABLED !== 'false'; // Enabled by default
