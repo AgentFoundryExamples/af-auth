@@ -58,7 +58,54 @@ AF Auth requires these secrets for production operation:
 | `jwt-private-key` | JWT signing key | 180 days | RSA private key (2048+ bits, base64-encoded) |
 | `jwt-public-key` | JWT verification key | When private key rotates | RSA public key (base64-encoded) |
 
-**New in v1.2**: GitHub access and refresh tokens are now encrypted at rest using AES-256-GCM with the `github-token-encryption-key`. This protects tokens even if the database is compromised.
+### GitHub Token Encryption (v1.2+)
+
+**As of v1.2**, GitHub access and refresh tokens are **always encrypted at rest** using AES-256-GCM authenticated encryption. This protects tokens even if the database is compromised.
+
+#### How It Works
+
+1. **Encryption at Storage**: When tokens are received from GitHub OAuth, they are encrypted before being stored in the database
+2. **Encrypted Format**: Tokens are stored as `salt:iv:authTag:ciphertext` (4 base64-encoded components)
+3. **Key Derivation**: Uses PBKDF2 with 100,000 iterations to derive encryption keys from the master key
+4. **Authenticated Encryption**: AES-256-GCM provides both confidentiality and integrity protection
+5. **Decryption on Use**: Tokens are only decrypted when needed (e.g., when returned via `/api/github-token`)
+
+#### Migration from Plaintext Tokens
+
+If upgrading from a version prior to v1.2, use the migration script to encrypt existing plaintext tokens:
+
+```bash
+# Dry run to preview changes (recommended first step)
+tsx scripts/migrate-encrypt-tokens.ts --dry-run
+
+# Apply encryption to existing tokens
+tsx scripts/migrate-encrypt-tokens.ts
+```
+
+The migration script:
+- ✅ Is idempotent (safe to run multiple times)
+- ✅ Validates encryption by round-trip decrypt before committing
+- ✅ Skips already-encrypted tokens automatically
+- ✅ Preserves null tokens
+- ✅ Provides detailed logging of all operations
+
+#### Token Refresh
+
+The `/api/github-token` endpoint automatically refreshes tokens that are expiring soon:
+
+1. **Threshold Check**: Before returning a token, checks if it expires within the configured threshold (default: 1 hour)
+2. **Automatic Refresh**: If expiring soon and a refresh token exists, automatically refreshes to get a new access token
+3. **Graceful Degradation**: If refresh fails but the existing token is still valid, returns the existing token
+4. **Error Handling**: If refresh fails and the token is expired, returns 503 TOKEN_REFRESH_FAILED error
+
+Configure the refresh threshold via environment variable:
+```bash
+# Default: 3600 seconds (1 hour)
+# Valid range: 300-7200 seconds (5 minutes to 2 hours)
+GITHUB_TOKEN_REFRESH_THRESHOLD_SECONDS=3600
+```
+
+**Best Practice**: Set a higher threshold (e.g., 2 hours) during high-traffic periods to avoid issuing tokens that are close to expiration.
 
 ### Creating Secrets
 
@@ -204,7 +251,82 @@ gcloud run services update ${SERVICE_NAME} \
 # Users will need to re-authenticate
 ```
 
-#### 3. JWT Private Key
+#### 3. GitHub Token Encryption Key
+
+**Frequency**: Every 90 days
+
+**Important**: This rotation requires re-encrypting all stored GitHub tokens in the database.
+
+**Process**:
+
+```bash
+# Step 1: Generate new encryption key
+NEW_KEY=$(openssl rand -hex 32)
+echo -n "${NEW_KEY}" | \
+  gcloud secrets versions add github-token-encryption-key --data-file=-
+
+# Step 2: Create a temporary decryption script that uses BOTH keys
+# This script will:
+# a. Decrypt tokens using OLD key
+# b. Re-encrypt tokens using NEW key
+# c. Update database atomically
+
+# Create rotation script
+cat > /tmp/rotate-encryption-key.ts << 'EOFSCRIPT'
+import { prisma, connect, disconnect } from '../src/db';
+
+const OLD_KEY = process.env.OLD_ENCRYPTION_KEY!;
+const NEW_KEY = process.env.NEW_ENCRYPTION_KEY!;
+
+async function rotateKey() {
+  await connect();
+  
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { githubAccessToken: { not: null } },
+        { githubRefreshToken: { not: null } },
+      ],
+    },
+  });
+  
+  console.log(`Found ${users.length} users with tokens to re-encrypt`);
+  
+  for (const user of users) {
+    // Decrypt with old key, encrypt with new key
+    // Implementation would use crypto module with both keys
+    // ...
+  }
+  
+  await disconnect();
+}
+
+rotateKey();
+EOFSCRIPT
+
+# Step 3: Run rotation script with both keys
+OLD_KEY=$(gcloud secrets versions access 1 --secret=github-token-encryption-key) \
+NEW_KEY=$(gcloud secrets versions access latest --secret=github-token-encryption-key) \
+  tsx /tmp/rotate-encryption-key.ts
+
+# Step 4: Deploy Cloud Run with new key
+gcloud run services update ${SERVICE_NAME} \
+  --region=${REGION} \
+  --update-secrets="GITHUB_TOKEN_ENCRYPTION_KEY=github-token-encryption-key:latest"
+
+# Step 5: Verify service health and token retrieval
+curl -X POST https://${SERVICE_URL}/api/github-token \
+  -H "Authorization: Bearer service:apikey" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"test-user-id"}'
+
+# Step 6: Disable old key version after verification (24 hour grace period)
+gcloud secrets versions disable OLD_VERSION --secret=github-token-encryption-key
+```
+
+**⚠️  CRITICAL**: Never destroy old encryption key versions until all tokens have been verified with the new key. Keep at least one previous version for emergency rollback.
+
+#### 4. JWT Private Key
 
 **Frequency**: Every 180 days or when compromised
 
@@ -236,49 +358,6 @@ curl https://${SERVICE_URL}/api/jwks > jwt-public-new.pem
 
 # Step 7: After grace period, existing tokens expire naturally (30 days)
 ```
-
-#### 4. GitHub Token Encryption Key
-
-**Frequency**: Every 90 days
-
-**Process** (requires re-encryption of all stored tokens):
-
-```bash
-# IMPORTANT: This rotation requires re-encrypting all GitHub tokens in the database
-# Plan for maintenance window or use blue-green deployment
-
-# Step 1: Generate new encryption key
-NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
-
-# Step 2: Add new secret version
-echo -n "$NEW_ENCRYPTION_KEY" | \
-  gcloud secrets versions add github-token-encryption-key --data-file=-
-
-# Step 3: BEFORE deploying, create a migration script to re-encrypt tokens
-# See scripts/rotate-encryption-key.ts (to be created)
-
-# Step 4: Deploy with new key
-gcloud run services update ${SERVICE_NAME} \
-  --region=${REGION} \
-  --update-secrets="GITHUB_TOKEN_ENCRYPTION_KEY=github-token-encryption-key:latest"
-
-# Step 5: Run migration to re-encrypt all tokens
-# This should be done immediately after deployment
-# npm run migrate:re-encrypt-tokens --old-key="<old_key>" --new-key="<new_key>"
-
-# Step 6: Verify all tokens are accessible
-curl -H "Authorization: Bearer <service-credentials>" \
-  https://${SERVICE_URL}/api/github-token \
-  -d '{"userId":"<test-user-id>"}'
-
-# Step 7: After verification (24 hours), disable old secret version
-gcloud secrets versions disable VERSION_NUMBER --secret=github-token-encryption-key
-
-# Note: Currently, this rotation requires manual re-encryption of all tokens
-# Future enhancement: Support dual-key decryption during rotation period
-```
-
-**Warning**: Rotating the encryption key without re-encrypting existing tokens will make all stored GitHub tokens inaccessible. Always test the rotation procedure in a non-production environment first.
 
 #### 5. Database Credentials
 

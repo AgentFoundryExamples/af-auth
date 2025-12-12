@@ -235,7 +235,7 @@ router.post('/github-token', async (req: Request, res: Response) => {
     );
     
     // Check if token needs to be refreshed
-    let accessToken = user.githubAccessToken;
+    let accessToken: string = user.githubAccessToken; // We know it's not null because we checked earlier
     let refreshToken = user.githubRefreshToken;
     let tokenExpiresAt = user.githubTokenExpiresAt;
     
@@ -268,6 +268,10 @@ router.post('/github-token', async (req: Request, res: Response) => {
           tokenResponse.refresh_token || decryptedRefreshToken
         );
         
+        if (!encryptedAccessToken) {
+          throw new Error('Failed to encrypt new access token');
+        }
+        
         // Update user record with new tokens
         const updatedUser = await prisma.user.update({
           where: { id: user.id },
@@ -278,7 +282,11 @@ router.post('/github-token', async (req: Request, res: Response) => {
           },
         });
         
-        // Use the new tokens
+        // Use the new tokens (we know they're not null because we just set them)
+        if (!updatedUser.githubAccessToken) {
+          throw new Error('Updated user has no access token');
+        }
+        
         accessToken = updatedUser.githubAccessToken;
         refreshToken = updatedUser.githubRefreshToken;
         tokenExpiresAt = updatedUser.githubTokenExpiresAt;
@@ -315,6 +323,14 @@ router.post('/github-token', async (req: Request, res: Response) => {
     
     // Decrypt token before returning
     const decryptedToken = await decryptGitHubToken(accessToken);
+    
+    if (!decryptedToken) {
+      // This should never happen since we checked for githubAccessToken earlier
+      return res.status(500).json({
+        error: 'DECRYPTION_FAILED',
+        message: 'Failed to decrypt GitHub token',
+      });
+    }
     
     // Return token and metadata
     return res.json({

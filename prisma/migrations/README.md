@@ -188,3 +188,32 @@ This marks a migration as applied without running it.
 - Schema sync migration created by Prisma
 - Removed default values from UUID and timestamp fields to match Prisma's expectations
 - Removed indexes on users table (users_created_at_idx, users_is_whitelisted_idx)
+
+### 20251213000000_encrypt_github_tokens
+- **Token Encryption Enhancement (v1.2)**
+- Updated schema comments to reflect encrypted token storage
+- No schema changes (encryption is transparent at database level)
+- Tokens stored in encrypted format: `salt:iv:authTag:ciphertext`
+- Uses AES-256-GCM authenticated encryption
+- See `scripts/migrate-encrypt-tokens.ts` for data migration from plaintext tokens
+
+## Token Encryption Migration
+
+**Important**: If upgrading from a version prior to v1.2, you must encrypt existing plaintext tokens:
+
+```bash
+# Preview changes (recommended first step)
+npm run migrate:encrypt-tokens -- --dry-run
+
+# Apply encryption to existing tokens
+npm run migrate:encrypt-tokens
+```
+
+The migration script:
+- ✅ Is idempotent (safe to run multiple times)
+- ✅ Validates encryption by round-trip decrypt before committing
+- ✅ Skips already-encrypted tokens automatically
+- ✅ Preserves null tokens
+- ✅ Provides detailed logging
+
+See [docs/security.md](../docs/security.md) for more information on token encryption and key rotation.
