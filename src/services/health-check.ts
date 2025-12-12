@@ -63,6 +63,8 @@ interface GithubAppCheckCache {
 
 let githubAppCheckCache: GithubAppCheckCache | null = null;
 const GITHUB_APP_CACHE_TTL_MS = 60000; // 1 minute cache
+const MIN_ENCRYPTION_KEY_LENGTH = 32; // Minimum length for AES-256 encryption key
+const JWT_TEST_CLOCK_OFFSET_SECONDS = 60; // Allow 60 seconds for clock skew in test JWT
 
 /**
  * Check database health and SSL connectivity
@@ -183,7 +185,7 @@ export async function checkEncryptionHealth(): Promise<ComponentHealth> {
     }
 
     // Verify encryption key meets minimum length requirement
-    if (config.github.tokenEncryptionKey.length < 32) {
+    if (config.github.tokenEncryptionKey.length < MIN_ENCRYPTION_KEY_LENGTH) {
       logger.error('GitHub token encryption key is too short');
       return {
         status: HealthStatus.UNHEALTHY,
@@ -256,8 +258,8 @@ export async function checkGithubAppHealth(): Promise<ComponentHealth> {
     // Test JWT signing capability (validates private key)
     try {
       const testPayload = {
-        iat: Math.floor(Date.now() / 1000) - 60,
-        exp: Math.floor(Date.now() / 1000) + 60,
+        iat: Math.floor(Date.now() / 1000) - JWT_TEST_CLOCK_OFFSET_SECONDS,
+        exp: Math.floor(Date.now() / 1000) + JWT_TEST_CLOCK_OFFSET_SECONDS,
         iss: config.github.appId,
       };
       
@@ -347,7 +349,10 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   ) {
     overallStatus = HealthStatus.DEGRADED;
   }
-  // GitHub App is not critical for basic operation - mark as degraded if it fails
+  // GitHub App is not critical for basic operation - service can handle existing
+  // authenticated users and issue JWTs even if GitHub App is down. New OAuth flows
+  // will fail, but this doesn't warrant marking the entire service as unhealthy.
+  // Mark as degraded instead to indicate partial functionality.
   else if (githubAppHealth.status === HealthStatus.UNHEALTHY) {
     overallStatus = HealthStatus.DEGRADED;
   }
