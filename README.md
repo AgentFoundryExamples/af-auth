@@ -1,19 +1,38 @@
 # AF Auth - Authentication Service
 
-A TypeScript Node.js authentication service with GitHub OAuth support, whitelist-based access control, and PostgreSQL persistence.
+**Version 1.1.0** - A production-ready TypeScript Node.js authentication service with GitHub OAuth, JWT tokens, service registry, and comprehensive deployment guides.
+
+> **Latest Release**: See [CHANGELOG.md](./CHANGELOG.md) for v1.1.0 release notes  
+> **Roadmap**: See [docs/ROADMAP.md](./docs/ROADMAP.md) for planned features and future iterations
 
 ## Features
 
-- 🔐 **GitHub OAuth Integration** - Complete OAuth 2.0 flow with CSRF protection
-- 🗄️ **PostgreSQL Database** - Prisma ORM with type-safe queries and user management
+### Core Authentication
+- 🔐 **GitHub OAuth 2.0** - Complete OAuth flow with state-based CSRF protection and one-time use validation
+- 👥 **Whitelist-Based Access** - Default-deny security model with database-backed whitelist
+- 🎟️ **JWT Token System** - RS256-signed tokens with 30-day validity and refresh flow
+- 🔄 **Token Refresh** - `POST /api/token` endpoint for refreshing expired JWTs
+- 🔑 **Public Key Distribution** - JWKS endpoint (`GET /api/jwks`) for downstream JWT verification
+
+### Service Integration
+- 🏢 **Service Registry** - Secure API for downstream services to access user GitHub tokens
+- 🔐 **Service Authentication** - Bcrypt-hashed API keys with Basic auth scheme
+- 📊 **Audit Logging** - Comprehensive access tracking without exposing sensitive data
+- 🛠️ **Management CLI** - TypeScript-based CLI for service and whitelist management
+
+### Infrastructure
+- 🗄️ **PostgreSQL Database** - Prisma ORM with idempotent migrations and connection resilience
 - 📝 **Structured Logging** - Pino logger with automatic sensitive data redaction
-- 🔒 **Security-First Design** - Token redaction, whitelist-based access, state validation
-- 🚀 **Cloud Run Ready** - Optimized for Google Cloud Platform deployment
-- ✅ **Health Checks** - Kubernetes/Cloud Run compatible health endpoints
-- 🔄 **Database Retry Logic** - Exponential backoff for connection resilience
-- 📊 **Migration Support** - Prisma migrations for schema evolution
-- 🎨 **Server-Side Rendered Pages** - Lightweight SSR pages for authentication flow
-- 🧪 **Comprehensive Testing** - Unit and integration tests for OAuth flow
+- ✅ **Health Checks** - Kubernetes/Cloud Run compatible endpoints (`/health`, `/ready`, `/live`)
+- 🚀 **Cloud Run Ready** - Complete deployment guide with Secret Manager and VPC networking
+- 🎨 **SSR Pages** - React-based server-side rendered authentication pages
+- 🧪 **Comprehensive Testing** - 104+ tests covering OAuth, JWT, service registry, and more
+
+### Security
+- 🔒 **Secret Management** - Google Secret Manager integration with zero-downtime rotation
+- 🔐 **RS256 JWT Signing** - Asymmetric cryptography with private key protection
+- 📋 **Security Documentation** - Complete guides for secret rotation, JWT verification, and incident response
+- 🛡️ **Encryption** - TLS in transit, AES-256 at rest, bcrypt for API keys
 
 ## Quick Start
 
@@ -146,6 +165,7 @@ Expected response:
 - `npm run db:migrate` - Apply migrations (production)
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:studio` - Open Prisma Studio
+- `npm run service-registry` - Manage service registry (create, list, rotate services)
 
 ### Project Structure
 
@@ -208,6 +228,10 @@ sequenceDiagram
 
 ## Documentation
 
+### Project Information
+- [CHANGELOG](./CHANGELOG.md) - Version history and release notes
+- [ROADMAP](./docs/ROADMAP.md) - Product roadmap and planned features
+
 ### Setup and Configuration
 
 - [Local Setup Guide](./docs/setup.md) - Complete local development setup
@@ -231,15 +255,23 @@ sequenceDiagram
 ## API Endpoints
 
 ### Authentication
-
 - `GET /auth/github` - Initiate OAuth flow (renders login page)
 - `GET /auth/github/callback` - OAuth callback handler
 
-### Health & Monitoring
+### JWT Token Management
+- `POST /api/token` - Refresh JWT tokens
+- `GET /api/jwks` - Get JWT public key for verification
+- `GET /.well-known/jwks.json` - JWKS endpoint (alternative path)
 
+### Service Registry
+- `POST /api/github-token` - Get user GitHub token (authenticated services only)
+
+### Health & Monitoring
 - `GET /health` - Health check with database status
 - `GET /ready` - Readiness probe for orchestrators
 - `GET /live` - Liveness probe for orchestrators
+
+**Complete API Reference**: See [docs/api.md](./docs/api.md)
 
 ## Environment Variables
 
@@ -426,19 +458,43 @@ See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#pr
 
 ## Roadmap
 
+### ✅ Completed (v1.1.0)
+
 - [x] GitHub OAuth 2.0 flow implementation
 - [x] Server-side rendered authentication pages
 - [x] CSRF protection with state validation
 - [x] Whitelist-based access control
-- [ ] JWT token generation and validation
-- [ ] Token refresh flow
-- [ ] Rate limiting
-- [ ] API documentation (OpenAPI/Swagger)
-- [ ] Docker compose for local development
-- [ ] CI/CD pipeline
+- [x] JWT token generation and validation (RS256)
+- [x] Token refresh flow (`POST /api/token`)
+- [x] Public key distribution (`GET /api/jwks`)
+- [x] Service Registry API for downstream services
+- [x] Service authentication with bcrypt-hashed API keys
+- [x] Comprehensive audit logging
+- [x] Cloud Run deployment guide
+- [x] Security documentation (secret rotation, JWT verification)
+- [x] Operations runbooks
+- [x] Management CLI for service registry
+- [x] Comprehensive testing (104+ tests)
+- [x] Database migrations with Prisma
+- [x] Health check endpoints
+
+### 🚧 Planned (v1.2.0 - Q1 2026)
+
+- [ ] Redis-based OAuth state storage (multi-instance support)
+- [ ] Rate limiting on authentication and API endpoints
+- [ ] Admin UI for user and service management
+- [ ] Whitelist management CLI tool
+
+### 🔮 Future Iterations
+
 - [ ] Token encryption at rest
-- [ ] Session persistence (Redis)
+- [ ] OpenAPI/Swagger documentation
 - [ ] Multi-factor authentication (MFA)
+- [ ] Prometheus metrics and Grafana dashboards
+- [ ] Additional OAuth providers (Google, Microsoft)
+- [ ] CI/CD pipeline with GitHub Actions
+
+**Full Roadmap**: See [docs/ROADMAP.md](./docs/ROADMAP.md) for detailed feature descriptions, timelines, and community requests.
 
 
 

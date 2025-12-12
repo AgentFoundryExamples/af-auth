@@ -212,7 +212,7 @@ gcloud builds submit \
 
 # Tag with version for rollback capability
 gcloud builds submit \
-  --tag ${REGION}-docker.pkg.dev/${PROJECT_ID}/${SERVICE_NAME}/${SERVICE_NAME}:v1.0.0
+  --tag ${REGION}-docker.pkg.dev/${PROJECT_ID}/${SERVICE_NAME}/${SERVICE_NAME}:v1.1.0
 ```
 
 #### Option B: Using Docker Locally
