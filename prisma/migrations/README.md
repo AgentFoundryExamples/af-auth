@@ -171,3 +171,20 @@ This marks a migration as applied without running it.
 - Created unique index on github_user_id
 - Created indexes on is_whitelisted and created_at
 - Added auto-update trigger for updated_at
+
+### 20251212003115_add_service_registry
+- Created `service_registry` table for managing authorized downstream services
+- Created `service_audit_logs` table for tracking all service access attempts
+- Added bcrypt-hashed API keys for service authentication
+- Added allowed_scopes field for future scope-based permissions
+- Added is_active flag for soft-delete functionality
+- Added last_used_at timestamp for tracking service usage
+- Created indexes on service_identifier, is_active for query performance
+- Created indexes on audit log fields (service_id, user_id, created_at, success)
+- Added auto-update trigger for service_registry.updated_at
+- Added comprehensive table and column comments for documentation
+
+### 20251212003212_
+- Schema sync migration created by Prisma
+- Removed default values from UUID and timestamp fields to match Prisma's expectations
+- Removed indexes on users table (users_created_at_idx, users_is_whitelisted_idx)
