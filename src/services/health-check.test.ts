@@ -16,6 +16,7 @@ import {
   checkRedisHealth,
   checkEncryptionHealth,
   checkGithubAppHealth,
+  checkMetricsHealth,
   performHealthCheck,
   performReadinessCheck,
   clearGithubAppCache,
@@ -23,11 +24,14 @@ import {
 } from './health-check';
 import db from '../db';
 import * as redisClient from './redis-client';
+import * as metricsService from './metrics';
 import { config } from '../config';
+import logger from '../utils/logger';
 
 // Mock dependencies
 jest.mock('../db');
 jest.mock('./redis-client');
+jest.mock('./metrics');
 jest.mock('../utils/logger');
 
 describe('Health Check Service', () => {
@@ -200,6 +204,120 @@ describe('Health Check Service', () => {
     });
   });
 
+  describe('checkMetricsHealth', () => {
+    it('should return healthy status when metrics are enabled and working', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      const mockRegistry = {
+        metrics: jest.fn().mockResolvedValue('# HELP metric_name description\nmetric_name 1'),
+      };
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.HEALTHY);
+      expect(result.details?.enabled).toBe(true);
+      expect(result.details?.registryInitialized).toBe(true);
+      expect(mockRegistry.metrics).toHaveBeenCalled();
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return healthy status when metrics are disabled', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = false;
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.HEALTHY);
+      expect(result.message).toBe('Metrics disabled');
+      expect(result.details?.enabled).toBe(false);
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return unhealthy status when registry is not initialized', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(false);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(null);
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.UNHEALTHY);
+      expect(result.message).toBe('Metrics registry not initialized');
+      expect(result.details?.registryInitialized).toBe(false);
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return unhealthy status when metrics output is empty', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      const mockRegistry = {
+        metrics: jest.fn().mockResolvedValue(''),
+      };
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.UNHEALTHY);
+      expect(result.message).toBe('Metrics collection failed - no data available');
+      expect(result.details?.metricsOutputEmpty).toBe(true);
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return unhealthy status when metrics retrieval fails', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      const mockRegistry = {
+        metrics: jest.fn().mockRejectedValue(new Error('Metrics collection failed')),
+      };
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.UNHEALTHY);
+      expect(result.message).toBe('Failed to retrieve metrics');
+      expect(result.details?.error).toBe('Metrics collection failed');
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should handle errors gracefully', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockImplementation(() => {
+        throw new Error('Unexpected error');
+      });
+
+      const result = await checkMetricsHealth();
+
+      expect(result.status).toBe(HealthStatus.UNHEALTHY);
+      expect(result.message).toBe('Unexpected error');
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+  });
+
   describe('checkGithubAppHealth', () => {
     it('should return healthy status when GitHub App is properly configured', async () => {
       const result = await checkGithubAppHealth();
@@ -277,6 +395,14 @@ describe('Health Check Service', () => {
       };
       (redisClient.getRedisClient as jest.Mock).mockReturnValue(mockRedis);
       (redisClient.isRedisConnected as jest.Mock).mockReturnValue(true);
+
+      // Setup default healthy metrics mocks
+      const mockRegistry = {
+        metrics: jest.fn().mockResolvedValue('# HELP metric_name description\nmetric_name 1'),
+      };
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
+      (config.metrics as any).enabled = true;
     });
 
     it('should return overall healthy status when all components are healthy', async () => {
@@ -287,6 +413,7 @@ describe('Health Check Service', () => {
       expect(result.components.redis.status).toBe(HealthStatus.HEALTHY);
       expect(result.components.encryption.status).toBe(HealthStatus.HEALTHY);
       expect(result.components.githubApp.status).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics?.status).toBe(HealthStatus.HEALTHY);
       expect(result).toHaveProperty('timestamp');
       expect(result).toHaveProperty('uptime');
       expect(result).toHaveProperty('environment');
@@ -338,6 +465,36 @@ describe('Health Check Service', () => {
       clearGithubAppCache();
     });
 
+    it('should return degraded status when only metrics are unhealthy', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(false);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(null);
+
+      const result = await performHealthCheck();
+
+      expect(result.status).toBe(HealthStatus.DEGRADED);
+      expect(result.components.metrics?.status).toBe(HealthStatus.UNHEALTHY);
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return healthy status when metrics are disabled', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = false;
+
+      const result = await performHealthCheck();
+
+      expect(result.status).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics?.status).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics?.message).toBe('Metrics disabled');
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
     it('should return degraded status when database has degraded status', async () => {
       const originalEnv = config.env;
       const originalSsl = config.database.ssl.enabled;
@@ -368,6 +525,14 @@ describe('Health Check Service', () => {
       };
       (redisClient.getRedisClient as jest.Mock).mockReturnValue(mockRedis);
       (redisClient.isRedisConnected as jest.Mock).mockReturnValue(true);
+
+      // Setup default healthy metrics mocks
+      const mockRegistry = {
+        metrics: jest.fn().mockResolvedValue('# HELP metric_name description\nmetric_name 1'),
+      };
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
+      (config.metrics as any).enabled = true;
     });
 
     it('should return ready when all critical components are healthy', async () => {
@@ -378,6 +543,7 @@ describe('Health Check Service', () => {
       expect(result.components.database).toBe(HealthStatus.HEALTHY);
       expect(result.components.redis).toBe(HealthStatus.HEALTHY);
       expect(result.components.encryption).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics).toBe(HealthStatus.HEALTHY);
     });
 
     it('should return not ready when database is unhealthy', async () => {
@@ -420,6 +586,46 @@ describe('Health Check Service', () => {
       expect(result.ready).toBe(false);
       expect(result.reason).toContain('database');
       expect(result.reason).toContain('redis');
+    });
+
+    it('should return not ready when metrics are unhealthy and enabled', async () => {
+      (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(false);
+      (metricsService.getRegistry as jest.Mock).mockReturnValue(null);
+
+      const result = await performReadinessCheck();
+
+      expect(result.ready).toBe(false);
+      expect(result.reason).toContain('metrics');
+      expect(result.components.metrics).toBe(HealthStatus.UNHEALTHY);
+    });
+
+    it('should return ready when metrics are disabled', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = false;
+
+      const result = await performReadinessCheck();
+
+      expect(result.ready).toBe(true);
+      expect(result.components.metrics).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics).toBeDefined();
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should log warning when metrics are disabled', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = false;
+
+      await performReadinessCheck();
+
+      // Verify the warning message is logged
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Metrics disabled - readiness passes but observability unavailable. Set METRICS_ENABLED=true for production.'
+      );
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
     });
 
     it('should not check GitHub App status for readiness', async () => {
