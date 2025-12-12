@@ -163,6 +163,18 @@ export const schemas = {
     token: z.string().min(1, 'Token is required'),
   }),
   
+  // Token revocation request
+  tokenRevoke: z.object({
+    token: z.string().min(1, 'Token is required'),
+    reason: z.string().optional(),
+    revokedBy: z.string().optional(),
+  }),
+  
+  // Revocation status query
+  revocationStatusQuery: z.object({
+    jti: z.string().min(1, 'JTI is required'),
+  }),
+  
   // GitHub token request
   githubTokenRequest: z
     .object({

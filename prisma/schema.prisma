@@ -56,3 +56,20 @@ model ServiceAuditLog {
   @@index([success])
   @@map("service_audit_logs")
 }
+
+model RevokedToken {
+  id                     String    @id @default(uuid()) @db.Uuid
+  jti                    String    @unique @db.VarChar(255)
+  userId                 String    @map("user_id") @db.Uuid
+  tokenIssuedAt          DateTime  @map("token_issued_at") @db.Timestamptz(6)
+  tokenExpiresAt         DateTime  @map("token_expires_at") @db.Timestamptz(6)
+  revokedAt              DateTime  @default(now()) @map("revoked_at") @db.Timestamptz(6)
+  revokedBy              String?   @map("revoked_by") @db.VarChar(255)
+  reason                 String?   @db.Text
+  
+  @@index([jti])
+  @@index([userId])
+  @@index([tokenExpiresAt])
+  @@index([revokedAt])
+  @@map("revoked_tokens")
+}
