@@ -124,9 +124,15 @@ curl http://localhost:3000/health
 ```json
 {
   "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": "30d"
+  "expiresIn": "30d",
+  "expiresAt": "2025-01-11T12:00:00.000Z"
 }
 ```
+
+**Response Fields:**
+- `token` (string): The signed JWT token
+- `expiresIn` (string): Configured expiration duration (e.g., "30d", "7d", "24h"). Matches `JWT_EXPIRES_IN` environment variable.
+- `expiresAt` (string): ISO 8601 timestamp when the token will expire
 
 **Error Responses:**
 
@@ -158,9 +164,15 @@ curl "http://localhost:3000/api/token?userId=550e8400-e29b-41d4-a716-44665544000
 ```json
 {
   "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": "30d"
+  "expiresIn": "30d",
+  "expiresAt": "2025-01-11T12:00:00.000Z"
 }
 ```
+
+**Response Fields:**
+- `token` (string): The new signed JWT token
+- `expiresIn` (string): Configured expiration duration (e.g., "30d", "7d", "24h"). Matches `JWT_EXPIRES_IN` environment variable.
+- `expiresAt` (string): ISO 8601 timestamp when the token will expire
 
 **Error Responses:**
 

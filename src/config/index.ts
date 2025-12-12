@@ -198,6 +198,86 @@ function getBase64DecodedKey(key: string, name: string): string {
   return decoded;
 }
 
+// JWT expiration format regex - matches formats like '30d', '7d', '24h', '60m', '3600s'
+const JWT_EXPIRES_IN_REGEX = /^(\d+)([smhd])$/;
+
+/**
+ * Parse JWT expiration string to seconds
+ * Supports formats: '30d', '7d', '24h', '60m', '3600s'
+ */
+function parseJWTExpiresInToSeconds(expiresIn: string): number {
+  const match = expiresIn.match(JWT_EXPIRES_IN_REGEX);
+  if (!match) {
+    throw new Error(
+      `Invalid JWT expiration format: "${expiresIn}". ` +
+      `Expected format: number followed by unit (s=seconds, m=minutes, h=hours, d=days). ` +
+      `Examples: "30d", "24h", "60m", "3600s"`
+    );
+  }
+  
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  
+  let seconds: number;
+  switch (unit) {
+    case 's': seconds = value; break;
+    case 'm': seconds = value * 60; break;
+    case 'h': seconds = value * 60 * 60; break;
+    case 'd': seconds = value * 24 * 60 * 60; break;
+    default:
+      throw new Error(`Unexpected time unit: ${unit}`);
+  }
+  
+  if (seconds > Number.MAX_SAFE_INTEGER) {
+    throw new Error(`JWT expiration value too large: ${expiresIn} exceeds maximum safe integer`);
+  }
+  
+  return seconds;
+}
+
+/**
+ * Validates JWT expiration string format
+ * Supports formats: '30d', '7d', '24h', '60m', '3600s'
+ * @throws Error if format is invalid or value is out of acceptable range
+ */
+function validateJWTExpiresIn(expiresIn: string): void {
+  // Parse to seconds (will throw if invalid format)
+  const seconds = parseJWTExpiresInToSeconds(expiresIn);
+  
+  // Validate value is positive
+  if (seconds <= 0) {
+    throw new Error(
+      `JWT_EXPIRES_IN value must be positive (got: ${expiresIn} = ${seconds} seconds)`
+    );
+  }
+  
+  // Error for extremely short expirations (less than 60 seconds)
+  if (seconds < 60) {
+    throw new Error(
+      `JWT_EXPIRES_IN is too short: ${expiresIn} (${seconds} seconds). ` +
+      `Minimum allowed: 60s. Use at least 5m (5 minutes) for production.`
+    );
+  }
+  
+  // Warn for very short expirations (less than 5 minutes)
+  if (seconds < 300) {
+    console.warn(
+      `WARNING: JWT_EXPIRES_IN is set to ${expiresIn} (${seconds} seconds). ` +
+      `This is very short and may cause authentication issues. ` +
+      `Minimum recommended: 5m (300 seconds).`
+    );
+  }
+  
+  // Warn for very long expirations (more than 1 year)
+  if (seconds > 365 * 24 * 60 * 60) {
+    console.warn(
+      `WARNING: JWT_EXPIRES_IN is set to ${expiresIn} (${seconds} seconds, ~${Math.floor(seconds / (24 * 60 * 60))} days). ` +
+      `This is unusually long and may pose security risks. ` +
+      `Recommended maximum: 90d (90 days).`
+    );
+  }
+}
+
 /**
  * Centralized application configuration.
  * All configuration is loaded from environment variables with appropriate defaults.
@@ -218,6 +298,10 @@ const jwtPublicKey = getBase64DecodedKey(jwtPublicKeyB64, 'JWT_PUBLIC_KEY');
 // Validate and load GitHub token encryption key
 const githubTokenEncryptionKey = getRequiredEnv('GITHUB_TOKEN_ENCRYPTION_KEY');
 validateMinLength(githubTokenEncryptionKey, 'GITHUB_TOKEN_ENCRYPTION_KEY', 32);
+
+// Validate JWT expiration format and range
+const jwtExpiresIn = getOptionalEnv('JWT_EXPIRES_IN', '30d');
+validateJWTExpiresIn(jwtExpiresIn);
 
 // Database SSL configuration
 const dbSslEnabled = getOptionalBooleanEnv('DB_SSL_ENABLED', process.env.NODE_ENV === 'production');
@@ -313,7 +397,7 @@ export const config: Config = {
   jwt: {
     privateKey: jwtPrivateKey,
     publicKey: jwtPublicKey,
-    expiresIn: getOptionalEnv('JWT_EXPIRES_IN', '30d'), // 30 days as per requirements
+    expiresIn: jwtExpiresIn,
     issuer: getOptionalEnv('JWT_ISSUER', baseUrl),
     audience: getOptionalEnv('JWT_AUDIENCE', baseUrl),
     clockTolerance: getOptionalNumericEnv('JWT_CLOCK_TOLERANCE_SECONDS', 60), // 60 seconds tolerance
@@ -356,5 +440,63 @@ export const config: Config = {
     authToken: process.env.METRICS_AUTH_TOKEN || null,
   },
 };
+
+/**
+ * Parse JWT expiration string to seconds (public utility)
+ * Supports formats: '30d', '7d', '24h', '60m', '3600s'
+ * @param expiresIn - The expiration string to parse
+ * @returns Number of seconds
+ */
+export function parseJWTExpiration(expiresIn: string): number {
+  return parseJWTExpiresInToSeconds(expiresIn);
+}
+
+/**
+ * Get JWT expiration time in seconds
+ * Converts the configured expiration string to seconds
+ */
+export function getJWTExpirationSeconds(): number {
+  return parseJWTExpiresInToSeconds(config.jwt.expiresIn);
+}
+
+/**
+ * Calculate JWT expiration timestamp from current time
+ * @returns Date object representing when a JWT issued now would expire
+ */
+export function calculateJWTExpiration(): Date {
+  const seconds = getJWTExpirationSeconds();
+  const milliseconds = seconds * 1000;
+  
+  if (milliseconds > Number.MAX_SAFE_INTEGER - Date.now()) {
+    throw new Error('JWT expiration calculation would overflow');
+  }
+  
+  return new Date(Date.now() + milliseconds);
+}
+
+/**
+ * Get human-readable JWT expiration description
+ * Examples: "30 days", "7 days", "24 hours", "60 minutes"
+ */
+export function getJWTExpirationDescription(): string {
+  const expiresIn = config.jwt.expiresIn;
+  const match = expiresIn.match(/^(\d+)([smhd])$/);
+  
+  if (!match) {
+    return expiresIn; // Fallback to raw value
+  }
+  
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  
+  const unitMap: Record<string, string> = {
+    's': value === 1 ? 'second' : 'seconds',
+    'm': value === 1 ? 'minute' : 'minutes',
+    'h': value === 1 ? 'hour' : 'hours',
+    'd': value === 1 ? 'day' : 'days',
+  };
+  
+  return `${value} ${unitMap[unit] || unit}`;
+}
 
 export default config;

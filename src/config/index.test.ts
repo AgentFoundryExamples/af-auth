@@ -259,5 +259,282 @@ AQAB
     expect(config.github.tokenEncryptionKey).toBeDefined();
     expect(config.github.tokenEncryptionKey.length).toBeGreaterThanOrEqual(32);
   });
+
+  describe('JWT Expiration Configuration', () => {
+    it('should accept valid JWT_EXPIRES_IN formats', () => {
+      const validFormats = ['30d', '7d', '24h', '60m', '3600s', '1d', '1h', '1m'];
+      
+      validFormats.forEach(format => {
+        jest.resetModules();
+        process.env = {
+          ...originalEnv,
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+          GITHUB_APP_ID: '123456',
+          GITHUB_INSTALLATION_ID: '12345678',
+          GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+          GITHUB_CLIENT_ID: 'test_client_id',
+          GITHUB_CLIENT_SECRET: 'test_client_secret',
+          SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+          JWT_PRIVATE_KEY: testPrivateKeyB64,
+          JWT_PUBLIC_KEY: testPublicKeyB64,
+          GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+          JWT_EXPIRES_IN: format,
+        };
+        
+        expect(() => {
+          const { config } = require('../config');
+          expect(config.jwt.expiresIn).toBe(format);
+        }).not.toThrow();
+      });
+    });
+
+    it('should reject invalid JWT_EXPIRES_IN formats', () => {
+      const invalidFormats = ['30', 'abc', '30x', '30 days', '0d', '-5d'];
+      
+      invalidFormats.forEach(format => {
+        jest.resetModules();
+        process.env = {
+          ...originalEnv,
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+          GITHUB_APP_ID: '123456',
+          GITHUB_INSTALLATION_ID: '12345678',
+          GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+          GITHUB_CLIENT_ID: 'test_client_id',
+          GITHUB_CLIENT_SECRET: 'test_client_secret',
+          SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+          JWT_PRIVATE_KEY: testPrivateKeyB64,
+          JWT_PUBLIC_KEY: testPublicKeyB64,
+          GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+          JWT_EXPIRES_IN: format,
+        };
+        
+        expect(() => {
+          require('../config');
+        }).toThrow();
+      });
+    });
+
+    it('should use default when JWT_EXPIRES_IN is empty', () => {
+      jest.resetModules();
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: '', // Empty string should use default
+      };
+      
+      const { config } = require('../config');
+      expect(config.jwt.expiresIn).toBe('30d'); // Default value
+    });
+
+    it('should reject JWT_EXPIRES_IN values that are too short (< 60s)', () => {
+      jest.resetModules();
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: '30s', // 30 seconds - too short
+      };
+      
+      expect(() => {
+        require('../config');
+      }).toThrow('JWT_EXPIRES_IN is too short');
+    });
+
+    it('should accept minimum valid JWT_EXPIRES_IN (60s)', () => {
+      jest.resetModules();
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: '60s',
+      };
+      
+      // Capture console.warn to suppress warning output
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+      
+      expect(() => {
+        const { config } = require('../config');
+        expect(config.jwt.expiresIn).toBe('60s');
+      }).not.toThrow();
+      
+      console.warn = originalWarn;
+    });
+
+    it('should provide helper function to get JWT expiration in seconds', () => {
+      jest.resetModules();
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: '24h',
+      };
+      
+      const { getJWTExpirationSeconds } = require('../config');
+      expect(getJWTExpirationSeconds()).toBe(24 * 60 * 60); // 86400 seconds
+    });
+
+    it('should provide helper function to calculate JWT expiration timestamp', () => {
+      jest.resetModules();
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: '1h',
+      };
+      
+      const { calculateJWTExpiration } = require('../config');
+      const expiresAt = calculateJWTExpiration();
+      
+      expect(expiresAt).toBeInstanceOf(Date);
+      const expectedTime = Date.now() + (60 * 60 * 1000);
+      expect(Math.abs(expiresAt.getTime() - expectedTime)).toBeLessThan(1000); // Within 1 second
+    });
+
+    it('should provide human-readable expiration description', () => {
+      const testCases = [
+        { input: '30d', expected: '30 days' },
+        { input: '1d', expected: '1 day' },
+        { input: '24h', expected: '24 hours' },
+        { input: '1h', expected: '1 hour' },
+        { input: '60m', expected: '60 minutes' },
+        { input: '5m', expected: '5 minutes' },
+        { input: '3600s', expected: '3600 seconds' },
+        { input: '60s', expected: '60 seconds' },
+      ];
+      
+      testCases.forEach(({ input, expected }) => {
+        jest.resetModules();
+        process.env = {
+          ...originalEnv,
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+          GITHUB_APP_ID: '123456',
+          GITHUB_INSTALLATION_ID: '12345678',
+          GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+          GITHUB_CLIENT_ID: 'test_client_id',
+          GITHUB_CLIENT_SECRET: 'test_client_secret',
+          SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+          JWT_PRIVATE_KEY: testPrivateKeyB64,
+          JWT_PUBLIC_KEY: testPublicKeyB64,
+          GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+          JWT_EXPIRES_IN: input,
+        };
+        
+        // Suppress warning for very short expiration times
+        const originalWarn = console.warn;
+        console.warn = jest.fn();
+        
+        const { getJWTExpirationDescription } = require('../config');
+        expect(getJWTExpirationDescription()).toBe(expected);
+        
+        console.warn = originalWarn;
+      });
+    });
+
+    it('should reject extremely large expiration values that would overflow', () => {
+      jest.resetModules();
+      
+      // Use a value that would overflow Number.MAX_SAFE_INTEGER when converted
+      // Number.MAX_SAFE_INTEGER is 9007199254740991
+      // For days: 9007199254740991 / (24 * 60 * 60) = ~104249991 days
+      const hugeValue = '999999999999999d'; // Much larger than max safe integer
+      
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: hugeValue,
+      };
+      
+      expect(() => {
+        require('../config');
+      }).toThrow('JWT expiration value too large');
+    });
+
+    it('should prevent overflow in calculateJWTExpiration', () => {
+      jest.resetModules();
+      
+      // Set up an expiration that when multiplied by 1000 would overflow
+      const largeButValidSeconds = Math.floor(Number.MAX_SAFE_INTEGER / 1000) - 1000;
+      const largeDays = Math.floor(largeButValidSeconds / (24 * 60 * 60));
+      
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: `${largeDays}d`,
+      };
+      
+      // Suppress warning for extremely long expiration
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+      
+      const { calculateJWTExpiration } = require('../config');
+      
+      // This should throw because milliseconds + Date.now() would overflow
+      expect(() => {
+        calculateJWTExpiration();
+      }).toThrow('JWT expiration calculation would overflow');
+      
+      console.warn = originalWarn;
+    });
+  });
 });
 

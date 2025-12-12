@@ -355,4 +355,94 @@ describe('JWT Service', () => {
       expect(publicKey).toContain('END PUBLIC KEY');
     });
   });
+
+  describe('JWT expiration configuration', () => {
+    it('should use configured JWT expiration time from config', () => {
+      const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
+        sub: 'test-user-id',
+        githubId: '12345',
+        jti: 'test-jti-123',
+      };
+
+      const token = signJWT(claims);
+      const decoded = jwt.decode(token) as JWTClaims;
+
+      expect(decoded.exp).toBeDefined();
+      expect(decoded.iat).toBeDefined();
+      
+      // Calculate expected expiration based on config (30d default in test env)
+      // 30 days = 30 * 24 * 60 * 60 = 2592000 seconds
+      const expectedExpDiff = 30 * 24 * 60 * 60; // 30 days in seconds
+      const actualExpDiff = decoded.exp! - decoded.iat!;
+      
+      // Allow 1 second tolerance for processing time
+      expect(Math.abs(actualExpDiff - expectedExpDiff)).toBeLessThan(2);
+    });
+
+    it('should generate tokens with expiration matching config value', async () => {
+      const mockUser = {
+        id: 'test-user-id',
+        githubUserId: BigInt(12345),
+        isWhitelisted: true,
+        githubAccessToken: 'gho_token',
+        githubRefreshToken: null,
+        githubTokenExpiresAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+
+      const token = await generateJWT('test-user-id');
+      const decoded = jwt.decode(token) as JWTClaims;
+
+      expect(decoded.exp).toBeDefined();
+      expect(decoded.iat).toBeDefined();
+      
+      // Verify token will be valid for approximately 30 days (default config)
+      const expiresInSeconds = decoded.exp! - Math.floor(Date.now() / 1000);
+      const expectedSeconds = 30 * 24 * 60 * 60; // 30 days
+      
+      // Allow 5 second tolerance
+      expect(Math.abs(expiresInSeconds - expectedSeconds)).toBeLessThan(5);
+    });
+
+    it('should include expiration in token claims', () => {
+      const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
+        sub: 'test-user-id',
+        githubId: '12345',
+        jti: 'test-jti-123',
+      };
+
+      const token = signJWT(claims);
+      const decoded = jwt.decode(token) as JWTClaims;
+
+      // Verify exp claim is present and in the future
+      expect(decoded.exp).toBeDefined();
+      expect(decoded.exp!).toBeGreaterThan(Math.floor(Date.now() / 1000));
+      
+      // Verify exp is not too far in the future (sanity check)
+      const oneYearInSeconds = 365 * 24 * 60 * 60;
+      expect(decoded.exp! - Math.floor(Date.now() / 1000)).toBeLessThan(oneYearInSeconds);
+    });
+
+    it('should verify tokens respect configured expiration', () => {
+      const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
+        sub: 'test-user-id',
+        githubId: '12345',
+        jti: 'test-jti-123',
+      };
+
+      const token = signJWT(claims);
+      const result = verifyJWT(token);
+
+      // Token should be valid immediately after creation
+      expect(result.valid).toBe(true);
+      expect(result.expired).toBeUndefined();
+      
+      // Claims should contain expiration
+      expect(result.claims?.exp).toBeDefined();
+      expect(result.claims?.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
+    });
+  });
 });
