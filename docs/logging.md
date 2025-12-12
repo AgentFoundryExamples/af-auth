@@ -368,6 +368,198 @@ if (Math.random() < 0.01) {
 
 ## Monitoring and Alerting
 
+### Health Check Logging
+
+The service performs comprehensive health checks that generate structured logs for monitoring.
+
+#### Health Check Events
+
+**Successful Health Check:**
+```json
+{
+  "level": "info",
+  "time": "2024-12-12T10:30:00.000Z",
+  "msg": "Health check completed",
+  "overallStatus": "healthy",
+  "duration": 15,
+  "components": {
+    "database": "healthy",
+    "redis": "healthy",
+    "encryption": "healthy",
+    "githubApp": "healthy"
+  }
+}
+```
+
+**Failed Component:**
+```json
+{
+  "level": "warn",
+  "time": "2024-12-12T10:30:00.000Z",
+  "msg": "Database health check failed",
+  "env": "production"
+}
+```
+
+**Readiness Check Failed:**
+```json
+{
+  "level": "warn",
+  "time": "2024-12-12T10:30:00.000Z",
+  "msg": "Readiness check failed",
+  "reason": "Unhealthy components: database, redis",
+  "components": {
+    "database": "unhealthy",
+    "redis": "unhealthy",
+    "encryption": "healthy"
+  }
+}
+```
+
+#### Querying Health Check Logs
+
+```bash
+# View all health check completions
+gcloud logging read 'jsonPayload.msg="Health check completed"' \
+  --limit=50 \
+  --format=json
+
+# View failed health checks
+gcloud logging read 'jsonPayload.msg="Health check completed" AND jsonPayload.overallStatus!="healthy"' \
+  --limit=20
+
+# View database health failures
+gcloud logging read 'jsonPayload.msg="Database health check failed"' \
+  --limit=20
+
+# View Redis health failures
+gcloud logging read 'jsonPayload.msg=~"Redis.*health"' \
+  --limit=20
+
+# View readiness failures
+gcloud logging read 'jsonPayload.msg="Readiness check failed"' \
+  --limit=20
+```
+
+#### Health Check Metrics for Monitoring
+
+Extract metrics from health check logs:
+
+```bash
+# Count health check failures by component in the last hour
+gcloud logging read 'jsonPayload.msg="Health check completed" 
+  AND timestamp>="'$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ)'"' \
+  --format=json | jq -r '.[] | .jsonPayload.components | to_entries | 
+  .[] | select(.value == "unhealthy") | .key' | sort | uniq -c
+
+# Track health status over time
+gcloud logging read 'jsonPayload.msg="Health check completed"' \
+  --limit=100 \
+  --format=json | jq -r '[.timestamp, .jsonPayload.overallStatus] | @csv'
+```
+
+#### Setting Up Health Check Alerts
+
+Create log-based metrics and alerts:
+
+```bash
+# Create log-based metric for unhealthy status
+gcloud logging metrics create af_auth_unhealthy \
+  --description="Count of unhealthy health checks" \
+  --log-filter='resource.type="cloud_run_revision"
+    AND jsonPayload.msg="Health check completed"
+    AND jsonPayload.overallStatus="unhealthy"'
+
+# Create log-based metric for degraded status
+gcloud logging metrics create af_auth_degraded \
+  --description="Count of degraded health checks" \
+  --log-filter='resource.type="cloud_run_revision"
+    AND jsonPayload.msg="Health check completed"
+    AND jsonPayload.overallStatus="degraded"'
+
+# Create alert policy for persistent unhealthy state
+gcloud alpha monitoring policies create \
+  --notification-channels=CHANNEL_ID \
+  --display-name="AF Auth - Persistent Unhealthy State" \
+  --condition-display-name="Unhealthy for 3 minutes" \
+  --condition-threshold-value=3 \
+  --condition-threshold-duration=180s \
+  --condition-threshold-filter='metric.type="logging.googleapis.com/user/af_auth_unhealthy"'
+
+# Create alert for database failures
+gcloud logging metrics create af_auth_db_failures \
+  --description="Database health check failures" \
+  --log-filter='resource.type="cloud_run_revision"
+    AND jsonPayload.msg="Database health check failed"'
+
+# Create alert for Redis failures  
+gcloud logging metrics create af_auth_redis_failures \
+  --description="Redis health check failures" \
+  --log-filter='resource.type="cloud_run_revision"
+    AND (jsonPayload.msg="Redis is not connected" OR jsonPayload.msg="Redis health check error")'
+```
+
+#### Component-Specific Health Logging
+
+**Database Health Check:**
+```json
+{
+  "level": "warn",
+  "msg": "Database health check failed",
+  // OR
+  "msg": "Database SSL is not enabled in production",
+  // OR
+  "level": "error",
+  "msg": "Database health check error",
+  "error": "Connection timeout"
+}
+```
+
+**Redis Health Check:**
+```json
+{
+  "level": "warn",
+  "msg": "Redis is not connected",
+  "status": "disconnected"
+  // OR
+  "msg": "Redis PING failed",
+  "result": "ERROR"
+}
+```
+
+**Encryption Health Check:**
+```json
+{
+  "level": "error",
+  "msg": "GitHub token encryption key is not configured"
+  // OR
+  "msg": "GitHub token encryption key is too short"
+  // OR
+  "msg": "JWT keys are not configured"
+}
+```
+
+**GitHub App Health Check:**
+```json
+{
+  "level": "error",
+  "msg": "GitHub App configuration is incomplete"
+  // OR
+  "msg": "Failed to sign test JWT with GitHub App private key",
+  "error": "Invalid key format"
+}
+```
+
+**Cache Operations:**
+```json
+{
+  "level": "debug",
+  "msg": "Using cached GitHub App health check result"
+  // OR
+  "msg": "Cleared GitHub App health check cache"
+}
+```
+
 ### Key Metrics to Monitor
 
 1. **Error Rate**: Count of error/fatal logs per minute
