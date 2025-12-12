@@ -198,16 +198,18 @@ function getBase64DecodedKey(key: string, name: string): string {
   return decoded;
 }
 
+// JWT expiration format regex - matches formats like '30d', '7d', '24h', '60m', '3600s'
+const JWT_EXPIRES_IN_REGEX = /^(\d+)([smhd])$/;
+
 /**
- * Validates JWT expiration string format
+ * Parse JWT expiration string to seconds
  * Supports formats: '30d', '7d', '24h', '60m', '3600s'
- * @throws Error if format is invalid or value is out of acceptable range
  */
-function validateJWTExpiresIn(expiresIn: string): void {
-  const match = expiresIn.match(/^(\d+)([smhd])$/);
+function parseJWTExpiresInToSeconds(expiresIn: string): number {
+  const match = expiresIn.match(JWT_EXPIRES_IN_REGEX);
   if (!match) {
     throw new Error(
-      `Invalid JWT_EXPIRES_IN format: "${expiresIn}". ` +
+      `Invalid JWT expiration format: "${expiresIn}". ` +
       `Expected format: number followed by unit (s=seconds, m=minutes, h=hours, d=days). ` +
       `Examples: "30d", "24h", "60m", "3600s"`
     );
@@ -216,29 +218,35 @@ function validateJWTExpiresIn(expiresIn: string): void {
   const value = parseInt(match[1], 10);
   const unit = match[2];
   
-  // Validate reasonable ranges to prevent misconfiguration
-  if (value <= 0) {
-    throw new Error(
-      `JWT_EXPIRES_IN value must be positive (got: ${value}${unit})`
-    );
-  }
-  
-  // Convert to seconds for range validation
-  let seconds: number;
   switch (unit) {
-    case 's': seconds = value; break;
-    case 'm': seconds = value * 60; break;
-    case 'h': seconds = value * 60 * 60; break;
-    case 'd': seconds = value * 24 * 60 * 60; break;
-    default: seconds = 0;
+    case 's': return value;
+    case 'm': return value * 60;
+    case 'h': return value * 60 * 60;
+    case 'd': return value * 24 * 60 * 60;
+    default:
+      // This should never happen due to regex constraint
+      throw new Error(`Unexpected time unit: ${unit}`);
+  }
+}
+
+/**
+ * Validates JWT expiration string format
+ * Supports formats: '30d', '7d', '24h', '60m', '3600s'
+ * @throws Error if format is invalid or value is out of acceptable range
+ */
+function validateJWTExpiresIn(expiresIn: string): void {
+  // Parse to seconds (will throw if invalid format)
+  let seconds: number;
+  try {
+    seconds = parseJWTExpiresInToSeconds(expiresIn);
+  } catch (error) {
+    throw error; // Re-throw parsing errors
   }
   
-  // Warn for very short expirations (less than 5 minutes)
-  if (seconds < 300) {
-    console.warn(
-      `WARNING: JWT_EXPIRES_IN is set to ${expiresIn} (${seconds} seconds). ` +
-      `This is very short and may cause authentication issues. ` +
-      `Minimum recommended: 5m (300 seconds).`
+  // Validate value is positive
+  if (seconds <= 0) {
+    throw new Error(
+      `JWT_EXPIRES_IN value must be positive (got: ${expiresIn} = ${seconds} seconds)`
     );
   }
   
@@ -250,6 +258,15 @@ function validateJWTExpiresIn(expiresIn: string): void {
     );
   }
   
+  // Warn for very short expirations (less than 5 minutes)
+  if (seconds < 300) {
+    console.warn(
+      `WARNING: JWT_EXPIRES_IN is set to ${expiresIn} (${seconds} seconds). ` +
+      `This is very short and may cause authentication issues. ` +
+      `Minimum recommended: 5m (300 seconds).`
+    );
+  }
+  
   // Warn for very long expirations (more than 1 year)
   if (seconds > 365 * 24 * 60 * 60) {
     console.warn(
@@ -257,29 +274,6 @@ function validateJWTExpiresIn(expiresIn: string): void {
       `This is unusually long and may pose security risks. ` +
       `Recommended maximum: 90d (90 days).`
     );
-  }
-}
-
-/**
- * Parse JWT expiration string to seconds
- * Supports formats: '30d', '7d', '24h', '60m', '3600s'
- */
-function parseJWTExpiresInToSeconds(expiresIn: string): number {
-  const match = expiresIn.match(/^(\d+)([smhd])$/);
-  if (!match) {
-    // This should not happen if validation was called
-    throw new Error(`Invalid JWT expiration format: ${expiresIn}`);
-  }
-  
-  const value = parseInt(match[1], 10);
-  const unit = match[2];
-  
-  switch (unit) {
-    case 's': return value;
-    case 'm': return value * 60;
-    case 'h': return value * 60 * 60;
-    case 'd': return value * 24 * 60 * 60;
-    default: throw new Error(`Unknown time unit: ${unit}`);
   }
 }
 
