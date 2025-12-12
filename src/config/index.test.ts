@@ -186,6 +186,9 @@ AQAB
       NODE_ENV: 'test',
       DB_SSL_ENABLED: 'true',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+      GITHUB_APP_ID: '123456',
+      GITHUB_INSTALLATION_ID: '12345678',
+      GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
       GITHUB_CLIENT_ID: 'test',
       GITHUB_CLIENT_SECRET: 'test',
       SESSION_SECRET: 'test_secret_at_least_32_chars',
@@ -207,6 +210,9 @@ AQAB
     const freshEnvDev = {
       NODE_ENV: 'development',
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+      GITHUB_APP_ID: '123456',
+      GITHUB_INSTALLATION_ID: '12345678',
+      GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
       GITHUB_CLIENT_ID: 'test',
       GITHUB_CLIENT_SECRET: 'test',
       SESSION_SECRET: 'test_secret_at_least_32_chars',
@@ -229,6 +235,9 @@ AQAB
     const testCert = 'test-certificate';
     const freshEnv = {
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+      GITHUB_APP_ID: '123456',
+      GITHUB_INSTALLATION_ID: '12345678',
+      GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
       GITHUB_CLIENT_ID: 'test',
       GITHUB_CLIENT_SECRET: 'test',
       SESSION_SECRET: 'test_secret_at_least_32_chars',

@@ -314,8 +314,8 @@ describe('Auth Routes', () => {
           githubUserId: BigInt(12345),
         },
         update: expect.objectContaining({
-          githubAccessToken: 'new-token',
-          githubRefreshToken: 'new-refresh-token',
+          githubAccessToken: expect.any(String),  // Token is encrypted
+          githubRefreshToken: expect.any(String),  // Token is encrypted
           githubTokenExpiresAt: expirationDate,
         }),
         create: expect.any(Object),
