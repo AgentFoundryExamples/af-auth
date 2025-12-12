@@ -391,27 +391,6 @@ See the [full deployment guide](./docs/deployment/cloud-run.md) for:
 - Scaling configuration
 - Monitoring and logging setup
 
-## Production Deployment Notes
-
-> **⚠️ WARNING**: The current implementation is suitable for development and single-instance deployments only. Before deploying to production with auto-scaling or multiple instances, review the [Production Deployment Considerations](./docs/github-app-setup.md#production-deployment-considerations) section.
-
-**Known Limitations**:
-- OAuth state storage uses in-memory Map (not multi-instance safe)
-- No rate limiting on authentication endpoints
-- Tokens stored in plaintext in database
-
-**Recommended for**:
-- ✅ Development and testing
-- ✅ Single-instance deployments (Cloud Run with min/max instances = 1)
-- ✅ Low-traffic applications
-
-**Requires updates for**:
-- ❌ Auto-scaling deployments
-- ❌ Kubernetes with horizontal pod autoscaling
-- ❌ Load-balanced multi-instance deployments
-
-See [docs/github-app-setup.md](./docs/github-app-setup.md#production-deployment-considerations) for detailed solutions and implementation examples.
-
 ## Security
 
 AF Auth implements comprehensive security controls across multiple layers. See the [Security Guide](./docs/security.md) for complete details.
