@@ -111,15 +111,26 @@ export async function validateState(
         const results = await pipeline.exec();
 
         if (!results || results.length < 2) {
-          logger.warn({ state, requestId }, 'OAuth state not found in Redis');
+          logger.warn({ state, requestId }, 'OAuth state not found in Redis pipeline results');
           return null;
         }
 
         const [getError, getValue] = results[0];
+        const [delError, delResult] = results[1];
+
         if (getError || !getValue) {
           logger.warn(
-            { state, requestId, error: getError },
+            { state, requestId, error: getError?.message },
             'OAuth state not found or expired'
+          );
+          return null;
+        }
+
+        // Verify deletion succeeded to prevent replay attacks
+        if (delError || delResult === 0) {
+          logger.warn(
+            { state, requestId, error: delError?.message, delResult },
+            'Failed to delete OAuth state from Redis, or key did not exist. Aborting to prevent reuse.'
           );
           return null;
         }

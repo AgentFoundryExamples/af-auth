@@ -25,12 +25,13 @@ let redisClient: Redis | null = null;
  * Get or create Redis client with connection retry logic
  */
 export function getRedisClient(): Redis {
-  if (redisClient && redisClient.status === 'ready') {
+  // Prevent race conditions where multiple concurrent requests might create a new client.
+  if (redisClient && (redisClient.status === 'ready' || redisClient.status === 'connecting')) {
     return redisClient;
   }
 
-  if (redisClient && redisClient.status === 'connecting') {
-    // Return existing client that's still connecting
+  // A client exists but is in a disconnected state. Let the retry logic handle it.
+  if (redisClient) {
     return redisClient;
   }
 
