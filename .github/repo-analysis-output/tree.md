@@ -63,6 +63,8 @@
   ├── middleware
     ├── jwt-auth.test.ts
     ├── jwt-auth.ts
+    ├── metrics.test.ts
+    ├── metrics.ts
     ├── rate-limit.test.ts
     ├── rate-limit.ts
     ├── validation.test.ts
@@ -78,7 +80,9 @@
     ├── github-token.test.ts
     ├── github-token.ts
     ├── jwt.test.ts
-    └── jwt.ts
+    ├── jwt.ts
+    ├── metrics.test.ts
+    └── metrics.ts
   ├── services
     ├── __mocks__
       ├── github-oauth.ts
@@ -89,6 +93,8 @@
     ├── health-check.ts
     ├── jwt.test.ts
     ├── jwt.ts
+    ├── metrics.test.ts
+    ├── metrics.ts
     ├── redis-client.ts
     ├── service-registry.test.ts
     ├── service-registry.ts

@@ -290,6 +290,14 @@
             },
             {
               "type": "file",
+              "name": "metrics.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "metrics.ts"
+            },
+            {
+              "type": "file",
               "name": "rate-limit.test.ts"
             },
             {
@@ -355,6 +363,14 @@
             {
               "type": "file",
               "name": "jwt.ts"
+            },
+            {
+              "type": "file",
+              "name": "metrics.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "metrics.ts"
             }
           ]
         },
@@ -399,6 +415,14 @@
             {
               "type": "file",
               "name": "jwt.ts"
+            },
+            {
+              "type": "file",
+              "name": "metrics.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "metrics.ts"
             },
             {
               "type": "file",

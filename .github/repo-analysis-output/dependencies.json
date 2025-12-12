@@ -128,6 +128,28 @@
       }
     },
     {
+      "id": "src/middleware/metrics.test.ts",
+      "path": "src/middleware/metrics.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/metrics.ts",
+      "path": "src/middleware/metrics.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
       "id": "src/middleware/rate-limit.test.ts",
       "path": "src/middleware/rate-limit.test.ts",
       "type": "file",
@@ -246,6 +268,31 @@
       }
     },
     {
+      "id": "src/routes/metrics.test.ts",
+      "path": "src/routes/metrics.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/routes/metrics.ts",
+      "path": "src/routes/metrics.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto"
+        ],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
       "id": "src/server.test.ts",
       "path": "src/server.test.ts",
       "type": "file",
@@ -352,6 +399,26 @@
         "third-party": [
           "jsonwebtoken",
           "ms"
+        ]
+      }
+    },
+    {
+      "id": "src/services/metrics.test.ts",
+      "path": "src/services/metrics.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/services/metrics.ts",
+      "path": "src/services/metrics.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "prom-client"
         ]
       }
     },
@@ -529,6 +596,22 @@
       "target": "src/utils/logger.ts"
     },
     {
+      "source": "src/middleware/jwt-auth.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/middleware/metrics.test.ts",
+      "target": "src/middleware/metrics.ts"
+    },
+    {
+      "source": "src/middleware/metrics.test.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/middleware/metrics.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
       "source": "src/middleware/rate-limit.test.ts",
       "target": "src/middleware/rate-limit.ts"
     },
@@ -547,6 +630,10 @@
     {
       "source": "src/middleware/rate-limit.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/middleware/rate-limit.ts",
+      "target": "src/services/metrics.ts"
     },
     {
       "source": "src/middleware/validation.test.ts",
@@ -601,6 +688,10 @@
       "target": "src/middleware/rate-limit.ts"
     },
     {
+      "source": "src/routes/auth.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
       "source": "src/routes/github-token.test.ts",
       "target": "src/server.ts"
     },
@@ -681,6 +772,30 @@
       "target": "src/middleware/validation.ts"
     },
     {
+      "source": "src/routes/metrics.test.ts",
+      "target": "src/routes/metrics.ts"
+    },
+    {
+      "source": "src/routes/metrics.test.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/routes/metrics.test.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/routes/metrics.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/routes/metrics.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/routes/metrics.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
       "source": "src/server.test.ts",
       "target": "src/server.ts"
     },
@@ -714,6 +829,14 @@
     },
     {
       "source": "src/server.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/middleware/metrics.ts"
+    },
+    {
+      "source": "src/server.ts",
       "target": "src/routes/auth.ts"
     },
     {
@@ -723,6 +846,10 @@
     {
       "source": "src/server.ts",
       "target": "src/routes/github-token.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/routes/metrics.ts"
     },
     {
       "source": "src/services/github-oauth.test.ts",
@@ -747,6 +874,10 @@
     {
       "source": "src/services/github-oauth.ts",
       "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/services/github-oauth.ts",
+      "target": "src/services/metrics.ts"
     },
     {
       "source": "src/services/health-check.test.ts",
@@ -801,12 +932,36 @@
       "target": "src/db/index.ts"
     },
     {
+      "source": "src/services/jwt.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/services/metrics.test.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/services/metrics.test.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/metrics.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/metrics.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/services/redis-client.ts",
       "target": "src/config/index.ts"
     },
     {
       "source": "src/services/redis-client.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/redis-client.ts",
+      "target": "src/services/metrics.ts"
     },
     {
       "source": "src/services/service-registry.test.ts",
@@ -851,6 +1006,10 @@
     {
       "source": "src/services/token-revocation.ts",
       "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/token-revocation.ts",
+      "target": "src/services/metrics.ts"
     },
     {
       "source": "src/utils/encryption.test.ts",
@@ -894,6 +1053,7 @@
       "ms",
       "pino",
       "pino-http",
+      "prom-client",
       "rate-limit-redis",
       "react",
       "react-dom/server",
@@ -902,6 +1062,6 @@
       "zod"
     ],
     "stdlib_count": 4,
-    "third-party_count": 19
+    "third-party_count": 20
   }
 }

@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 41
+Total files: 47
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -74,8 +74,8 @@ Total files: 41
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 11.29 KB  
-**LOC:** 292  
+**Size:** 11.84 KB  
+**LOC:** 308  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -110,8 +110,26 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.77 KB  
-**LOC:** 173  
+**Size:** 6.18 KB  
+**LOC:** 181  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/metrics.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 6.38 KB  
+**LOC:** 169  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/metrics.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 1.65 KB  
+**LOC:** 18  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/rate-limit.test.ts
@@ -128,8 +146,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 3.81 KB  
-**LOC:** 94  
+**Size:** 4.54 KB  
+**LOC:** 106  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/validation.test.ts
@@ -164,8 +182,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.29 KB  
-**LOC:** 192  
+**Size:** 8.80 KB  
+**LOC:** 201  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.test.ts
@@ -204,6 +222,24 @@ Total files: 41
 **LOC:** 242  
 **TODOs/FIXMEs:** 0  
 
+## src/routes/metrics.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 11.58 KB  
+**LOC:** 226  
+**TODOs/FIXMEs:** 0  
+
+## src/routes/metrics.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 4.09 KB  
+**LOC:** 89  
+**TODOs/FIXMEs:** 0  
+
 ## src/server.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -218,8 +254,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.29 KB  
-**LOC:** 177  
+**Size:** 6.65 KB  
+**LOC:** 186  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/__mocks__/github-oauth.ts
@@ -254,8 +290,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.46 KB  
-**LOC:** 259  
+**Size:** 8.98 KB  
+**LOC:** 268  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/health-check.test.ts
@@ -290,8 +326,26 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.83 KB  
-**LOC:** 196  
+**Size:** 7.02 KB  
+**LOC:** 200  
+**TODOs/FIXMEs:** 0  
+
+## src/services/metrics.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 14.82 KB  
+**LOC:** 360  
+**TODOs/FIXMEs:** 0  
+
+## src/services/metrics.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 10.08 KB  
+**LOC:** 271  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/redis-client.ts
@@ -299,8 +353,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.79 KB  
-**LOC:** 168  
+**Size:** 6.04 KB  
+**LOC:** 174  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/service-registry.test.ts
@@ -326,8 +380,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.81 KB  
-**LOC:** 245  
+**Size:** 9.30 KB  
+**LOC:** 256  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/token-revocation.ts
@@ -335,8 +389,8 @@ Total files: 41
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.57 KB  
-**LOC:** 187  
+**Size:** 7.22 KB  
+**LOC:** 199  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/encryption.test.ts
