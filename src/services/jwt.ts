@@ -16,6 +16,7 @@ import { config } from '../config';
 import logger from '../utils/logger';
 import { prisma } from '../db';
 import type { StringValue } from 'ms';
+import { randomUUID } from 'crypto';
 
 /**
  * JWT Claims structure
@@ -23,7 +24,7 @@ import type { StringValue } from 'ms';
 export interface JWTClaims {
   sub: string; // Internal user UUID
   githubId: string; // GitHub user ID
-  isWhitelisted: boolean; // Whitelist status at time of issuance
+  jti: string; // JWT ID for revocation tracking
   iat?: number; // Issued at (automatically added by jsonwebtoken)
   exp?: number; // Expiration (automatically added by jsonwebtoken)
   iss?: string; // Issuer
@@ -81,7 +82,7 @@ export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>):
   const token = jwt.sign(payload, privateKey, options);
   
   logger.debug(
-    { sub: claims.sub, expiresIn: config.jwt.expiresIn },
+    { sub: claims.sub, jti: claims.jti, expiresIn: config.jwt.expiresIn },
     'JWT signed successfully'
   );
   
@@ -150,12 +151,15 @@ export async function generateJWT(userId: string): Promise<string> {
     throw new Error('User not found');
   }
   
+  // Generate unique JTI for revocation tracking using UUID v4 for maximum unpredictability
+  const jti = randomUUID();
+  
   const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
     sub: user.id,
     // Convert BigInt to string for JSON compatibility
     // GitHub user IDs are within safe integer range, so no precision loss expected
     githubId: user.githubUserId.toString(),
-    isWhitelisted: user.isWhitelisted,
+    jti,
   };
   
   return signJWT(claims);
@@ -166,7 +170,8 @@ export async function generateJWT(userId: string): Promise<string> {
  * Validates:
  * - Token signature and expiry
  * - User still exists in database
- * - User is still whitelisted
+ * - User is still whitelisted (checked from database)
+ * - Token has not been revoked
  * 
  * Returns a new JWT if validation passes, throws error otherwise
  */
@@ -186,6 +191,17 @@ export async function refreshJWT(token: string): Promise<string> {
     throw new Error('INVALID_TOKEN');
   }
   
+  // Check if token is revoked
+  if (claims.jti) {
+    const revokedToken = await prisma.revokedToken.findUnique({
+      where: { jti: claims.jti },
+    });
+    
+    if (revokedToken) {
+      throw new Error('TOKEN_REVOKED');
+    }
+  }
+  
   // Fetch current user data
   const user = await prisma.user.findUnique({
     where: { id: claims.sub },
@@ -195,7 +211,7 @@ export async function refreshJWT(token: string): Promise<string> {
     throw new Error('USER_NOT_FOUND');
   }
   
-  // Check whitelist status
+  // Check whitelist status from database (not from token)
   if (!user.isWhitelisted) {
     throw new Error('WHITELIST_REVOKED');
   }

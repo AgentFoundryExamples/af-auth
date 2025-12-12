@@ -13,6 +13,7 @@
 // limitations under the License.
 import { Router, Request, Response } from 'express';
 import { generateJWT, refreshJWT, getPublicKeyForVerification } from '../services/jwt';
+import { revokeToken, getRevocationStatus } from '../services/token-revocation';
 import logger from '../utils/logger';
 import { jwtRateLimiter } from '../middleware/rate-limit';
 import { validateBody, validateQuery, schemas } from '../middleware/validation';
@@ -53,6 +54,12 @@ router.post('/token', jwtRateLimiter, validateBody(schemas.tokenRefresh), async 
         return res.status(400).json({
           error: 'INVALID_TOKEN',
           message: 'The provided token is invalid or malformed.',
+        });
+      } else if (errorMessage === 'TOKEN_REVOKED') {
+        logger.info('Token refresh denied: token revoked');
+        return res.status(401).json({
+          error: 'TOKEN_REVOKED',
+          message: 'This token has been revoked.',
         });
       } else if (errorMessage === 'USER_NOT_FOUND') {
         logger.warn('Token refresh failed: user not found');
@@ -197,6 +204,85 @@ router.get('/jwks.json', jwtRateLimiter, (_req: Request, res: Response) => {
     return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'Failed to retrieve JWKS.',
+    });
+  }
+});
+
+/**
+ * POST /api/token/revoke
+ * Revoke a JWT token
+ * 
+ * Request body: { token: string, reason?: string, revokedBy?: string }
+ * Response: { success: boolean, jti?: string } or error
+ */
+router.post('/token/revoke', jwtRateLimiter, validateBody(schemas.tokenRevoke), async (req: Request, res: Response) => {
+  try {
+    const { token, reason, revokedBy } = req.body;
+    
+    const result = await revokeToken(token, revokedBy, reason);
+    
+    if (!result.success) {
+      logger.warn({ error: result.error }, 'Token revocation failed');
+      return res.status(400).json({
+        error: 'REVOCATION_FAILED',
+        message: result.error || 'Failed to revoke token',
+      });
+    }
+    
+    logger.info({ jti: result.jti, revokedBy }, 'Token revoked via API');
+    
+    return res.json({
+      success: true,
+      jti: result.jti,
+      message: 'Token revoked successfully',
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({ errorMessage }, 'Error in token revocation endpoint');
+    return res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred during revocation.',
+    });
+  }
+});
+
+/**
+ * GET /api/token/revocation-status
+ * Check if a token has been revoked
+ * 
+ * Query params: jti (string)
+ * Response: { revoked: boolean, details?: object } or error
+ */
+router.get('/token/revocation-status', jwtRateLimiter, validateQuery(schemas.revocationStatusQuery), async (req: Request, res: Response) => {
+  try {
+    const { jti } = req.query;
+    
+    const status = await getRevocationStatus(jti as string);
+    
+    if (!status) {
+      return res.json({
+        revoked: false,
+        jti: jti as string,
+      });
+    }
+    
+    return res.json({
+      revoked: true,
+      details: {
+        jti: status.jti,
+        userId: status.userId,
+        revokedAt: status.revokedAt,
+        revokedBy: status.revokedBy,
+        reason: status.reason,
+        tokenExpiresAt: status.tokenExpiresAt,
+      },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({ errorMessage }, 'Error checking revocation status');
+    return res.status(500).json({
+      error: 'INTERNAL_ERROR',
+      message: 'An unexpected error occurred.',
     });
   }
 });

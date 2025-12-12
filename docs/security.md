@@ -585,25 +585,43 @@ Downstream services must verify JWTs issued by AF Auth:
 ```javascript
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const axios = require('axios');
 
 // Download public key from AF Auth service
 // curl https://auth.example.com/api/jwks > jwt-public.pem
 
 const publicKey = fs.readFileSync('jwt-public.pem', 'utf8');
+const AUTH_SERVICE_URL = 'https://auth.example.com';
 
-function verifyToken(token) {
+async function verifyToken(token) {
   try {
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ['RS256'],
-      issuer: 'https://auth.example.com',
-      audience: 'https://auth.example.com',
+      issuer: AUTH_SERVICE_URL,
+      audience: AUTH_SERVICE_URL,
       clockTolerance: 60 // Allow 60 seconds clock skew
     });
     
-    // Check whitelist status
-    if (!decoded.isWhitelisted) {
-      throw new Error('User not whitelisted');
+    // Check if token is revoked (optional - for extra security)
+    // Note: This adds latency. Consider caching revocation status.
+    try {
+      const revocationResponse = await axios.get(
+        `${AUTH_SERVICE_URL}/api/token/revocation-status`,
+        { params: { jti: decoded.jti } }
+      );
+      
+      if (revocationResponse.data.revoked) {
+        throw new Error('Token has been revoked');
+      }
+    } catch (err) {
+      // If revocation check fails, log and continue
+      // Token signature is still valid
+      console.warn('Failed to check revocation status:', err.message);
     }
+    
+    // Note: Whitelist status is NOT in the token
+    // If you need to check whitelist status, query the auth service
+    // or maintain a local cache of user whitelist status
     
     return decoded;
   } catch (error) {
@@ -613,7 +631,7 @@ function verifyToken(token) {
 }
 
 // Express middleware
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -621,7 +639,7 @@ function requireAuth(req, res, next) {
   }
   
   const token = authHeader.substring(7);
-  const decoded = verifyToken(token);
+  const decoded = await verifyToken(token);
   
   if (!decoded) {
     return res.status(401).json({ error: 'Invalid or expired token' });
@@ -640,6 +658,7 @@ import requests
 
 # Download public key
 PUBLIC_KEY_URL = 'https://auth.example.com/api/jwks'
+AUTH_SERVICE_URL = 'https://auth.example.com'
 public_key = requests.get(PUBLIC_KEY_URL).text
 
 def verify_token(token):
@@ -648,14 +667,29 @@ def verify_token(token):
             token,
             public_key,
             algorithms=['RS256'],
-            issuer='https://auth.example.com',
-            audience='https://auth.example.com',
+            issuer=AUTH_SERVICE_URL,
+            audience=AUTH_SERVICE_URL,
             leeway=60  # Clock skew tolerance
         )
         
-        # Check whitelist status
-        if not decoded.get('isWhitelisted'):
-            raise ValueError('User not whitelisted')
+        # Check if token is revoked (optional - for extra security)
+        # Note: This adds latency. Consider caching revocation status.
+        try:
+            revocation_response = requests.get(
+                f'{AUTH_SERVICE_URL}/api/token/revocation-status',
+                params={'jti': decoded.get('jti')}
+            )
+            
+            if revocation_response.json().get('revoked'):
+                raise ValueError('Token has been revoked')
+        except requests.RequestException as e:
+            # If revocation check fails, log and continue
+            # Token signature is still valid
+            print(f'Failed to check revocation status: {e}')
+        
+        # Note: Whitelist status is NOT in the token
+        # If you need to check whitelist status, query the auth service
+        # or maintain a local cache of user whitelist status
         
         return decoded
     except jwt.ExpiredSignatureError:
@@ -697,17 +731,71 @@ AF Auth JWTs include these standard and custom claims:
 |-------|------|-------------|----------|
 | `sub` | string | User UUID (internal ID) | Yes |
 | `githubId` | string | GitHub user ID | Yes |
-| `isWhitelisted` | boolean | Whitelist status at issuance | Yes |
+| `jti` | string | JWT ID for revocation tracking | Yes |
 | `iss` | string | Issuer URL | Yes |
 | `aud` | string | Audience URL | Yes |
 | `iat` | number | Issued at timestamp | Yes |
 | `exp` | number | Expiration timestamp | Yes |
 
+**Note**: Whitelist status is NOT included in JWT claims. Authorization checks must consult the user database or service registry to verify current whitelist status.
+
+### Token Revocation
+
+AF Auth supports immediate token revocation without waiting for expiration:
+
+#### Revocation Mechanism
+
+1. **JWT ID (JTI)**: Each token includes a unique JTI for tracking
+2. **Revocation Store**: Revoked tokens are stored in the `revoked_tokens` database table
+3. **Revocation Check**: Middleware verifies tokens aren't revoked before processing requests
+4. **Whitelist Check**: Middleware verifies user's current whitelist status from database
+
+#### Revoking Tokens
+
+```bash
+# Via API
+curl -X POST https://auth.example.com/api/token/revoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGc...",
+    "reason": "Security incident",
+    "revokedBy": "admin-user"
+  }'
+
+# Check revocation status
+curl https://auth.example.com/api/token/revocation-status?jti=token-jti-123
+```
+
+#### Revocation Guarantees
+
+- **Immediate Enforcement**: Revoked tokens are rejected milliseconds after revocation
+- **Distributed Safe**: Works across multiple instances using shared database
+- **Persistent**: Revocation survives restarts and deployments
+- **Auditable**: All revocations logged with timestamp, reason, and who revoked it
+
+#### Cleanup
+
+Expired revoked tokens should be cleaned up periodically to prevent database bloat:
+
+```bash
+# Manual cleanup (retain for 7 days after expiry)
+npm run cleanup:revoked-tokens
+
+# With custom retention (30 days)
+npm run cleanup:revoked-tokens -- --retention=30
+
+# Dry run to preview
+npm run cleanup:revoked-tokens -- --dry-run
+
+# Schedule via cron (daily at 2 AM)
+0 2 * * * cd /app && npm run cleanup:revoked-tokens >> /var/log/cleanup.log 2>&1
+```
+
 ### Token Expiration
 
 - **Default**: 30 days
 - **Configurable**: via `JWT_EXPIRES_IN` environment variable
-- **Non-renewable**: Tokens cannot be refreshed (by design)
+- **Refreshable**: Tokens can be refreshed via `/api/token` endpoint if not revoked
 - **Validation**: Downstream services MUST check `exp` claim
 
 ### Compromised Token Response

@@ -28,6 +28,9 @@ jest.mock('../db', () => ({
     user: {
       findUnique: jest.fn(),
     },
+    revokedToken: {
+      findUnique: jest.fn(),
+    },
   },
 }));
 
@@ -54,7 +57,7 @@ describe('JWT Service', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'test-user-id',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti-123',
       };
 
       const token = signJWT(claims);
@@ -64,11 +67,11 @@ describe('JWT Service', () => {
       expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
     });
 
-    it('should include issuer and audience in signed token', () => {
+    it('should include issuer, audience, and jti in signed token', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'test-user-id',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti-123',
       };
 
       const token = signJWT(claims);
@@ -78,14 +81,14 @@ describe('JWT Service', () => {
       expect(decoded.aud).toBeDefined();
       expect(decoded.sub).toBe(claims.sub);
       expect(decoded.githubId).toBe(claims.githubId);
-      expect(decoded.isWhitelisted).toBe(claims.isWhitelisted);
+      expect(decoded.jti).toBe(claims.jti);
     });
 
     it('should set expiration time', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'test-user-id',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti-123',
       };
 
       const token = signJWT(claims);
@@ -103,7 +106,7 @@ describe('JWT Service', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'test-user-id',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti-123',
       };
 
       const token = signJWT(claims);
@@ -113,7 +116,7 @@ describe('JWT Service', () => {
       expect(result.claims).toBeDefined();
       expect(result.claims?.sub).toBe(claims.sub);
       expect(result.claims?.githubId).toBe(claims.githubId);
-      expect(result.claims?.isWhitelisted).toBe(claims.isWhitelisted);
+      expect(result.claims?.jti).toBe(claims.jti);
       expect(result.error).toBeUndefined();
       expect(result.expired).toBeUndefined();
     });
@@ -131,7 +134,7 @@ describe('JWT Service', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'test-user-id',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti-123',
       };
 
       const token = signJWT(claims);
@@ -187,7 +190,7 @@ describe('JWT Service', () => {
       expect(result.valid).toBe(true);
       expect(result.claims?.sub).toBe(mockUser.id);
       expect(result.claims?.githubId).toBe(mockUser.githubUserId.toString());
-      expect(result.claims?.isWhitelisted).toBe(mockUser.isWhitelisted);
+      expect(result.claims?.jti).toBeDefined();
     });
 
     it('should throw error for non-existent user', async () => {
@@ -196,11 +199,11 @@ describe('JWT Service', () => {
       await expect(generateJWT('non-existent-id')).rejects.toThrow('User not found');
     });
 
-    it('should include current whitelist status', async () => {
+    it('should generate unique JTI for each token', async () => {
       const mockUser = {
         id: 'test-user-id',
         githubUserId: BigInt(12345),
-        isWhitelisted: false, // Not whitelisted
+        isWhitelisted: true,
         githubAccessToken: 'gho_token',
         githubRefreshToken: null,
         githubTokenExpiresAt: new Date(),
@@ -210,10 +213,15 @@ describe('JWT Service', () => {
 
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      const token = await generateJWT('test-user-id');
-      const result = verifyJWT(token);
+      const token1 = await generateJWT('test-user-id');
+      const token2 = await generateJWT('test-user-id');
+      
+      const result1 = verifyJWT(token1);
+      const result2 = verifyJWT(token2);
 
-      expect(result.claims?.isWhitelisted).toBe(false);
+      expect(result1.claims?.jti).toBeDefined();
+      expect(result2.claims?.jti).toBeDefined();
+      expect(result1.claims?.jti).not.toBe(result2.claims?.jti);
     });
   });
 
@@ -229,13 +237,17 @@ describe('JWT Service', () => {
       updatedAt: new Date(),
     };
 
+    beforeEach(() => {
+      (mockPrisma.revokedToken.findUnique as jest.Mock).mockResolvedValue(null);
+    });
+
     it('should refresh a valid token', async () => {
       (mockPrisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
       const originalToken = await generateJWT('test-user-id');
       
-      // Wait 1 second to ensure different iat claim
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait 10ms to ensure different iat claim
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       const newToken = await refreshJWT(originalToken);
 
@@ -259,11 +271,29 @@ describe('JWT Service', () => {
       await expect(refreshJWT(invalidToken)).rejects.toThrow('INVALID_TOKEN');
     });
 
+    it('should reject revoked token', async () => {
+      const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
+        sub: mockUser.id,
+        githubId: mockUser.githubUserId.toString(),
+        jti: 'revoked-jti',
+      };
+
+      const token = signJWT(claims);
+      
+      // Mock revoked token
+      (mockPrisma.revokedToken.findUnique as jest.Mock).mockResolvedValue({
+        jti: 'revoked-jti',
+        userId: mockUser.id,
+      });
+
+      await expect(refreshJWT(token)).rejects.toThrow('TOKEN_REVOKED');
+    });
+
     it('should reject token for non-existent user', async () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: 'non-existent-user',
         githubId: '12345',
-        isWhitelisted: true,
+        jti: 'test-jti',
       };
 
       const token = signJWT(claims);
@@ -283,7 +313,7 @@ describe('JWT Service', () => {
       const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: mockUser.id,
         githubId: mockUser.githubUserId.toString(),
-        isWhitelisted: true, // Was whitelisted when token was issued
+        jti: 'test-jti',
       };
 
       const token = signJWT(claims);
@@ -291,7 +321,7 @@ describe('JWT Service', () => {
       await expect(refreshJWT(token)).rejects.toThrow('WHITELIST_REVOKED');
     });
 
-    it('should issue new token with updated user data', async () => {
+    it('should issue new token with current whitelist status from DB', async () => {
       const updatedUser = {
         ...mockUser,
         isWhitelisted: true,
@@ -302,7 +332,7 @@ describe('JWT Service', () => {
       const oldClaims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
         sub: mockUser.id,
         githubId: mockUser.githubUserId.toString(),
-        isWhitelisted: false, // Old status
+        jti: 'old-jti',
       };
 
       const oldToken = signJWT(oldClaims);
@@ -310,7 +340,8 @@ describe('JWT Service', () => {
 
       const result = verifyJWT(newToken);
       expect(result.valid).toBe(true);
-      expect(result.claims?.isWhitelisted).toBe(true); // Updated status
+      // New token should have different JTI
+      expect(result.claims?.jti).not.toBe('old-jti');
     });
   });
 
