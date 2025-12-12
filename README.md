@@ -316,7 +316,7 @@ See [.env.example](./.env.example) for all available configuration options.
 | `BASE_URL` | `http://localhost:3000` | Base URL of the service |
 | `LOG_LEVEL` | `info` | Logging level |
 | `LOG_PRETTY` | `true` in dev | Pretty print logs |
-| `JWT_EXPIRES_IN` | `30d` | JWT expiration time (format: number+unit, e.g., 30d, 7d, 24h, 60m) |
+| `JWT_EXPIRES_IN` | `30d` | JWT expiration time (format: number+unit, e.g., 30d, 7d, 24h, 60m, 3600s) |
 | `REDIS_HOST` | - | Redis host for multi-instance deployments |
 | `REDIS_PORT` | `6379` | Redis port |
 | `METRICS_ENABLED` | `true` | Enable Prometheus metrics collection |
@@ -431,7 +431,7 @@ AF Auth implements comprehensive security controls across multiple layers. See t
 
 ### Security Best Practices
 
-1. **Secret Rotation**: Rotate secrets regularly (GitHub OAuth: 90 days, Session: 60 days, JWT keys: 180 days, GitHub token encryption: 90 days)
+1. **Secret Rotation**: Rotate secrets regularly according to documented schedules (see [Security Guide](./docs/security.md) for detailed rotation procedures and intervals)
 2. **Key Rotation Monitoring**: Use `npm run check-key-rotation` to monitor rotation status and receive automated warnings
 3. **Least Privilege**: Grant minimal required IAM permissions
 4. **Network Isolation**: Use VPC connectors for private database access

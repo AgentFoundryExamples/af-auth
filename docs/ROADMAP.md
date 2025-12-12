@@ -59,7 +59,7 @@ AF Auth is a production-ready authentication service suitable for **multi-instan
 - [x] RS256-signed JWT tokens (asymmetric cryptography)
 - [x] Configurable token validity period (JWT_EXPIRES_IN: 30d default, supports s/m/h/d units)
 - [x] Standard claims: `sub`, `iss`, `aud`, `iat`, `exp`, `jti`
-- [x] Custom claims: `githubId`
+- [x] Custom claims: `githubId` (Note: `isWhitelisted` removed from JWT - whitelist status checked from database on each request for real-time enforcement)
 - [x] RSA key pair generation and management
 - [x] Private key security (excluded from version control)
 - [x] Token generation on successful authentication
@@ -172,7 +172,12 @@ AF Auth is a production-ready authentication service suitable for **multi-instan
 #### Secret Management
 - [x] Google Secret Manager integration
 - [x] Zero-downtime secret rotation procedures
-- [x] Rotation schedules documented (GitHub: 90d, Session: 60d, JWT: 180d, DB: 90d, GitHub token encryption: 90d)
+- [x] Rotation schedules documented:
+  - GitHub OAuth: 90 days
+  - Session secret: 60 days
+  - JWT keys: 180 days
+  - Database credentials: 90 days
+  - GitHub token encryption key: 90 days
 - [x] Key rotation tracking system with automated warnings
 - [x] Rotation status checker CLI (`npm run check-key-rotation`)
 - [x] Service API key rotation tracking
