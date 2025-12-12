@@ -29,6 +29,7 @@ export interface ServiceRegistryEntry {
   createdAt: Date;
   updatedAt: Date;
   lastUsedAt: Date | null;
+  lastApiKeyRotatedAt: Date | null;
 }
 
 /**
@@ -82,6 +83,7 @@ export async function createService(
     createdAt: service.createdAt,
     updatedAt: service.updatedAt,
     lastUsedAt: service.lastUsedAt,
+    lastApiKeyRotatedAt: service.lastApiKeyRotatedAt,
   };
 }
 
@@ -148,6 +150,7 @@ export async function authenticateService(
         createdAt: service.createdAt,
         updatedAt: service.updatedAt,
         lastUsedAt: service.lastUsedAt,
+        lastApiKeyRotatedAt: service.lastApiKeyRotatedAt,
       },
     };
   } catch (error) {
@@ -185,6 +188,7 @@ export async function getService(
     createdAt: service.createdAt,
     updatedAt: service.updatedAt,
     lastUsedAt: service.lastUsedAt,
+    lastApiKeyRotatedAt: service.lastApiKeyRotatedAt,
   };
 }
 
@@ -198,13 +202,17 @@ export async function rotateServiceApiKey(
   newApiKey: string
 ): Promise<void> {
   const hashedApiKey = await bcrypt.hash(newApiKey, BCRYPT_ROUNDS);
+  const now = new Date();
   
   await prisma.serviceRegistry.update({
     where: { serviceIdentifier },
-    data: { hashedApiKey },
+    data: { 
+      hashedApiKey,
+      lastApiKeyRotatedAt: now,
+    },
   });
   
-  logger.info({ serviceIdentifier }, 'Service API key rotated successfully');
+  logger.info({ serviceIdentifier, rotatedAt: now }, 'Service API key rotated successfully');
 }
 
 /**
@@ -265,6 +273,7 @@ export async function listServices(activeOnly = false): Promise<ServiceRegistryE
     createdAt: service.createdAt,
     updatedAt: service.updatedAt,
     lastUsedAt: service.lastUsedAt,
+    lastApiKeyRotatedAt: service.lastApiKeyRotatedAt,
   }));
 }
 

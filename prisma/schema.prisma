@@ -33,6 +33,7 @@ model ServiceRegistry {
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   lastUsedAt             DateTime? @map("last_used_at") @db.Timestamptz(6)
+  lastApiKeyRotatedAt    DateTime? @map("last_api_key_rotated_at") @db.Timestamptz(6)
 
   @@index([serviceIdentifier])
   @@index([isActive])
@@ -72,4 +73,22 @@ model RevokedToken {
   @@index([tokenExpiresAt])
   @@index([revokedAt])
   @@map("revoked_tokens")
+}
+
+model JWTKeyRotation {
+  id                     String    @id @default(uuid()) @db.Uuid
+  keyIdentifier          String    @unique @map("key_identifier") @db.VarChar(255)
+  keyType                String    @map("key_type") @db.VarChar(50)
+  lastRotatedAt          DateTime  @map("last_rotated_at") @db.Timestamptz(6)
+  nextRotationDue        DateTime? @map("next_rotation_due") @db.Timestamptz(6)
+  isActive               Boolean   @default(true) @map("is_active")
+  rotationIntervalDays   Int?      @map("rotation_interval_days")
+  metadata               String?   @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  @@index([keyIdentifier])
+  @@index([isActive])
+  @@index([nextRotationDue])
+  @@map("jwt_key_rotation")
 }

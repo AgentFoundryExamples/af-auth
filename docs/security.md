@@ -535,6 +535,147 @@ curl https://${SERVICE_URL}/health
 gcloud sql users delete olduser --instance=${SERVICE_NAME}-db
 ```
 
+### Key Rotation Tracking and Policy
+
+AF Auth now includes automated key rotation tracking to ensure compliance and prevent security incidents from stale keys.
+
+#### Rotation Policies
+
+The following rotation intervals are configured via environment variables:
+
+| Key Type | Environment Variable | Default Interval | Criticality |
+|----------|---------------------|------------------|-------------|
+| JWT Signing/Verification Keys | `JWT_KEY_ROTATION_INTERVAL_DAYS` | 180 days | High |
+| GitHub Token Encryption Key | `GITHUB_TOKEN_ENCRYPTION_KEY_ROTATION_INTERVAL_DAYS` | 90 days | Critical |
+| Service API Keys | `SERVICE_API_KEY_ROTATION_INTERVAL_DAYS` | 365 days | Medium |
+
+#### Checking Rotation Status
+
+Use the built-in rotation status checker to inspect all keys:
+
+```bash
+# Check rotation status for all active keys
+npm run check-key-rotation
+
+# Include inactive keys
+npm run check-key-rotation -- --all
+```
+
+**Example Output**:
+
+```
+🔑 JWT Key Rotation Status
+════════════════════════════════════════════════════════════════════════════════
+
+✓ jwt_signing_key (jwt_signing)
+  Last Rotated:     2024-06-15 (180 days ago)
+  Next Rotation:    2024-12-12
+  Status:           ⚠️  3 days OVERDUE
+  Rotation Policy:  Every 180 days
+
+✓ github_token_encryption_key (github_token_encryption)
+  Last Rotated:     2024-09-01 (103 days ago)
+  Next Rotation:    2024-11-30
+  Status:           ⚡ 18 days (soon)
+  Rotation Policy:  Every 90 days
+
+────────────────────────────────────────────────────────────────────────────────
+
+🔐 Service API Key Rotation Status
+════════════════════════════════════════════════════════════════════════════════
+
+✓ my-service
+  Last Rotated:     2024-01-15 (332 days ago)
+  Next Rotation:    2025-01-15
+  Status:           ✓ 33 days
+  Last Used:        2024-12-12
+```
+
+#### Automated Warnings
+
+The service automatically checks for overdue rotations on startup and logs warnings:
+
+```
+WARN: Key rotation is OVERDUE - rotation required
+  keyIdentifier: jwt_signing_key
+  keyType: jwt_signing
+  daysSinceRotation: 183
+  daysOverdue: 3
+```
+
+#### Recording Rotations
+
+After rotating a key, record the rotation in the tracking system:
+
+**JWT Keys** (manual recording via database):
+
+```sql
+-- Record JWT key rotation
+INSERT INTO jwt_key_rotation (
+  id,
+  key_identifier,
+  key_type,
+  last_rotated_at,
+  next_rotation_due,
+  is_active,
+  rotation_interval_days,
+  metadata
+) VALUES (
+  gen_random_uuid(),
+  'jwt_signing_key',
+  'jwt_signing',
+  NOW(),
+  NOW() + INTERVAL '180 days',
+  true,
+  180,
+  'Rotated due to scheduled maintenance'
+)
+ON CONFLICT (key_identifier) 
+DO UPDATE SET
+  last_rotated_at = EXCLUDED.last_rotated_at,
+  next_rotation_due = EXCLUDED.next_rotation_due,
+  metadata = EXCLUDED.metadata,
+  updated_at = NOW();
+```
+
+**Service API Keys** (automatic tracking):
+
+Service API key rotations are automatically tracked when using the service registry CLI:
+
+```bash
+# Rotate a service API key
+npm run service-registry -- rotate my-service
+
+# The rotation timestamp is automatically recorded in the database
+```
+
+#### Emergency Rotation Procedures
+
+If a key is compromised, follow these emergency procedures:
+
+**Priority Levels**:
+- **P0 (Critical)**: JWT private key, GitHub token encryption key
+- **P1 (High)**: Service API keys for production services
+- **P2 (Medium)**: Other service API keys
+
+**Emergency Steps**:
+
+1. **Immediately** generate and deploy new keys
+2. **Revoke** all active sessions/tokens if JWT private key is compromised
+3. **Notify** downstream services of public key changes
+4. **Monitor** logs for suspicious activity
+5. **Record** the emergency rotation in the tracking system
+6. **Document** the incident in your security log
+
+#### Compliance and Audit
+
+The rotation tracking system provides audit trails for compliance:
+
+- All rotation events are timestamped and recorded
+- Overdue rotations trigger automated warnings in logs
+- Rotation history is queryable via database
+- Prometheus metrics track rotation status (if metrics are enabled)
+
 ### Rotation Checklist
 
 Use this checklist for each rotation:
@@ -545,6 +686,8 @@ Use this checklist for each rotation:
 - [ ] Verify service health after update
 - [ ] Monitor logs for errors (24-48 hours)
 - [ ] Revoke/disable old secret
+- [ ] **Record rotation in tracking system** (new)
+- [ ] **Run `npm run check-key-rotation` to verify** (new)
 - [ ] Document rotation in security log
 - [ ] Update downstream services (if applicable)
 
