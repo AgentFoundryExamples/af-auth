@@ -95,8 +95,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10318,
-        "loc": 205,
+        "size_bytes": 21232,
+        "loc": 439,
         "todo_count": 0
       }
     },
@@ -109,8 +109,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 12128,
-        "loc": 308,
+        "size_bytes": 16497,
+        "loc": 421,
         "todo_count": 0
       }
     },
@@ -319,8 +319,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 14022,
-        "loc": 321,
+        "size_bytes": 17057,
+        "loc": 371,
         "todo_count": 0
       }
     },
@@ -333,8 +333,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10006,
-        "loc": 242,
+        "size_bytes": 10214,
+        "loc": 245,
         "todo_count": 0
       }
     },
@@ -487,8 +487,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10857,
-        "loc": 271,
+        "size_bytes": 14104,
+        "loc": 333,
         "todo_count": 0
       }
     },

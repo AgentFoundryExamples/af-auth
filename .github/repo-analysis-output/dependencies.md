@@ -9,7 +9,7 @@ Includes classification of external dependencies as stdlib vs third-party.
 ## Statistics
 
 - **Total files**: 47
-- **Intra-repo dependencies**: 129
+- **Intra-repo dependencies**: 131
 - **External stdlib dependencies**: 4
 - **External third-party dependencies**: 20
 
@@ -51,9 +51,9 @@ Total: 20 unique packages
 
 ## Most Depended Upon Files (Intra-Repo)
 
+- `src/config/index.ts` (21 dependents)
 - `src/db/index.ts` (20 dependents)
 - `src/utils/logger.ts` (20 dependents)
-- `src/config/index.ts` (19 dependents)
 - `src/services/metrics.ts` (13 dependents)
 - `src/services/jwt.ts` (8 dependents)
 - `src/services/redis-client.ts` (8 dependents)
@@ -67,8 +67,8 @@ Total: 20 unique packages
 - `src/server.ts` (11 dependencies)
 - `src/routes/auth.ts` (8 dependencies)
 - `src/routes/github-token.ts` (8 dependencies)
+- `src/routes/jwt.ts` (6 dependencies)
 - `src/middleware/jwt-auth.ts` (5 dependencies)
-- `src/routes/jwt.ts` (5 dependencies)
 - `src/services/token-revocation.ts` (5 dependencies)
 - `src/middleware/jwt-auth.test.ts` (4 dependencies)
 - `src/middleware/rate-limit.ts` (4 dependencies)

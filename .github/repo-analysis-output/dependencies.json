@@ -749,6 +749,10 @@
     },
     {
       "source": "src/routes/jwt.test.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/routes/jwt.test.ts",
       "target": "src/services/token-revocation.ts"
     },
     {
@@ -770,6 +774,10 @@
     {
       "source": "src/routes/jwt.ts",
       "target": "src/middleware/validation.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/config/index.ts"
     },
     {
       "source": "src/routes/metrics.test.ts",

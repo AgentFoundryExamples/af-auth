@@ -65,8 +65,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 10.08 KB  
-**LOC:** 205  
+**Size:** 20.73 KB  
+**LOC:** 439  
 **TODOs/FIXMEs:** 0  
 
 ## src/config/index.ts
@@ -74,8 +74,8 @@ Total files: 47
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 11.84 KB  
-**LOC:** 308  
+**Size:** 16.11 KB  
+**LOC:** 421  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -209,8 +209,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 13.69 KB  
-**LOC:** 321  
+**Size:** 16.66 KB  
+**LOC:** 371  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.ts
@@ -218,8 +218,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.77 KB  
-**LOC:** 242  
+**Size:** 9.97 KB  
+**LOC:** 245  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/metrics.test.ts
@@ -317,8 +317,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 10.60 KB  
-**LOC:** 271  
+**Size:** 13.77 KB  
+**LOC:** 333  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.ts
