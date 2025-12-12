@@ -75,9 +75,19 @@ function getSecurityHeadersConfig(): SecurityHeadersConfig {
   const githubCallbackUrl = process.env.GITHUB_CALLBACK_URL || config.github.callbackUrl;
   const githubDomain = new URL(githubCallbackUrl).origin;
 
+  // Check if CSP is disabled and warn
+  const cspEnabled = process.env.CSP_ENABLED !== 'false'; // Enabled by default
+  if (!cspEnabled) {
+    console.warn(
+      'WARNING: Content-Security-Policy is DISABLED via CSP_ENABLED=false. ' +
+      'This significantly weakens protection against XSS attacks. ' +
+      'CSP should NEVER be disabled in production environments.'
+    );
+  }
+
   return {
     contentSecurityPolicy: {
-      enabled: process.env.CSP_ENABLED !== 'false', // Enabled by default
+      enabled: cspEnabled,
       directives: {
         defaultSrc: parseDirective('CSP_DEFAULT_SRC', ["'self'"]),
         // unsafe-inline is required for React SSR pages that include inline scripts and styles

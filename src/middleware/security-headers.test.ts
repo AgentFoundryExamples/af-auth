@@ -85,6 +85,7 @@ describe('Security Headers Middleware', () => {
 
     it('should disable CSP when CSP_ENABLED is false', async () => {
       process.env.CSP_ENABLED = 'false';
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       
       app = express();
       app.use(createSecurityHeadersMiddleware());
@@ -95,6 +96,11 @@ describe('Security Headers Middleware', () => {
       const response = await request(app).get('/test').expect(200);
 
       expect(response.headers['content-security-policy']).toBeUndefined();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Content-Security-Policy is DISABLED')
+      );
+      
+      consoleSpy.mockRestore();
     });
 
     it('should include upgrade-insecure-requests in production', async () => {
