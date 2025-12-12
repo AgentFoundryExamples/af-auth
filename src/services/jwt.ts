@@ -76,7 +76,6 @@ export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>):
   const options: jwt.SignOptions = {
     algorithm: 'RS256',
     expiresIn: config.jwt.expiresIn as StringValue,
-    jwtid: claims.jti, // Use provided JTI for revocation tracking
   };
   
   const token = jwt.sign(payload, privateKey, options);

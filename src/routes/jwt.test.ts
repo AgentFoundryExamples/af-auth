@@ -124,6 +124,21 @@ describe('JWT Routes', () => {
       expect(response.body).toHaveProperty('error', 'USER_NOT_FOUND');
     });
 
+    it('should reject revoked token', async () => {
+      const token = 'revoked.token.here';
+
+      mockJwtService.refreshJWT.mockRejectedValue(new Error('TOKEN_REVOKED'));
+
+      const response = await request(app)
+        .post('/api/token')
+        .send({ token })
+        .expect(401)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('error', 'TOKEN_REVOKED');
+      expect(response.body.message).toContain('revoked');
+    });
+
     it('should reject token for user with revoked whitelist', async () => {
       const token = 'token.for.revoked.user';
 
@@ -293,6 +308,121 @@ describe('JWT Routes', () => {
         .expect('Content-Type', /json/);
 
       expect(response.body).toHaveProperty('error', 'INTERNAL_ERROR');
+    });
+  });
+
+  describe('POST /api/token/revoke', () => {
+    beforeEach(() => {
+      // Mock the revocation service to be available
+      const tokenRevocation = require('../services/token-revocation');
+      jest.spyOn(tokenRevocation, 'revokeToken');
+    });
+
+    it('should successfully revoke a valid token', async () => {
+      const { revokeToken } = require('../services/token-revocation');
+      
+      revokeToken.mockResolvedValue({
+        success: true,
+        jti: 'test-jti-123',
+      });
+
+      const response = await request(app)
+        .post('/api/token/revoke')
+        .send({
+          token: 'valid.token.here',
+          reason: 'User request',
+          revokedBy: 'admin-user',
+        })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('jti', 'test-jti-123');
+      expect(revokeToken).toHaveBeenCalledWith('valid.token.here', 'admin-user', 'User request');
+    });
+
+    it('should handle revocation failure', async () => {
+      const { revokeToken } = require('../services/token-revocation');
+      
+      revokeToken.mockResolvedValue({
+        success: false,
+        error: 'Invalid token',
+      });
+
+      const response = await request(app)
+        .post('/api/token/revoke')
+        .send({ token: 'invalid.token.here' })
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('error', 'REVOCATION_FAILED');
+      expect(response.body.message).toBe('Invalid token');
+    });
+
+    it('should require token in request', async () => {
+      const response = await request(app)
+        .post('/api/token/revoke')
+        .send({})
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
+    });
+  });
+
+  describe('GET /api/token/revocation-status', () => {
+    beforeEach(() => {
+      const tokenRevocation = require('../services/token-revocation');
+      jest.spyOn(tokenRevocation, 'getRevocationStatus');
+    });
+
+    it('should return revocation details for revoked token', async () => {
+      const { getRevocationStatus } = require('../services/token-revocation');
+      
+      const mockRevocationDetails = {
+        jti: 'revoked-jti',
+        userId: 'user-123',
+        revokedAt: new Date(),
+        revokedBy: 'admin-user',
+        reason: 'Security incident',
+        tokenExpiresAt: new Date(),
+      };
+
+      getRevocationStatus.mockResolvedValue(mockRevocationDetails);
+
+      const response = await request(app)
+        .get('/api/token/revocation-status')
+        .query({ jti: 'revoked-jti' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('revoked', true);
+      expect(response.body).toHaveProperty('details');
+      expect(response.body.details.jti).toBe('revoked-jti');
+    });
+
+    it('should return false for non-revoked token', async () => {
+      const { getRevocationStatus } = require('../services/token-revocation');
+      
+      getRevocationStatus.mockResolvedValue(null);
+
+      const response = await request(app)
+        .get('/api/token/revocation-status')
+        .query({ jti: 'valid-jti' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('revoked', false);
+      expect(response.body).toHaveProperty('jti', 'valid-jti');
+    });
+
+    it('should require jti parameter', async () => {
+      const response = await request(app)
+        .get('/api/token/revocation-status')
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
     });
   });
 });

@@ -93,7 +93,7 @@ export async function revokeToken(
 export async function revokeAllUserTokens(
   userId: string,
   revokedBy?: string,
-  reason?: string
+  _reason?: string
 ): Promise<{ success: boolean; count: number }> {
   try {
     // For future tokens, we rely on whitelist check in middleware
