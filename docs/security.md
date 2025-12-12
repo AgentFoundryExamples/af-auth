@@ -42,6 +42,150 @@ graph TD
 4. **Auditability**: All security events logged
 5. **Rotation**: Regular rotation of secrets and credentials
 
+## Request Security
+
+### Rate Limiting
+
+AF Auth implements Redis-backed rate limiting to prevent brute force attacks and API abuse:
+
+| Endpoint Category | Window | Max Requests | Purpose |
+|-------------------|--------|--------------|---------|
+| Authentication (`/auth/*`) | 15 minutes | 10 | Prevent OAuth brute force |
+| JWT Operations (`/api/token`, `/api/jwks`) | 15 minutes | 100 | Moderate token operations |
+| GitHub Token Access (`/api/github-token`) | 1 hour | 1000 | Service-to-service calls |
+
+#### Configuration
+
+Rate limits are configured via environment variables:
+
+```bash
+# Authentication endpoints (strict limits)
+RATE_LIMIT_AUTH_WINDOW_MS=900000     # 15 minutes
+RATE_LIMIT_AUTH_MAX=10               # 10 requests
+
+# JWT endpoints (moderate limits)
+RATE_LIMIT_JWT_WINDOW_MS=900000      # 15 minutes
+RATE_LIMIT_JWT_MAX=100               # 100 requests
+
+# GitHub token endpoint (higher limits)
+RATE_LIMIT_GITHUB_TOKEN_WINDOW_MS=3600000  # 1 hour
+RATE_LIMIT_GITHUB_TOKEN_MAX=1000           # 1000 requests
+```
+
+#### Distributed Rate Limiting
+
+For multi-instance deployments (e.g., Cloud Run with autoscaling), rate limits can be enforced using Redis:
+
+- Counters are stored in Redis with TTL matching the window duration
+- Rate limits are enforced consistently across all instances
+- Automatic cleanup after TTL expiry
+- Falls back to in-memory limits if Redis is unavailable
+
+#### Handling Rate Limit Errors
+
+When rate limits are exceeded, the API returns HTTP 429 with a generic error message:
+
+```json
+{
+  "error": "RATE_LIMIT_EXCEEDED",
+  "message": "Too many authentication attempts. Please try again later."
+}
+```
+
+Response headers include rate limit information:
+- `RateLimit-Limit`: Maximum requests allowed in the window
+- `RateLimit-Remaining`: Requests remaining in current window
+- `RateLimit-Reset`: Unix timestamp when the window resets
+
+### Input Validation
+
+All API endpoints validate incoming data using Zod schemas:
+
+#### Validation Rules
+
+- **UUID fields**: Must be valid UUIDv4 format
+- **GitHub User IDs**: Must be numeric strings
+- **Token fields**: Non-empty strings
+- **Request requirements**: Either `userId` OR `githubUserId` required (not both)
+
+#### Validation Errors
+
+Failed validation returns HTTP 400 with sanitized details:
+
+```json
+{
+  "error": "VALIDATION_ERROR",
+  "message": "Invalid request data",
+  "requestId": "uuid-for-correlation",
+  "details": [
+    {
+      "path": "userId",
+      "message": "Invalid uuid"
+    }
+  ]
+}
+```
+
+**Security Notes:**
+- Actual field values are never included in error responses
+- Validation failures are logged with sanitized snapshots
+- Request IDs enable correlation without exposing PII
+
+#### Prototype Pollution Protection
+
+All request bodies are automatically sanitized to remove dangerous properties:
+- `__proto__`
+- `constructor`
+- `prototype`
+
+This protection is applied before validation and route handlers execute.
+
+### Logging Redaction
+
+The logger automatically redacts sensitive fields from all log entries:
+
+#### Redacted Field Categories
+
+**Credentials & Secrets:**
+- `password`, `token`, `accessToken`, `refreshToken`
+- `secret`, `apiKey`, `authorization`, `cookie`
+- `privateKey`, `publicKey`, `encryptionKey`, `clientSecret`
+
+**PII (Personally Identifiable Information):**
+- `email`, `name`, `login`, `username`
+- `firstName`, `lastName`, `fullName`
+- `phoneNumber`, `address`, `street`, `city`
+- `zipCode`, `postalCode`
+
+**Sensitive IDs:**
+- `sessionId`, `ssn`, `creditCard`, `cvv`
+
+#### Redaction Behavior
+
+- Case-insensitive matching (e.g., `PASSWORD`, `Password`, `password`)
+- Supports camelCase and snake_case (e.g., `userPassword`, `user_password`)
+- Recursive redaction through nested objects and arrays
+- Circular reference protection
+- Preserves non-sensitive fields
+
+#### Example
+
+```javascript
+// Input
+{
+  userId: "123",
+  email: "user@example.com",
+  token: "ghp_abc123"
+}
+
+// Logged as
+{
+  userId: "123",
+  email: "[REDACTED]",
+  token: "[REDACTED]"
+}
+```
+
 ## Secret Manager Setup
 
 ### Required Secrets

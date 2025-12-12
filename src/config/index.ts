@@ -79,6 +79,25 @@ interface Config {
     adminContactEmail: string;
     adminContactName: string;
   };
+  rateLimit: {
+    auth: {
+      windowMs: number;
+      maxRequests: number;
+    };
+    jwt: {
+      windowMs: number;
+      maxRequests: number;
+    };
+    githubToken: {
+      windowMs: number;
+      maxRequests: number;
+    };
+  };
+  cookies: {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'strict' | 'lax' | 'none';
+  };
 }
 
 /**
@@ -294,6 +313,31 @@ export const config: Config = {
   ui: {
     adminContactEmail: getOptionalEnv('ADMIN_CONTACT_EMAIL', 'admin@example.com'),
     adminContactName: getOptionalEnv('ADMIN_CONTACT_NAME', 'Administrator'),
+  },
+  rateLimit: {
+    auth: {
+      windowMs: getOptionalNumericEnv('RATE_LIMIT_AUTH_WINDOW_MS', 900000), // 15 minutes
+      maxRequests: getOptionalNumericEnv('RATE_LIMIT_AUTH_MAX', 10), // 10 requests per window
+    },
+    jwt: {
+      windowMs: getOptionalNumericEnv('RATE_LIMIT_JWT_WINDOW_MS', 900000), // 15 minutes
+      maxRequests: getOptionalNumericEnv('RATE_LIMIT_JWT_MAX', 100), // 100 requests per window
+    },
+    githubToken: {
+      windowMs: getOptionalNumericEnv('RATE_LIMIT_GITHUB_TOKEN_WINDOW_MS', 3600000), // 1 hour
+      maxRequests: getOptionalNumericEnv('RATE_LIMIT_GITHUB_TOKEN_MAX', 1000), // 1000 requests per hour
+    },
+  },
+  cookies: {
+    httpOnly: getOptionalBooleanEnv('COOKIE_HTTP_ONLY', true),
+    secure: getOptionalBooleanEnv('COOKIE_SECURE', process.env.NODE_ENV === 'production'),
+    sameSite: (() => {
+      const value = getOptionalEnv('COOKIE_SAME_SITE', 'strict');
+      if (!['strict', 'lax', 'none'].includes(value)) {
+        throw new Error(`Invalid COOKIE_SAME_SITE value: "${value}". Must be 'strict', 'lax', or 'none'.`);
+      }
+      return value as 'strict' | 'lax' | 'none';
+    })(),
   },
 };
 

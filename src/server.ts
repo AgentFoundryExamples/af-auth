@@ -17,6 +17,7 @@ import pinoHttp from 'pino-http';
 import { config } from './config';
 import logger from './utils/logger';
 import db from './db';
+import { sanitizeRequestBody } from './middleware/validation';
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +25,9 @@ const server = http.createServer(app);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Sanitize request body to prevent prototype pollution
+app.use(sanitizeRequestBody);
 
 // HTTP request logging
 app.use(

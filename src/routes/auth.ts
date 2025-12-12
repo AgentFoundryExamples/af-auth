@@ -31,6 +31,7 @@ import { LoginPage } from '../pages/login';
 import { UnauthorizedPage } from '../pages/unauthorized';
 import { TokenReadyPage } from '../pages/token-ready';
 import { ErrorPage } from '../pages/error';
+import { authRateLimiter } from '../middleware/rate-limit';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ function renderPage(component: React.ReactElement): string {
  * GET /auth/github
  * Initiates OAuth flow by redirecting to GitHub authorization page
  */
-router.get('/github', async (_req: Request, res: Response) => {
+router.get('/github', authRateLimiter, async (_req: Request, res: Response) => {
   try {
     logger.info('Initiating GitHub OAuth flow');
     
@@ -84,7 +85,7 @@ router.get('/github', async (_req: Request, res: Response) => {
  * GET /auth/github/callback
  * Handles OAuth callback from GitHub
  */
-router.get('/github/callback', async (req: Request, res: Response) => {
+router.get('/github/callback', authRateLimiter, async (req: Request, res: Response) => {
   const { code, state, error, error_description } = req.query;
   
   try {
