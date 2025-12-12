@@ -906,6 +906,10 @@
       "target": "src/services/redis-client.ts"
     },
     {
+      "source": "src/server.test.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
       "source": "src/server.ts",
       "target": "src/config/index.ts"
     },
@@ -995,7 +999,15 @@
     },
     {
       "source": "src/services/health-check.test.ts",
+      "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
       "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
+      "target": "src/utils/logger.ts"
     },
     {
       "source": "src/services/health-check.ts",
@@ -1012,6 +1024,10 @@
     {
       "source": "src/services/health-check.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/health-check.ts",
+      "target": "src/services/metrics.ts"
     },
     {
       "source": "src/services/jwt.test.ts",

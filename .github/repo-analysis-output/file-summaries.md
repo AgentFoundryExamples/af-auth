@@ -281,8 +281,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.76 KB  
-**LOC:** 152  
+**Size:** 8.30 KB  
+**LOC:** 161  
 **TODOs/FIXMEs:** 0  
 
 ## src/server.ts
@@ -335,8 +335,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 15.88 KB  
-**LOC:** 316  
+**Size:** 23.50 KB  
+**LOC:** 455  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/health-check.ts
@@ -344,8 +344,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 12.80 KB  
-**LOC:** 374  
+**Size:** 17.06 KB  
+**LOC:** 480  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.test.ts
