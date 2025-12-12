@@ -125,9 +125,9 @@ gcloud artifacts repositories list --location=${REGION}
 
 ## Building and Pushing Container
 
-### 1. Create Dockerfile
+### 1. Dockerfile
 
-Create a production-ready Dockerfile in the project root:
+The project includes a production-ready Dockerfile. If you need to create or customize it, here's the recommended structure:
 
 ```dockerfile
 FROM node:18-alpine AS builder

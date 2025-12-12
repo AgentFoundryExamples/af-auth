@@ -18,7 +18,7 @@ This guide provides operational runbooks for managing the AF Auth service, inclu
 
 Regularly verify service health:
 
-\`\`\`bash
+```bash
 # Check service health
 export SERVICE_URL=$(gcloud run services describe af-auth \
   --region=us-central1 \
@@ -37,11 +37,11 @@ curl ${SERVICE_URL}/health
 #     "healthy": true
 #   }
 # }
-\`\`\`
+```
 
 ### Service Status Check
 
-\`\`\`bash
+```bash
 # Check Cloud Run service status
 gcloud run services describe af-auth \
   --region=us-central1 \
@@ -56,11 +56,11 @@ gcloud run revisions list \
 gcloud run services describe af-auth \
   --region=us-central1 \
   --format='get(status.traffic)'
-\`\`\`
+```
 
 ### Database Status
 
-\`\`\`bash
+```bash
 # Check Cloud SQL instance
 gcloud sql instances describe af-auth-db \
   --format='value(state)'
@@ -71,7 +71,7 @@ gcloud sql instances describe af-auth-db \
 
 # View recent operations
 gcloud sql operations list --instance=af-auth-db --limit=10
-\`\`\`
+```
 
 ## Logging and Monitoring
 
@@ -79,7 +79,7 @@ gcloud sql operations list --instance=af-auth-db --limit=10
 
 #### Viewing Logs
 
-\`\`\`bash
+```bash
 # Real-time logs
 gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=af-auth" \
   --format=json \
@@ -94,11 +94,11 @@ gcloud logging read "resource.type=cloud_run_revision \
   AND timestamp>="2024-12-11T00:00:00Z" \
   AND timestamp<="2024-12-11T23:59:59Z"" \
   --format=json
-\`\`\`
+```
 
 #### Key Log Queries
 
-\`\`\`bash
+```bash
 # Authentication failures
 gcloud logging read 'jsonPayload.action="authentication_failed"' \
   --limit=20 \
@@ -115,13 +115,13 @@ gcloud logging read 'severity>=WARNING AND textPayload=~"database"' \
 # OAuth flow completions
 gcloud logging read 'jsonPayload.msg="User authenticated successfully"' \
   --limit=100
-\`\`\`
+```
 
 ### Severity Levels and Filtering
 
 Configure log ingestion with severity filters to reduce noise and costs:
 
-\`\`\`bash
+```bash
 # Create log sink for ERROR and above
 gcloud logging sinks create af-auth-errors \
   bigquery.googleapis.com/projects/PROJECT_ID/datasets/af_auth_errors \
@@ -134,7 +134,7 @@ gcloud logging sinks create af-auth-audit \
   bigquery.googleapis.com/projects/PROJECT_ID/datasets/af_auth_audit \
   --log-filter='resource.type="cloud_run_revision"
     AND jsonPayload.action!=""'
-\`\`\`
+```
 
 ### Sensitive Data Redaction
 
@@ -152,18 +152,18 @@ The service automatically redacts sensitive fields in logs:
 
 Verify redaction is working:
 
-\`\`\`bash
+```bash
 # Should see [REDACTED] for sensitive fields
 gcloud logging read 'jsonPayload.githubAccessToken!=""' \
   --limit=1 \
   --format=json
-\`\`\`
+```
 
 ### Monitoring Dashboards
 
 Create custom dashboards for key metrics:
 
-\`\`\`bash
+```bash
 # View request count
 gcloud monitoring time-series list \
   --filter='metric.type="run.googleapis.com/request_count"
@@ -181,13 +181,13 @@ gcloud monitoring time-series list \
   --filter='metric.type="run.googleapis.com/container/instance_count"
     AND resource.labels.service_name="af-auth"' \
   --format=json
-\`\`\`
+```
 
 ### Alerting
 
 Configure alerts for critical metrics:
 
-\`\`\`bash
+```bash
 # Create error rate alert
 gcloud alpha monitoring policies create \
   --notification-channels=CHANNEL_ID \
@@ -203,7 +203,7 @@ gcloud alpha monitoring policies create \
   --condition-display-name="P95 latency > 2 seconds" \
   --condition-threshold-value=2000 \
   --condition-threshold-duration=300s
-\`\`\`
+```
 
 ## Whitelist Management
 
@@ -213,7 +213,7 @@ Before users attempt to authenticate, pre-load them into the whitelist:
 
 #### Option A: Using Prisma Studio (Development)
 
-\`\`\`bash
+```bash
 # Start Prisma Studio
 npm run db:studio
 
@@ -223,11 +223,11 @@ npm run db:studio
 # - is_whitelisted: true
 # - created_at: now()
 # - updated_at: now()
-\`\`\`
+```
 
 #### Option B: Using SQL (Production)
 
-\`\`\`bash
+```bash
 # Connect via Cloud SQL Proxy
 cloud_sql_proxy -instances=PROJECT:REGION:af-auth-db=tcp:5432
 
@@ -246,13 +246,13 @@ ON CONFLICT (github_user_id) DO UPDATE
 SET is_whitelisted = true,
     updated_at = NOW();
 EOFSQL
-\`\`\`
+```
 
 #### Option C: Using Management Script
 
 Create a management script `scripts/manage-whitelist.ts`:
 
-\`\`\`typescript
+```typescript
 import { prisma } from '../src/db';
 
 async function whitelistUser(githubUserId: number) {
@@ -268,7 +268,7 @@ async function whitelistUser(githubUserId: number) {
     }
   });
   
-  console.log(\`User \${user.id} whitelisted (GitHub ID: \${githubUserId})\`);
+  console.log(`User \${user.id} whitelisted (GitHub ID: \${githubUserId})`);
   return user;
 }
 
@@ -281,7 +281,7 @@ async function revokeUser(githubUserId: number) {
     }
   });
   
-  console.log(\`User \${user.id} revoked (GitHub ID: \${githubUserId})\`);
+  console.log(`User \${user.id} revoked (GitHub ID: \${githubUserId})`);
   return user;
 }
 
@@ -296,7 +296,7 @@ async function listWhitelisted() {
     }
   });
   
-  console.log(\`Whitelisted users: \${users.length}\`);
+  console.log(`Whitelisted users: \${users.length}`);
   console.table(users);
 }
 
@@ -319,21 +319,21 @@ switch (command) {
 }
 
 await prisma.\$disconnect();
-\`\`\`
+```
 
 Add to `package.json`:
 
-\`\`\`json
+```json
 {
   "scripts": {
     "whitelist": "tsx scripts/manage-whitelist.ts"
   }
 }
-\`\`\`
+```
 
 Usage:
 
-\`\`\`bash
+```bash
 # Whitelist a user
 npm run whitelist -- add 12345678
 
@@ -342,13 +342,13 @@ npm run whitelist -- revoke 12345678
 
 # List all whitelisted users
 npm run whitelist -- list
-\`\`\`
+```
 
 ### Post-Authentication Whitelisting
 
 After a user has authenticated (but is not whitelisted):
 
-\`\`\`bash
+```bash
 # Find user by GitHub ID
 psql -h localhost -U postgres -d af_auth << 'EOFSQL'
 SELECT id, github_user_id, is_whitelisted, created_at
@@ -363,7 +363,7 @@ SET is_whitelisted = true,
     updated_at = NOW()
 WHERE github_user_id = 12345678;
 EOFSQL
-\`\`\`
+```
 
 The user will be whitelisted on their next authentication attempt.
 
@@ -371,7 +371,7 @@ The user will be whitelisted on their next authentication attempt.
 
 Whitelist multiple users from a CSV file:
 
-\`\`\`bash
+```bash
 # Create CSV file: whitelist.csv
 # github_user_id
 # 12345678
@@ -393,13 +393,13 @@ SET is_whitelisted = true,
 
 DROP TABLE temp_whitelist;
 EOFSQL
-\`\`\`
+```
 
 ### Whitelist Audit Trail
 
 Query whitelist changes:
 
-\`\`\`bash
+```bash
 # View recent whitelist grants
 gcloud logging read 'jsonPayload.isWhitelisted=true
   AND jsonPayload.msg="User authenticated successfully"' \
@@ -414,7 +414,7 @@ WHERE is_whitelisted = true
   AND updated_at > NOW() - INTERVAL '7 days'
 ORDER BY updated_at DESC;
 EOFSQL
-\`\`\`
+```
 
 ## Service Registry Operations
 
@@ -422,7 +422,7 @@ EOFSQL
 
 Use the CLI tool to register downstream services:
 
-\`\`\`bash
+```bash
 # Add a new service
 npm run service-registry -- add my-service \
   --description "Analytics pipeline service"
@@ -430,43 +430,43 @@ npm run service-registry -- add my-service \
 # Output includes API key - save securely!
 # Service ID: 550e8400-e29b-41d4-a716-446655440000
 # API Key: 3f7a4b2c9d1e8f6a5b3c7d9e1f2a4b6c8d0e1f3a5b7c9d1e3f5a7b9c1d3e5f7a
-\`\`\`
+```
 
 ### Rotating Service API Keys
 
-\`\`\`bash
+```bash
 # Rotate API key for a service
 npm run service-registry -- rotate my-service
 
 # Output provides new API key
 # Update downstream service configuration immediately
-\`\`\`
+```
 
 ### Deactivating Services
 
-\`\`\`bash
+```bash
 # Deactivate service (prevents API access)
 npm run service-registry -- deactivate my-service
 
 # Reactivate
 npm run service-registry -- activate my-service
-\`\`\`
+```
 
 ### Listing Services
 
-\`\`\`bash
+```bash
 # List all services
 npm run service-registry -- list
 
 # List active services only
 npm run service-registry -- list --active
-\`\`\`
+```
 
 ### Service Usage Audit
 
 Query service registry access logs:
 
-\`\`\`bash
+```bash
 # View service access attempts
 gcloud logging read 'jsonPayload.action="service_registry_access"' \
   --limit=100 \
@@ -479,11 +479,11 @@ gcloud logging read 'jsonPayload.action="service_auth_failed"' \
 # Access by specific service
 gcloud logging read 'jsonPayload.serviceId="550e8400-e29b-41d4-a716-446655440000"' \
   --limit=100
-\`\`\`
+```
 
 Database audit log query:
 
-\`\`\`sql
+```sql
 -- Recent service access
 SELECT 
   sal.created_at,
@@ -510,7 +510,7 @@ WHERE sal.success = false
   AND sal.created_at > NOW() - INTERVAL '7 days'
 GROUP BY sr.service_identifier
 ORDER BY failed_attempts DESC;
-\`\`\`
+```
 
 ## Backup and Recovery
 
@@ -518,7 +518,7 @@ ORDER BY failed_attempts DESC;
 
 #### Automated Backups
 
-\`\`\`bash
+```bash
 # Enable automated backups
 gcloud sql instances patch af-auth-db \
   --backup-start-time=02:00 \
@@ -530,11 +530,11 @@ gcloud sql backups list --instance=af-auth-db
 
 # Verify latest backup
 gcloud sql backups describe BACKUP_ID --instance=af-auth-db
-\`\`\`
+```
 
 #### Manual Backups
 
-\`\`\`bash
+```bash
 # Create on-demand backup before risky operation
 gcloud sql backups create \
   --instance=af-auth-db \
@@ -544,11 +544,11 @@ gcloud sql backups create \
 gcloud sql export sql af-auth-db \
   gs://PROJECT_ID-backups/af-auth-$(date +%Y%m%d-%H%M%S).sql \
   --database=af_auth
-\`\`\`
+```
 
 #### Restoring from Backup
 
-\`\`\`bash
+```bash
 # List available backups
 gcloud sql backups list --instance=af-auth-db
 
@@ -561,11 +561,11 @@ gcloud sql backups restore BACKUP_ID \
 gcloud sql import sql af-auth-db \
   gs://PROJECT_ID-backups/af-auth-20241211-120000.sql \
   --database=af_auth
-\`\`\`
+```
 
 ### Configuration Backups
 
-\`\`\`bash
+```bash
 # Export Cloud Run service configuration
 gcloud run services describe af-auth \
   --region=us-central1 \
@@ -577,13 +577,13 @@ gcloud secrets list --format=yaml > secrets-backup.yaml
 # Export IAM policies
 gcloud projects get-iam-policy PROJECT_ID \
   --format=yaml > iam-policies-backup.yaml
-\`\`\`
+```
 
 ### Disaster Recovery
 
 Full recovery procedure:
 
-\`\`\`bash
+```bash
 # 1. Restore database from backup
 gcloud sql backups restore LATEST_BACKUP_ID \
   --backup-instance=af-auth-db \
@@ -600,7 +600,7 @@ gcloud run services replace af-auth-config-backup.yaml \
 curl $(gcloud run services describe af-auth --region=us-central1 --format='value(status.url)')/health
 
 # 5. Test OAuth flow end-to-end
-\`\`\`
+```
 
 ## Performance Tuning
 
@@ -608,7 +608,7 @@ curl $(gcloud run services describe af-auth --region=us-central1 --format='value
 
 Adjust pool size based on traffic:
 
-\`\`\`bash
+```bash
 # For low traffic (default)
 gcloud run services update af-auth \
   --region=us-central1 \
@@ -618,13 +618,13 @@ gcloud run services update af-auth \
 gcloud run services update af-auth \
   --region=us-central1 \
   --set-env-vars="DB_POOL_MIN=5,DB_POOL_MAX=25"
-\`\`\`
+```
 
 ### Instance Sizing
 
 Adjust Cloud Run resources:
 
-\`\`\`bash
+```bash
 # Increase memory and CPU for better performance
 gcloud run services update af-auth \
   --region=us-central1 \
@@ -635,13 +635,13 @@ gcloud run services update af-auth \
 gcloud run services update af-auth \
   --region=us-central1 \
   --concurrency=100  # Higher = fewer instances, lower = more isolation
-\`\`\`
+```
 
 ### Cold Start Optimization
 
 Reduce cold starts:
 
-\`\`\`bash
+```bash
 # Set minimum instances (keeps service warm)
 gcloud run services update af-auth \
   --region=us-central1 \
@@ -651,13 +651,13 @@ gcloud run services update af-auth \
 gcloud logging read 'jsonPayload.message=~"Starting server"' \
   --limit=50 \
   --format=json
-\`\`\`
+```
 
 ### Database Query Optimization
 
 Monitor slow queries:
 
-\`\`\`sql
+```sql
 -- Enable pg_stat_statements
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
@@ -675,13 +675,13 @@ LIMIT 20;
 -- Add indexes if needed
 CREATE INDEX idx_users_github_id ON users(github_user_id);
 CREATE INDEX idx_service_audit_logs_created_at ON service_audit_logs(created_at);
-\`\`\`
+```
 
 ## Troubleshooting
 
 ### High Error Rate
 
-\`\`\`bash
+```bash
 # Check error distribution
 gcloud logging read 'severity>=ERROR' \
   --limit=100 \
@@ -692,11 +692,11 @@ gcloud logging read 'severity>=ERROR' \
 # 2. Invalid GitHub OAuth configuration
 # 3. Secret access denied
 # 4. Memory/CPU exhaustion
-\`\`\`
+```
 
 ### Authentication Failures
 
-\`\`\`bash
+```bash
 # View failed authentications
 gcloud logging read 'jsonPayload.msg="Authentication failed"' \
   --limit=50 \
@@ -710,11 +710,11 @@ gcloud logging read 'jsonPayload.msg="Authentication failed"' \
 
 # Test OAuth flow manually
 curl "https://SERVICE_URL/auth/github"
-\`\`\`
+```
 
 ### Database Connection Issues
 
-\`\`\`bash
+```bash
 # Check Cloud SQL status
 gcloud sql instances describe af-auth-db
 
@@ -730,11 +730,11 @@ gcloud secrets versions access latest --secret=database-url
 psql -h localhost -U postgres -d af_auth << 'EOFSQL'
 SELECT count(*) FROM pg_stat_activity WHERE datname = 'af_auth';
 EOFSQL
-\`\`\`
+```
 
 ### High Latency
 
-\`\`\`bash
+```bash
 # Check request latency distribution
 gcloud monitoring time-series list \
   --filter='metric.type="run.googleapis.com/request_latencies"
@@ -754,11 +754,11 @@ gcloud logging read 'httpRequest.latency>"2s"' \
 # 1. Increase min-instances to reduce cold starts
 # 2. Optimize database queries
 # 3. Increase CPU/memory allocation
-\`\`\`
+```
 
 ### Memory Issues
 
-\`\`\`bash
+```bash
 # Check for OOM kills (exit code 137)
 gcloud logging read 'severity>=ERROR AND textPayload=~"137"' \
   --limit=20
@@ -772,11 +772,11 @@ gcloud monitoring time-series list \
 gcloud run services update af-auth \
   --region=us-central1 \
   --memory=1Gi
-\`\`\`
+```
 
 ### Service Won't Deploy
 
-\`\`\`bash
+```bash
 # Check deployment logs
 gcloud logging read 'resource.type="cloud_run_revision"
   AND resource.labels.service_name="af-auth"
@@ -794,7 +794,7 @@ gcloud secrets list
 
 # Verify service account has permissions
 gcloud secrets get-iam-policy database-url
-\`\`\`
+```
 
 ## References
 
