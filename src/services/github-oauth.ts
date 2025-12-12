@@ -212,6 +212,64 @@ export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
 }
 
 /**
+ * Refresh an expired GitHub access token using a refresh token
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<GitHubTokenResponse> {
+  try {
+    logger.info('Refreshing GitHub access token');
+    
+    const response = await axios.post<GitHubTokenResponse>(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: config.github.clientId,
+        client_secret: config.github.clientSecret,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
+    
+    if (!response.data.access_token) {
+      throw new Error('No access token in GitHub refresh response');
+    }
+    
+    logger.info('Successfully refreshed access token');
+    
+    return response.data;
+  } catch (error) {
+    logger.error({ error }, 'Failed to refresh access token');
+    throw new Error('Failed to refresh GitHub access token');
+  }
+}
+
+/**
+ * Check if a token is expired or will expire soon
+ * @param expiresAt Token expiration date
+ * @param thresholdSeconds Time in seconds before expiry to consider token as "expiring soon"
+ * @returns true if token is expired or expiring soon, false otherwise
+ */
+export function isTokenExpiringSoon(
+  expiresAt: Date | null,
+  thresholdSeconds: number = 3600
+): boolean {
+  if (!expiresAt) {
+    // If no expiration date, consider it as not expiring (legacy tokens)
+    return false;
+  }
+  
+  const now = Date.now();
+  const expiryTime = expiresAt.getTime();
+  const thresholdMs = thresholdSeconds * 1000;
+  
+  // Token is expiring soon if it expires within the threshold
+  return (expiryTime - now) <= thresholdMs;
+}
+
+/**
  * Calculate token expiration date
  */
 export function calculateTokenExpiration(expiresIn?: number): Date | null {

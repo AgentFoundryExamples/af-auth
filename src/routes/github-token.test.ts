@@ -36,12 +36,40 @@ jest.mock('../utils/logger', () => {
 // Mock the service registry
 jest.mock('../services/service-registry');
 
+// Mock the github-oauth service
+jest.mock('../services/github-oauth');
+
+// Mock encryption utilities
+jest.mock('../utils/encryption', () => ({
+  encryptGitHubToken: jest.fn(async (token) => {
+    if (token === null) return null;
+    return `encrypted_${token}`;
+  }),
+  decryptGitHubToken: jest.fn(async (token) => {
+    if (token === null) return null;
+    if (typeof token === 'string' && token.startsWith('encrypted_')) {
+      return token.replace('encrypted_', '');
+    }
+    return token;
+  }),
+}));
+
 // Mock the database
 jest.mock('../db', () => ({
   prisma: {
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
+    $transaction: jest.fn(async (callback) => {
+      // Execute the transaction callback with the mocked prisma client
+      return callback({
+        user: {
+          findUnique: jest.fn(),
+          update: jest.fn(),
+        },
+      });
+    }),
   },
 }));
 
@@ -49,8 +77,10 @@ import request from 'supertest';
 import { app } from '../server';
 import { prisma } from '../db';
 import * as serviceRegistry from '../services/service-registry';
+import * as githubOAuth from '../services/github-oauth';
 
 const mockServiceRegistry = serviceRegistry as jest.Mocked<typeof serviceRegistry>;
+const mockGitHubOAuth = githubOAuth as jest.Mocked<typeof githubOAuth>;
 
 describe('GitHub Token Routes', () => {
   beforeEach(() => {
@@ -581,6 +611,195 @@ describe('GitHub Token Routes', () => {
           })
         );
       });
+    });
+  });
+
+  describe('Token Refresh', () => {
+    beforeEach(() => {
+      mockServiceRegistry.authenticateService.mockResolvedValue({
+        authenticated: true,
+        service: {
+          id: 'service-id',
+          serviceIdentifier: 'test-service',
+          allowedScopes: [],
+          isActive: true,
+          description: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastUsedAt: null,
+        },
+      });
+      mockServiceRegistry.logServiceAccess.mockResolvedValue();
+    });
+
+    it('should refresh token when expiring soon', async () => {
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Expires in 30 minutes
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        githubUserId: BigInt(12345678),
+        githubAccessToken: 'encrypted_old_token',
+        githubRefreshToken: 'encrypted_refresh_token',
+        githubTokenExpiresAt: expiresAt,
+        isWhitelisted: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedUser = {
+        ...mockUser,
+        githubAccessToken: 'encrypted_new_token',
+        githubRefreshToken: 'encrypted_new_refresh_token',
+        githubTokenExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      mockGitHubOAuth.isTokenExpiringSoon.mockReturnValue(true);
+      mockGitHubOAuth.refreshAccessToken.mockResolvedValue({
+        access_token: 'new_access_token',
+        token_type: 'bearer',
+        scope: 'user:email',
+        refresh_token: 'new_refresh_token',
+        expires_in: 28800, // 8 hours
+      });
+      mockGitHubOAuth.calculateTokenExpiration.mockReturnValue(
+        new Date(Date.now() + 8 * 60 * 60 * 1000)
+      );
+
+      // Mock the transaction to execute the callback with mock transaction client
+      (prisma.$transaction as jest.Mock).mockImplementation(async (callback) => {
+        const txMockUser = {
+          ...mockUser,
+          githubAccessToken: 'encrypted_old_token',
+          githubRefreshToken: 'encrypted_refresh_token',
+          githubTokenExpiresAt: expiresAt,
+        };
+        
+        const txClient = {
+          user: {
+            findUnique: jest.fn().mockResolvedValue(txMockUser),
+            update: jest.fn().mockResolvedValue(updatedUser),
+          },
+        };
+        
+        return callback(txClient);
+      });
+
+      const response = await request(app)
+        .post('/api/github-token')
+        .set('Authorization', 'Bearer test-service:test-api-key')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200);
+
+      expect(mockGitHubOAuth.isTokenExpiringSoon).toHaveBeenCalled();
+      expect(mockGitHubOAuth.refreshAccessToken).toHaveBeenCalled();
+      expect(response.body.token).toBeDefined();
+    });
+
+    it('should not refresh token when not expiring soon', async () => {
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expires in 24 hours
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        githubUserId: BigInt(12345678),
+        githubAccessToken: 'encrypted_token',
+        githubRefreshToken: 'encrypted_refresh_token',
+        githubTokenExpiresAt: expiresAt,
+        isWhitelisted: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      mockGitHubOAuth.isTokenExpiringSoon.mockReturnValue(false);
+
+      const response = await request(app)
+        .post('/api/github-token')
+        .set('Authorization', 'Bearer test-service:test-api-key')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200);
+
+      expect(mockGitHubOAuth.isTokenExpiringSoon).toHaveBeenCalled();
+      expect(mockGitHubOAuth.refreshAccessToken).not.toHaveBeenCalled();
+      expect(response.body.token).toBeDefined();
+    });
+
+    it('should handle refresh failure gracefully and return existing token if not expired', async () => {
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Expires in 30 minutes
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        githubUserId: BigInt(12345678),
+        githubAccessToken: 'encrypted_token',
+        githubRefreshToken: 'encrypted_refresh_token',
+        githubTokenExpiresAt: expiresAt,
+        isWhitelisted: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      mockGitHubOAuth.isTokenExpiringSoon.mockReturnValue(true);
+      
+      // Mock the transaction to throw an error simulating refresh failure
+      (prisma.$transaction as jest.Mock).mockRejectedValue(new Error('GitHub API error'));
+
+      const response = await request(app)
+        .post('/api/github-token')
+        .set('Authorization', 'Bearer test-service:test-api-key')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200);
+
+      expect(response.body.token).toBeDefined();
+    });
+
+    it('should return error when refresh fails and token is already expired', async () => {
+      const expiresAt = new Date(Date.now() - 60 * 1000); // Expired 1 minute ago
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        githubUserId: BigInt(12345678),
+        githubAccessToken: 'encrypted_token',
+        githubRefreshToken: 'encrypted_refresh_token',
+        githubTokenExpiresAt: expiresAt,
+        isWhitelisted: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      mockGitHubOAuth.isTokenExpiringSoon.mockReturnValue(true);
+      mockGitHubOAuth.refreshAccessToken.mockRejectedValue(new Error('GitHub API error'));
+
+      const response = await request(app)
+        .post('/api/github-token')
+        .set('Authorization', 'Bearer test-service:test-api-key')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(503);
+
+      expect(response.body.error).toBe('TOKEN_REFRESH_FAILED');
+    });
+
+    it('should not attempt refresh when no refresh token available', async () => {
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // Expires in 30 minutes
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        githubUserId: BigInt(12345678),
+        githubAccessToken: 'encrypted_token',
+        githubRefreshToken: null, // No refresh token
+        githubTokenExpiresAt: expiresAt,
+        isWhitelisted: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+      mockGitHubOAuth.isTokenExpiringSoon.mockReturnValue(true);
+
+      const response = await request(app)
+        .post('/api/github-token')
+        .set('Authorization', 'Bearer test-service:test-api-key')
+        .send({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200);
+
+      expect(mockGitHubOAuth.refreshAccessToken).not.toHaveBeenCalled();
+      expect(response.body.token).toBeDefined();
     });
   });
 });

@@ -15,7 +15,9 @@ import { Router, Request, Response } from 'express';
 import logger from '../utils/logger';
 import { prisma } from '../db';
 import { authenticateService, logServiceAccess } from '../services/service-registry';
-import { decryptGitHubToken } from '../utils/encryption';
+import { decryptGitHubToken, encryptGitHubToken } from '../utils/encryption';
+import { refreshAccessToken, isTokenExpiringSoon, calculateTokenExpiration } from '../services/github-oauth';
+import { config } from '../config';
 
 const router = Router();
 
@@ -232,6 +234,129 @@ router.post('/github-token', async (req: Request, res: Response) => {
       }
     );
     
+    // Check if token needs to be refreshed
+    let accessToken: string = user.githubAccessToken; // We know it's not null because we checked earlier
+    let refreshToken = user.githubRefreshToken;
+    let tokenExpiresAt = user.githubTokenExpiresAt;
+    
+    if (
+      isTokenExpiringSoon(tokenExpiresAt, config.github.tokenRefreshThresholdSeconds) &&
+      refreshToken
+    ) {
+      logger.info(
+        { userId: user.id, expiresAt: tokenExpiresAt },
+        'GitHub token is expiring soon, attempting refresh'
+      );
+      
+      try {
+        // Use a transaction to prevent race conditions from concurrent refresh attempts
+        const refreshResult = await prisma.$transaction(async (tx) => {
+          // Re-fetch user within transaction to ensure we have the latest token state
+          const userInTx = await tx.user.findUnique({
+            where: { id: user.id },
+            select: {
+              githubAccessToken: true,
+              githubRefreshToken: true,
+              githubTokenExpiresAt: true,
+            },
+          });
+          
+          if (!userInTx || !userInTx.githubRefreshToken) {
+            throw new Error('User or refresh token not found in transaction');
+          }
+          
+          // Check again if refresh is still needed (another request might have refreshed it)
+          if (!isTokenExpiringSoon(userInTx.githubTokenExpiresAt, config.github.tokenRefreshThresholdSeconds)) {
+            // Token was already refreshed by another request, use the updated token
+            return {
+              accessToken: userInTx.githubAccessToken,
+              refreshToken: userInTx.githubRefreshToken,
+              tokenExpiresAt: userInTx.githubTokenExpiresAt,
+              wasRefreshed: false,
+            };
+          }
+          
+          // Decrypt the refresh token
+          const decryptedRefreshToken = await decryptGitHubToken(userInTx.githubRefreshToken);
+          
+          if (!decryptedRefreshToken) {
+            throw new Error('Refresh token decryption failed');
+          }
+          
+          // Refresh the access token
+          const tokenResponse = await refreshAccessToken(decryptedRefreshToken);
+          
+          // Calculate new expiration
+          const newExpiresAt = calculateTokenExpiration(tokenResponse.expires_in);
+          
+          // Encrypt new tokens
+          const encryptedAccessToken = await encryptGitHubToken(tokenResponse.access_token);
+          // If GitHub returns a new refresh token, use it; otherwise keep the existing encrypted one
+          const encryptedRefreshToken = tokenResponse.refresh_token
+            ? await encryptGitHubToken(tokenResponse.refresh_token)
+            : userInTx.githubRefreshToken; // Keep existing encrypted refresh token
+          
+          if (!encryptedAccessToken) {
+            throw new Error('Failed to encrypt new access token');
+          }
+          
+          // Update user record with new tokens atomically
+          const updatedUser = await tx.user.update({
+            where: { id: user.id },
+            data: {
+              githubAccessToken: encryptedAccessToken,
+              githubRefreshToken: encryptedRefreshToken,
+              githubTokenExpiresAt: newExpiresAt,
+            },
+          });
+          
+          return {
+            accessToken: updatedUser.githubAccessToken,
+            refreshToken: updatedUser.githubRefreshToken,
+            tokenExpiresAt: updatedUser.githubTokenExpiresAt,
+            wasRefreshed: true,
+          };
+        });
+        
+        // Use the refreshed tokens
+        if (refreshResult.accessToken) {
+          accessToken = refreshResult.accessToken;
+          refreshToken = refreshResult.refreshToken;
+          tokenExpiresAt = refreshResult.tokenExpiresAt;
+          
+          if (refreshResult.wasRefreshed) {
+            logger.info(
+              { userId: user.id, newExpiresAt: tokenExpiresAt },
+              'Successfully refreshed GitHub token'
+            );
+          } else {
+            logger.info(
+              { userId: user.id },
+              'Token already refreshed by concurrent request'
+            );
+          }
+        }
+      } catch (error) {
+        // Log the error but don't fail the request - return the existing token
+        // Sanitize error message to avoid exposing sensitive information
+        const errorType = error instanceof Error ? error.constructor.name : 'UnknownError';
+        logger.error(
+          { userId: user.id, errorType },
+          'Failed to refresh GitHub token, returning existing token'
+        );
+        
+        // If the existing token is already expired, return an error
+        if (tokenExpiresAt && new Date() > tokenExpiresAt) {
+          return res.status(503).json({
+            error: 'TOKEN_REFRESH_FAILED',
+            message: 'GitHub token has expired and refresh failed. Please re-authenticate.',
+          });
+        }
+        
+        // Otherwise, continue with the existing token
+      }
+    }
+    
     const duration = Date.now() - startTime;
     logger.info(
       { serviceId: service.id, userId: user.id, duration },
@@ -239,12 +364,20 @@ router.post('/github-token', async (req: Request, res: Response) => {
     );
     
     // Decrypt token before returning
-    const decryptedToken = await decryptGitHubToken(user.githubAccessToken);
+    const decryptedToken = await decryptGitHubToken(accessToken);
+    
+    if (!decryptedToken) {
+      // This should never happen since we checked for githubAccessToken earlier
+      return res.status(500).json({
+        error: 'DECRYPTION_FAILED',
+        message: 'Failed to decrypt GitHub token',
+      });
+    }
     
     // Return token and metadata
     return res.json({
       token: decryptedToken,
-      expiresAt: user.githubTokenExpiresAt?.toISOString() || null,
+      expiresAt: tokenExpiresAt?.toISOString() || null,
       user: {
         id: user.id,
         githubUserId: user.githubUserId.toString(),

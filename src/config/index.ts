@@ -47,6 +47,7 @@ interface Config {
     clientSecret: string;
     callbackUrl: string;
     tokenEncryptionKey: string;
+    tokenRefreshThresholdSeconds: number;
   };
   session: {
     secret: string;
@@ -235,6 +236,15 @@ export const config: Config = {
       `${baseUrl}/auth/github/callback`
     ),
     tokenEncryptionKey: githubTokenEncryptionKey,
+    tokenRefreshThresholdSeconds: (() => {
+      const threshold = getOptionalNumericEnv('GITHUB_TOKEN_REFRESH_THRESHOLD_SECONDS', 3600);
+      if (threshold < 300 || threshold > 7200) {
+        throw new Error(
+          `GITHUB_TOKEN_REFRESH_THRESHOLD_SECONDS must be between 300 and 7200 seconds (got ${threshold})`
+        );
+      }
+      return threshold;
+    })(),
   },
   session: {
     secret: getRequiredEnv('SESSION_SECRET'),
