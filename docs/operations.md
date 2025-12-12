@@ -17,7 +17,11 @@ This guide provides operational runbooks for managing the AF Auth service, inclu
 
 ### Health Check Verification
 
-Regularly verify service health:
+The service provides three health endpoints for monitoring and orchestration:
+
+#### `/health` - Comprehensive Health Check
+
+Returns detailed status of all components. Use this for monitoring dashboards and alerts.
 
 ```bash
 # Check service health
@@ -27,18 +31,290 @@ export SERVICE_URL=$(gcloud run services describe af-auth \
 
 curl ${SERVICE_URL}/health
 
-# Expected response:
+# Expected response (healthy):
 # {
 #   "status": "healthy",
-#   "timestamp": "2024-12-11T10:30:00.000Z",
+#   "timestamp": "2024-12-12T10:30:00.000Z",
 #   "uptime": 42.5,
 #   "environment": "production",
-#   "database": {
-#     "connected": true,
-#     "healthy": true
+#   "components": {
+#     "database": {
+#       "status": "healthy",
+#       "details": {
+#         "connected": true,
+#         "sslEnabled": true
+#       }
+#     },
+#     "redis": {
+#       "status": "healthy",
+#       "details": {
+#         "connectionStatus": "ready"
+#       }
+#     },
+#     "encryption": {
+#       "status": "healthy",
+#       "details": {
+#         "githubTokenEncryptionKeyLength": 64,
+#         "jwtKeysConfigured": true
+#       }
+#     },
+#     "githubApp": {
+#       "status": "healthy",
+#       "details": {
+#         "appIdConfigured": true,
+#         "privateKeyConfigured": true,
+#         "installationIdConfigured": true
+#       }
+#     }
 #   }
 # }
 ```
+
+**Status Codes:**
+- `200` - Service is healthy or degraded (partially operational)
+- `503` - Service is unhealthy (critical components failing)
+
+**Health States:**
+- `healthy` - All components operational
+- `degraded` - Service operational but some non-critical components failing (e.g., GitHub App)
+- `unhealthy` - Critical components failing (database, Redis, or encryption)
+
+**GitHub App Health Check Caching:**
+
+The GitHub App health check is cached for 60 seconds to avoid rate limiting:
+- Successful checks are cached for 1 minute
+- Failed checks are also cached to prevent API hammering during outages
+- Cache is instance-specific (each Cloud Run instance maintains its own cache)
+- Cache is cleared on service restart or instance replacement
+- This instance-level caching is acceptable since health checks are evaluated per-instance
+
+**Note on GitHub App Validation:**
+
+The health check validates that the GitHub App private key is properly formatted and can sign JWTs. It does NOT make actual GitHub API calls to avoid rate limiting and performance impact. This validates the service's ability to mint installation access tokens when needed. Monitor actual GitHub API connectivity separately through OAuth flow metrics and application logs.
+
+#### `/ready` - Readiness Probe
+
+Cloud Run readiness probe endpoint. Checks if the service is ready to accept traffic.
+
+```bash
+curl ${SERVICE_URL}/ready
+
+# Expected response (ready):
+# {
+#   "status": "ready",
+#   "components": {
+#     "database": "healthy",
+#     "redis": "healthy",
+#     "encryption": "healthy"
+#   }
+# }
+
+# Expected response (not ready):
+# {
+#   "status": "not ready",
+#   "reason": "Unhealthy components: database, redis",
+#   "components": {
+#     "database": "unhealthy",
+#     "redis": "unhealthy",
+#     "encryption": "healthy"
+#   }
+# }
+```
+
+**Status Codes:**
+- `200` - Service is ready
+- `503` - Service is not ready
+
+**Readiness Criteria:**
+- Database must be healthy
+- Redis must be healthy
+- Encryption keys must be configured
+
+Note: GitHub App status does not affect readiness. The service can operate without GitHub App functionality for existing authenticated users.
+
+#### `/live` - Liveness Probe
+
+Cloud Run liveness probe endpoint. Always returns 200 if the process is running.
+
+```bash
+curl ${SERVICE_URL}/live
+
+# Expected response:
+# {
+#   "status": "alive"
+# }
+```
+
+**Status Code:** Always `200`
+
+This endpoint is used by Cloud Run to determine if the container should be restarted. It checks only that the process is responsive, not the health of dependencies.
+
+#### Recommended Cloud Run Probe Settings
+
+Configure Cloud Run health checks in your service YAML:
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: af-auth
+spec:
+  template:
+    spec:
+      containers:
+      - image: gcr.io/PROJECT_ID/af-auth:latest
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+```
+
+**Probe Configuration Guidelines:**
+- **Liveness Probe**: Longer initial delay (10s) to allow for startup, less frequent checks (10s)
+- **Readiness Probe**: Shorter initial delay (5s), more frequent checks (5s) for faster traffic routing
+- **Timeouts**: Keep at 3s to avoid false positives from slow networks
+- **Failure Thresholds**: Readiness can be more sensitive (2) than liveness (3)
+
+#### Health Check Monitoring and Alerts
+
+Set up Cloud Monitoring alerts based on health check results:
+
+```bash
+# Create uptime check
+gcloud monitoring uptime-configs create af-auth-health \
+  --resource-type=uptime-url \
+  --hostname=${SERVICE_URL#https://} \
+  --path=/health \
+  --period=60 \
+  --timeout=10
+
+# Create alert policy for unhealthy status
+gcloud alpha monitoring policies create \
+  --notification-channels=CHANNEL_ID \
+  --display-name="AF Auth - Unhealthy Status" \
+  --condition-display-name="Health check returns 503" \
+  --condition-threshold-value=1 \
+  --condition-threshold-duration=180s \
+  --condition-threshold-filter='resource.type="uptime_url" AND metric.type="monitoring.googleapis.com/uptime_check/check_passed" AND resource.label.check_id="af-auth-health"'
+```
+
+#### Interpreting Health Check Failures
+
+**Database Unhealthy:**
+```json
+{
+  "database": {
+    "status": "unhealthy",
+    "message": "Database is not responding",
+    "details": {
+      "connected": false,
+      "sslEnabled": true
+    }
+  }
+}
+```
+**Actions:**
+1. Check Cloud SQL instance status: `gcloud sql instances describe af-auth-db`
+2. Verify network connectivity and firewall rules
+3. Check database logs for errors
+4. Verify SSL certificates are valid
+
+**Database Degraded (SSL disabled in production):**
+```json
+{
+  "database": {
+    "status": "degraded",
+    "message": "Database SSL is not enabled",
+    "details": {
+      "connected": true,
+      "sslEnabled": false
+    }
+  }
+}
+```
+**Actions:**
+1. Enable SSL in production environment: Set `DB_SSL_ENABLED=true`
+2. Restart the service to apply changes
+3. This is a security concern and should be addressed immediately
+
+**Redis Unhealthy:**
+```json
+{
+  "redis": {
+    "status": "unhealthy",
+    "message": "Redis is not connected",
+    "details": {
+      "connectionStatus": "disconnected"
+    }
+  }
+}
+```
+**Actions:**
+1. Check Redis/Memorystore instance status
+2. Verify network connectivity
+3. Check Redis logs for connection errors
+4. Review Redis configuration (host, port, password)
+5. Monitor for Redis reconnection (automatic with exponential backoff)
+
+**Encryption Unhealthy:**
+```json
+{
+  "encryption": {
+    "status": "unhealthy",
+    "message": "Encryption key not configured"
+  }
+}
+```
+**Actions:**
+1. Verify `GITHUB_TOKEN_ENCRYPTION_KEY` environment variable is set
+2. Ensure key is at least 32 characters
+3. Verify `JWT_PRIVATE_KEY` and `JWT_PUBLIC_KEY` are configured
+4. Restart the service after fixing configuration
+
+**GitHub App Unhealthy:**
+```json
+{
+  "githubApp": {
+    "status": "unhealthy",
+    "message": "GitHub App configuration incomplete"
+  }
+}
+```
+**Actions:**
+1. Verify `GITHUB_APP_ID`, `GITHUB_INSTALLATION_ID`, and `GITHUB_APP_PRIVATE_KEY` are set
+2. Check GitHub App installation is active
+3. Verify private key is valid and properly base64-encoded
+4. Note: This does not affect existing authenticated users, only new OAuth flows
+
+**GitHub App Cached Results:**
+
+When you see `"cached": true` in the GitHub App health check:
+```json
+{
+  "githubApp": {
+    "status": "healthy",
+    "details": {
+      "cached": true,
+      "cacheAge": 45000
+    }
+  }
+}
+```
+This indicates the result is from cache (up to 60 seconds old). To force a fresh check, restart the service or wait for cache expiration.
 
 ### Service Status Check
 
