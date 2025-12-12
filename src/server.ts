@@ -18,6 +18,7 @@ import { config } from './config';
 import logger from './utils/logger';
 import db from './db';
 import { sanitizeRequestBody } from './middleware/validation';
+import { performHealthCheck, performReadinessCheck, HealthStatus } from './services/health-check';
 
 const app = express();
 const server = http.createServer(app);
@@ -47,37 +48,54 @@ app.use(
 
 /**
  * Health check endpoint.
- * Returns service status and database connectivity.
+ * Returns comprehensive service status including all critical components.
+ * Used by Cloud Run health checks and monitoring systems.
  */
 app.get('/health', async (_req: Request, res: Response) => {
-  const dbHealthy = await db.healthCheck();
-  
-  const health = {
-    status: dbHealthy ? 'healthy' : 'unhealthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: config.env,
-    database: {
-      connected: db.connected,
-      healthy: dbHealthy,
-    },
-  };
-
-  const statusCode = dbHealthy ? 200 : 503;
-  res.status(statusCode).json(health);
+  try {
+    const healthResult = await performHealthCheck();
+    
+    // Return 200 for healthy/degraded, 503 for unhealthy
+    const statusCode = healthResult.status === HealthStatus.UNHEALTHY ? 503 : 200;
+    
+    res.status(statusCode).json(healthResult);
+  } catch (error) {
+    logger.error({ error }, 'Health check endpoint error');
+    res.status(503).json({
+      status: HealthStatus.UNHEALTHY,
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+    });
+  }
 });
 
 /**
  * Readiness probe endpoint for Kubernetes/Cloud Run.
  * Checks if the service is ready to accept traffic.
+ * Validates critical components: DB, Redis, encryption keys.
  */
 app.get('/ready', async (_req: Request, res: Response) => {
-  const dbHealthy = await db.healthCheck();
-  
-  if (dbHealthy) {
-    res.status(200).json({ status: 'ready' });
-  } else {
-    res.status(503).json({ status: 'not ready', reason: 'database unavailable' });
+  try {
+    const readinessResult = await performReadinessCheck();
+    
+    if (readinessResult.ready) {
+      res.status(200).json({
+        status: 'ready',
+        components: readinessResult.components,
+      });
+    } else {
+      res.status(503).json({
+        status: 'not ready',
+        reason: readinessResult.reason,
+        components: readinessResult.components,
+      });
+    }
+  } catch (error) {
+    logger.error({ error }, 'Readiness check endpoint error');
+    res.status(503).json({
+      status: 'not ready',
+      reason: 'Readiness check failed',
+    });
   }
 });
 

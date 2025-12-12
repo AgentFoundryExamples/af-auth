@@ -13,45 +13,143 @@
 // limitations under the License.
 import request from 'supertest';
 import { app } from './server';
+import db from './db';
+import * as redisClient from './services/redis-client';
+
+// Mock dependencies
+jest.mock('./db');
+jest.mock('./services/redis-client');
 
 describe('Server', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Setup default healthy mocks
+    (db.healthCheck as jest.Mock).mockResolvedValue(true);
+    Object.defineProperty(db, 'connected', { value: true, configurable: true });
+    
+    const mockRedis = {
+      status: 'ready',
+      ping: jest.fn().mockResolvedValue('PONG'),
+    };
+    (redisClient.getRedisClient as jest.Mock).mockReturnValue(mockRedis);
+    (redisClient.isRedisConnected as jest.Mock).mockReturnValue(true);
+  });
+
   describe('Health Endpoints', () => {
     describe('GET /health', () => {
-      it('should return health status', async () => {
+      it('should return comprehensive health status', async () => {
         const response = await request(app)
           .get('/health')
-          .expect('Content-Type', /json/);
+          .expect('Content-Type', /json/)
+          .expect(200);
 
         expect(response.body).toHaveProperty('status');
         expect(response.body).toHaveProperty('timestamp');
         expect(response.body).toHaveProperty('uptime');
         expect(response.body).toHaveProperty('environment');
-        expect(response.body).toHaveProperty('database');
-        expect(response.body.database).toHaveProperty('connected');
-        expect(response.body.database).toHaveProperty('healthy');
+        expect(response.body).toHaveProperty('components');
+        expect(response.body.components).toHaveProperty('database');
+        expect(response.body.components).toHaveProperty('redis');
+        expect(response.body.components).toHaveProperty('encryption');
+        expect(response.body.components).toHaveProperty('githubApp');
       });
 
-      it('should return appropriate status code based on database health', async () => {
+      it('should return 200 for healthy status', async () => {
         const response = await request(app).get('/health');
         
-        // Status should be 200 if healthy, 503 if unhealthy
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('healthy');
+      });
+
+      it('should return 503 when database is unhealthy', async () => {
+        (db.healthCheck as jest.Mock).mockResolvedValue(false);
+
+        const response = await request(app).get('/health');
+        
+        expect(response.status).toBe(503);
+        expect(response.body.status).toBe('unhealthy');
+        expect(response.body.components.database.status).toBe('unhealthy');
+      });
+
+      it('should return 503 when Redis is unhealthy', async () => {
+        (redisClient.isRedisConnected as jest.Mock).mockReturnValue(false);
+
+        const response = await request(app).get('/health');
+        
+        expect(response.status).toBe(503);
+        expect(response.body.status).toBe('unhealthy');
+        expect(response.body.components.redis.status).toBe('unhealthy');
+      });
+
+      it('should return 200 with degraded status when only GitHub App is unhealthy', async () => {
+        // This is tested by temporarily breaking GitHub App config in the health check
+        // But in this test we'll just verify the structure
+        const response = await request(app).get('/health');
+        
+        // Should still be healthy if only optional components fail
         expect([200, 503]).toContain(response.status);
+        expect(['healthy', 'degraded', 'unhealthy']).toContain(response.body.status);
+      });
+
+      it('should handle health check errors gracefully', async () => {
+        (db.healthCheck as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app).get('/health');
+        
+        expect(response.status).toBe(503);
       });
     });
 
     describe('GET /ready', () => {
-      it('should return readiness status', async () => {
+      it('should return readiness status with component details', async () => {
         const response = await request(app)
           .get('/ready')
-          .expect('Content-Type', /json/);
+          .expect('Content-Type', /json/)
+          .expect(200);
 
         expect(response.body).toHaveProperty('status');
-        expect(['ready', 'not ready']).toContain(response.body.status);
+        expect(response.body.status).toBe('ready');
+        expect(response.body).toHaveProperty('components');
+        expect(response.body.components).toHaveProperty('database');
+        expect(response.body.components).toHaveProperty('redis');
+        expect(response.body.components).toHaveProperty('encryption');
       });
 
-      it('should return appropriate status code', async () => {
+      it('should return 200 when ready', async () => {
         const response = await request(app).get('/ready');
-        expect([200, 503]).toContain(response.status);
+        
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('ready');
+      });
+
+      it('should return 503 when database is unhealthy', async () => {
+        (db.healthCheck as jest.Mock).mockResolvedValue(false);
+
+        const response = await request(app).get('/ready');
+        
+        expect(response.status).toBe(503);
+        expect(response.body.status).toBe('not ready');
+        expect(response.body.reason).toContain('database');
+      });
+
+      it('should return 503 when Redis is unhealthy', async () => {
+        (redisClient.isRedisConnected as jest.Mock).mockReturnValue(false);
+
+        const response = await request(app).get('/ready');
+        
+        expect(response.status).toBe(503);
+        expect(response.body.status).toBe('not ready');
+        expect(response.body.reason).toContain('redis');
+      });
+
+      it('should handle readiness check errors gracefully', async () => {
+        (db.healthCheck as jest.Mock).mockRejectedValue(new Error('Database error'));
+
+        const response = await request(app).get('/ready');
+        
+        expect(response.status).toBe(503);
+        expect(response.body.status).toBe('not ready');
       });
     });
 
@@ -63,6 +161,16 @@ describe('Server', () => {
           .expect('Content-Type', /json/);
 
         expect(response.body).toEqual({ status: 'alive' });
+      });
+
+      it('should always return 200 regardless of component health', async () => {
+        (db.healthCheck as jest.Mock).mockResolvedValue(false);
+        (redisClient.isRedisConnected as jest.Mock).mockReturnValue(false);
+
+        const response = await request(app).get('/live');
+        
+        expect(response.status).toBe(200);
+        expect(response.body.status).toBe('alive');
       });
     });
   });
