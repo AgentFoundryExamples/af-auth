@@ -67,6 +67,14 @@ curl ${SERVICE_URL}/health
 #         "privateKeyConfigured": true,
 #         "installationIdConfigured": true
 #       }
+#     },
+#     "metrics": {
+#       "status": "healthy",
+#       "details": {
+#         "enabled": true,
+#         "registryInitialized": true,
+#         "metricsSize": 4523
+#       }
 #     }
 #   }
 # }
@@ -78,8 +86,13 @@ curl ${SERVICE_URL}/health
 
 **Health States:**
 - `healthy` - All components operational
-- `degraded` - Service operational but some non-critical components failing (e.g., GitHub App)
+- `degraded` - Service operational but some non-critical components failing (e.g., GitHub App, Metrics)
 - `unhealthy` - Critical components failing (database, Redis, or encryption)
+
+**Component Criticality:**
+- **Critical Components:** Database, Redis, Encryption - failures cause `unhealthy` status
+- **Non-Critical Components:** GitHub App, Metrics - failures cause `degraded` status
+- Degraded state allows service to continue operating for existing users while signaling operational issues
 
 **GitHub App Health Check Caching:**
 
@@ -107,7 +120,8 @@ curl ${SERVICE_URL}/ready
 #   "components": {
 #     "database": "healthy",
 #     "redis": "healthy",
-#     "encryption": "healthy"
+#     "encryption": "healthy",
+#     "metrics": "healthy"
 #   }
 # }
 
@@ -118,7 +132,8 @@ curl ${SERVICE_URL}/ready
 #   "components": {
 #     "database": "unhealthy",
 #     "redis": "unhealthy",
-#     "encryption": "healthy"
+#     "encryption": "healthy",
+#     "metrics": "healthy"
 #   }
 # }
 ```
@@ -131,6 +146,13 @@ curl ${SERVICE_URL}/ready
 - Database must be healthy
 - Redis must be healthy
 - Encryption keys must be configured
+- **Metrics must be healthy (when enabled)** - Ensures observability pipeline is operational
+
+**Metrics Readiness Behavior:**
+- When `METRICS_ENABLED=true` (production default), metrics registry must be initialized and functional
+- When `METRICS_ENABLED=false`, readiness passes with a warning logged for visibility
+- Failed metrics initialization blocks deployment to ensure observability requirements are met
+- See [Metrics Configuration](#metrics-configuration) for details on metrics setup
 
 Note: GitHub App status does not affect readiness. The service can operate without GitHub App functionality for existing authenticated users.
 
@@ -317,6 +339,66 @@ When you see `"cached": true` in the GitHub App health check:
 }
 ```
 This indicates the result is from cache (up to 60 seconds old). To force a fresh check, restart the service or wait for cache expiration.
+
+**Metrics Unhealthy:**
+```json
+{
+  "metrics": {
+    "status": "unhealthy",
+    "message": "Metrics registry not initialized",
+    "details": {
+      "enabled": true,
+      "registryInitialized": false
+    }
+  }
+}
+```
+**Actions:**
+1. Check that metrics initialization happened during server startup
+2. Verify Prometheus client dependencies are installed
+3. Review server startup logs for initialization errors
+4. Ensure `METRICS_ENABLED=true` is set correctly
+5. Check for errors in metrics service configuration
+6. Restart the service to retry initialization
+
+**Metrics Degraded:**
+```json
+{
+  "metrics": {
+    "status": "degraded",
+    "message": "Metrics registry returned no data",
+    "details": {
+      "enabled": true,
+      "registryInitialized": true,
+      "metricsOutputEmpty": true
+    }
+  }
+}
+```
+**Actions:**
+1. This indicates registry is initialized but returning empty data
+2. Check if collectors are properly configured
+3. Verify default metrics collection is enabled (`METRICS_COLLECT_DEFAULT=true`)
+4. Review application metrics recording calls
+5. This is a warning state - service remains operational but observability is impaired
+
+**Metrics Disabled:**
+```json
+{
+  "metrics": {
+    "status": "healthy",
+    "message": "Metrics disabled",
+    "details": {
+      "enabled": false
+    }
+  }
+}
+```
+**Note:** This is an expected state when `METRICS_ENABLED=false`. However, for production deployments:
+1. Metrics should be enabled for observability requirements
+2. A warning is logged during readiness checks
+3. Consider enabling metrics for production monitoring
+4. See [Metrics Configuration](#metrics-configuration) for setup details
 
 ### Service Status Check
 
@@ -687,6 +769,62 @@ METRICS_AUTH_TOKEN=your_metrics_auth_token_here
 ```
 
 **Security Note:** Always configure `METRICS_AUTH_TOKEN` in production to prevent unauthorized access to operational data. Metrics may contain information about system behavior, error rates, and usage patterns.
+
+### Metrics and Readiness Checks
+
+The service includes metrics health checks as part of the readiness probe to ensure observability requirements are met before accepting traffic.
+
+**Behavior:**
+- When `METRICS_ENABLED=true`, the readiness probe validates:
+  - Metrics registry is properly initialized
+  - Metrics can be collected and exported
+  - Registry returns valid Prometheus-formatted data
+- When `METRICS_ENABLED=false`, readiness passes but logs a warning
+- Metrics health failures block deployment until resolved
+
+**Configuration Options:**
+
+```bash
+# Enable metrics (required for production observability)
+METRICS_ENABLED=true
+
+# Startup timeout considerations:
+# - Metrics initialization happens synchronously at startup
+# - Typically completes in <100ms
+# - No additional timeout configuration needed
+# - If initialization fails, service won't pass readiness checks
+```
+
+**Deployment Guidelines:**
+
+1. **Production Deployments:**
+   - Always set `METRICS_ENABLED=true`
+   - Configure `METRICS_AUTH_TOKEN` for security
+   - Monitor readiness probe during rollout
+   - Set appropriate probe timeouts (see [Recommended Probe Settings](#recommended-cloud-run-probe-settings))
+
+2. **Development/Test Deployments:**
+   - Metrics can be disabled for local development
+   - Warning will be logged but deployment proceeds
+   - Not recommended for staging/production environments
+
+3. **Cold Start Considerations:**
+   - Metrics initialization adds minimal overhead (<100ms)
+   - No additional configuration needed for timeouts
+   - Readiness probe `initialDelaySeconds: 5` is sufficient
+   - Monitor Cloud Run cold start metrics if concerned
+
+4. **Troubleshooting Failed Readiness:**
+   - Check `/health` endpoint for detailed metrics component status
+   - Review startup logs for initialization errors
+   - Verify Prometheus client dependencies are installed
+   - Ensure no conflicts with other monitoring systems
+
+**Edge Cases:**
+
+- **Partial Registry Failures:** If some collectors fail to initialize, metrics check will fail gracefully with diagnostic information
+- **Slow Initialization:** Metrics initialization is synchronous; if it takes >5 seconds, increase readiness probe `initialDelaySeconds`
+- **Disabled Metrics:** Explicit warning logged but readiness passes; ensure this is intentional for your environment
 
 ### Accessing Metrics
 
