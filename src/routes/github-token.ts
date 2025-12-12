@@ -264,9 +264,10 @@ router.post('/github-token', async (req: Request, res: Response) => {
         
         // Encrypt new tokens
         const encryptedAccessToken = await encryptGitHubToken(tokenResponse.access_token);
-        const encryptedRefreshToken = await encryptGitHubToken(
-          tokenResponse.refresh_token || decryptedRefreshToken
-        );
+        // If GitHub returns a new refresh token, use it; otherwise keep the existing encrypted one
+        const encryptedRefreshToken = tokenResponse.refresh_token
+          ? await encryptGitHubToken(tokenResponse.refresh_token)
+          : refreshToken; // Keep existing encrypted refresh token
         
         if (!encryptedAccessToken) {
           throw new Error('Failed to encrypt new access token');

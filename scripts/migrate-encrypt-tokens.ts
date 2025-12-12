@@ -88,7 +88,7 @@ async function migrateUserTokens(userId: string, dryRun: boolean): Promise<{
     // Validate by decrypting
     const decrypted = await decryptGitHubToken(encryptedAccessToken);
     if (decrypted !== user.githubAccessToken) {
-      throw new Error('Token encryption validation failed - decrypted value does not match original');
+      throw new Error('Token encryption validation failed');
     }
     
     if (!dryRun) {
@@ -113,7 +113,7 @@ async function migrateUserTokens(userId: string, dryRun: boolean): Promise<{
     // Validate by decrypting
     const decrypted = await decryptGitHubToken(encryptedRefreshToken);
     if (decrypted !== user.githubRefreshToken) {
-      throw new Error('Token encryption validation failed - decrypted value does not match original');
+      throw new Error('Token encryption validation failed');
     }
     
     if (!dryRun) {
