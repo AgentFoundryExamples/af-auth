@@ -39,12 +39,15 @@
       └── migration.sql
     ├── 20251212091408_add_revoked_tokens
       └── migration.sql
+    ├── 20251212210718_add_key_rotation_tracking
+      └── migration.sql
     ├── 20251213000000_encrypt_github_tokens
       └── migration.sql
     ├── migration_lock.toml
     └── README.md
   └── schema.prisma
 ├── scripts
+  ├── check-key-rotation.ts
   ├── cleanup-revoked-tokens.ts
   ├── create-migration.sh
   ├── manage-services.ts
@@ -93,6 +96,8 @@
     ├── health-check.ts
     ├── jwt.test.ts
     ├── jwt.ts
+    ├── key-rotation.test.ts
+    ├── key-rotation.ts
     ├── metrics.test.ts
     ├── metrics.ts
     ├── redis-client.ts

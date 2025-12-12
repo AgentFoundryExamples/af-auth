@@ -180,6 +180,16 @@
             },
             {
               "type": "directory",
+              "name": "20251212210718_add_key_rotation_tracking",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
+              "type": "directory",
               "name": "20251213000000_encrypt_github_tokens",
               "children": [
                 {
@@ -208,6 +218,10 @@
       "type": "directory",
       "name": "scripts",
       "children": [
+        {
+          "type": "file",
+          "name": "check-key-rotation.ts"
+        },
         {
           "type": "file",
           "name": "cleanup-revoked-tokens.ts"
@@ -415,6 +429,14 @@
             {
               "type": "file",
               "name": "jwt.ts"
+            },
+            {
+              "type": "file",
+              "name": "key-rotation.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "key-rotation.ts"
             },
             {
               "type": "file",

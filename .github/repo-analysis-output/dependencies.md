@@ -8,8 +8,8 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 47
-- **Intra-repo dependencies**: 131
+- **Total files**: 50
+- **Intra-repo dependencies**: 142
 - **External stdlib dependencies**: 4
 - **External third-party dependencies**: 20
 
@@ -51,15 +51,15 @@ Total: 20 unique packages
 
 ## Most Depended Upon Files (Intra-Repo)
 
-- `src/config/index.ts` (21 dependents)
-- `src/db/index.ts` (20 dependents)
-- `src/utils/logger.ts` (20 dependents)
+- `src/config/index.ts` (23 dependents)
+- `src/db/index.ts` (23 dependents)
+- `src/utils/logger.ts` (22 dependents)
 - `src/services/metrics.ts` (13 dependents)
 - `src/services/jwt.ts` (8 dependents)
 - `src/services/redis-client.ts` (8 dependents)
 - `src/services/token-revocation.ts` (6 dependents)
+- `src/services/service-registry.ts` (5 dependents)
 - `src/services/github-oauth.ts` (5 dependents)
-- `src/services/service-registry.ts` (4 dependents)
 - `src/utils/encryption.ts` (4 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
@@ -69,8 +69,8 @@ Total: 20 unique packages
 - `src/routes/github-token.ts` (8 dependencies)
 - `src/routes/jwt.ts` (6 dependencies)
 - `src/middleware/jwt-auth.ts` (5 dependencies)
+- `src/services/jwt.ts` (5 dependencies)
 - `src/services/token-revocation.ts` (5 dependencies)
+- `scripts/check-key-rotation.ts` (4 dependencies)
 - `src/middleware/jwt-auth.test.ts` (4 dependencies)
 - `src/middleware/rate-limit.ts` (4 dependencies)
-- `src/routes/auth.test.ts` (4 dependencies)
-- `src/routes/github-token.test.ts` (4 dependencies)

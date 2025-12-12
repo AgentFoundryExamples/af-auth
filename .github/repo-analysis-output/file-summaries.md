@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 47
+Total files: 50
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -31,6 +31,15 @@ Total files: 47
 **Summary:** JavaScript module for jest.setup  
 **Size:** 0.66 KB  
 **LOC:** 1  
+**TODOs/FIXMEs:** 0  
+
+## scripts/check-key-rotation.ts
+**Language:** TypeScript  
+**Role:** script  
+**Role Justification:** located in 'scripts' directory  
+**Summary:** TypeScript utility script (role: script)  
+**Size:** 7.28 KB  
+**LOC:** 180  
 **TODOs/FIXMEs:** 0  
 
 ## scripts/cleanup-revoked-tokens.ts
@@ -74,8 +83,8 @@ Total files: 47
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 16.11 KB  
-**LOC:** 421  
+**Size:** 16.62 KB  
+**LOC:** 431  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -326,8 +335,26 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.02 KB  
-**LOC:** 200  
+**Size:** 7.53 KB  
+**LOC:** 204  
+**TODOs/FIXMEs:** 0  
+
+## src/services/key-rotation.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 17.82 KB  
+**LOC:** 492  
+**TODOs/FIXMEs:** 0  
+
+## src/services/key-rotation.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 9.05 KB  
+**LOC:** 288  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/metrics.test.ts
@@ -362,8 +389,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 13.61 KB  
-**LOC:** 356  
+**Size:** 14.04 KB  
+**LOC:** 368  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/service-registry.ts
@@ -371,8 +398,8 @@ Total files: 47
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.49 KB  
-**LOC:** 261  
+**Size:** 8.83 KB  
+**LOC:** 270  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/token-revocation.test.ts

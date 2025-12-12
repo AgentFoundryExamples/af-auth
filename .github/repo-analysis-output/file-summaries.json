@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 47,
+  "total_files": 50,
   "files": [
     {
       "schema_version": "2.0",
@@ -41,6 +41,20 @@
       "metrics": {
         "size_bytes": 676,
         "loc": 1,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "scripts/check-key-rotation.ts",
+      "language": "TypeScript",
+      "role": "script",
+      "role_justification": "located in 'scripts' directory",
+      "summary": "TypeScript utility script (role: script)",
+      "summary_text": "TypeScript utility script (role: script)",
+      "metrics": {
+        "size_bytes": 7458,
+        "loc": 180,
         "todo_count": 0
       }
     },
@@ -109,8 +123,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 16497,
-        "loc": 421,
+        "size_bytes": 17014,
+        "loc": 431,
         "todo_count": 0
       }
     },
@@ -501,8 +515,36 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7186,
-        "loc": 200,
+        "size_bytes": 7706,
+        "loc": 204,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/key-rotation.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 18247,
+        "loc": 492,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/key-rotation.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 9272,
+        "loc": 288,
         "todo_count": 0
       }
     },
@@ -557,8 +599,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 13940,
-        "loc": 356,
+        "size_bytes": 14378,
+        "loc": 368,
         "todo_count": 0
       }
     },
@@ -571,8 +613,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 8698,
-        "loc": 261,
+        "size_bytes": 9040,
+        "loc": 270,
         "todo_count": 0
       }
     },

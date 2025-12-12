@@ -34,6 +34,15 @@
       }
     },
     {
+      "id": "scripts/check-key-rotation.ts",
+      "path": "scripts/check-key-rotation.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "scripts/cleanup-revoked-tokens.ts",
       "path": "scripts/cleanup-revoked-tokens.ts",
       "type": "file",
@@ -403,6 +412,24 @@
       }
     },
     {
+      "id": "src/services/key-rotation.test.ts",
+      "path": "src/services/key-rotation.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/services/key-rotation.ts",
+      "path": "src/services/key-rotation.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "src/services/metrics.test.ts",
       "path": "src/services/metrics.test.ts",
       "type": "file",
@@ -515,6 +542,22 @@
     }
   ],
   "edges": [
+    {
+      "source": "scripts/check-key-rotation.ts",
+      "target": "src/services/key-rotation.ts"
+    },
+    {
+      "source": "scripts/check-key-rotation.ts",
+      "target": "src/services/service-registry.ts"
+    },
+    {
+      "source": "scripts/check-key-rotation.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "scripts/check-key-rotation.ts",
+      "target": "src/db/index.ts"
+    },
     {
       "source": "scripts/cleanup-revoked-tokens.ts",
       "target": "src/services/token-revocation.ts"
@@ -942,6 +985,34 @@
     {
       "source": "src/services/jwt.ts",
       "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/services/jwt.ts",
+      "target": "src/services/key-rotation.ts"
+    },
+    {
+      "source": "src/services/key-rotation.test.ts",
+      "target": "src/services/key-rotation.ts"
+    },
+    {
+      "source": "src/services/key-rotation.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/key-rotation.test.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/key-rotation.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/key-rotation.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/key-rotation.ts",
+      "target": "src/config/index.ts"
     },
     {
       "source": "src/services/metrics.test.ts",
