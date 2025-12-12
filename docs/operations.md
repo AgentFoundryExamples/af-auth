@@ -84,7 +84,13 @@ curl ${SERVICE_URL}/health
 The GitHub App health check is cached for 60 seconds to avoid rate limiting:
 - Successful checks are cached for 1 minute
 - Failed checks are also cached to prevent API hammering during outages
-- Cache can be cleared by restarting the service
+- Cache is instance-specific (each Cloud Run instance maintains its own cache)
+- Cache is cleared on service restart or instance replacement
+- This instance-level caching is acceptable since health checks are evaluated per-instance
+
+**Note on GitHub App Validation:**
+
+The health check validates that the GitHub App private key is properly formatted and can sign JWTs. It does NOT make actual GitHub API calls to avoid rate limiting and performance impact. This validates the service's ability to mint installation access tokens when needed. Monitor actual GitHub API connectivity separately through OAuth flow metrics and application logs.
 
 #### `/ready` - Readiness Probe
 

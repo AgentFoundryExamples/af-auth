@@ -54,6 +54,11 @@ export interface HealthCheckResult {
 /**
  * GitHub App token check result cache
  * Caches successful checks to avoid hammering GitHub API
+ * 
+ * NOTE: This cache is stored in module-level state and is instance-specific.
+ * In Cloud Run with multiple instances, each instance maintains its own cache.
+ * This is acceptable as health checks are evaluated per-instance and the cache
+ * prevents rate limiting on each individual instance. Cache is cleared on restart.
  */
 interface GithubAppCheckCache {
   status: HealthStatus;
@@ -221,6 +226,12 @@ export async function checkEncryptionHealth(): Promise<ComponentHealth> {
 /**
  * Check GitHub App token minting capability
  * Uses caching to avoid hammering GitHub API
+ * 
+ * NOTE: This check validates that the GitHub App private key is properly formatted
+ * and can be used to sign JWTs. It does NOT make actual GitHub API calls to avoid
+ * rate limiting and performance impact. The key validation ensures the service can
+ * mint installation access tokens when needed. Full GitHub API connectivity should
+ * be monitored separately through OAuth flow metrics.
  */
 export async function checkGithubAppHealth(): Promise<ComponentHealth> {
   try {
@@ -329,31 +340,20 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
     checkGithubAppHealth(),
   ]);
 
-  // Determine overall status
+  // Determine overall status based on component health
+  const componentHealths = [databaseHealth, redisHealth, encryptionHealth, githubAppHealth];
+  const criticalHealths = [databaseHealth, redisHealth, encryptionHealth];
+
   let overallStatus = HealthStatus.HEALTHY;
   
-  // If any critical component is unhealthy, mark as unhealthy
-  if (
-    databaseHealth.status === HealthStatus.UNHEALTHY ||
-    redisHealth.status === HealthStatus.UNHEALTHY ||
-    encryptionHealth.status === HealthStatus.UNHEALTHY
-  ) {
+  // If any critical component is unhealthy, the service is unhealthy
+  if (criticalHealths.some(h => h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.UNHEALTHY;
-  }
-  // If any component is degraded, mark as degraded (unless already unhealthy)
-  else if (
-    databaseHealth.status === HealthStatus.DEGRADED ||
-    redisHealth.status === HealthStatus.DEGRADED ||
-    encryptionHealth.status === HealthStatus.DEGRADED ||
-    githubAppHealth.status === HealthStatus.DEGRADED
-  ) {
-    overallStatus = HealthStatus.DEGRADED;
-  }
-  // GitHub App is not critical for basic operation - service can handle existing
-  // authenticated users and issue JWTs even if GitHub App is down. New OAuth flows
-  // will fail, but this doesn't warrant marking the entire service as unhealthy.
-  // Mark as degraded instead to indicate partial functionality.
-  else if (githubAppHealth.status === HealthStatus.UNHEALTHY) {
+  } 
+  // Otherwise, if any component is degraded or the non-critical GitHub App is unhealthy, the service is degraded
+  // GitHub App is not critical because the service can handle existing authenticated users and issue JWTs
+  // even if GitHub App is down. Only new OAuth flows will fail.
+  else if (componentHealths.some(h => h.status === HealthStatus.DEGRADED || h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.DEGRADED;
   }
 

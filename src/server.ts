@@ -65,6 +65,7 @@ app.get('/health', async (_req: Request, res: Response) => {
       status: HealthStatus.UNHEALTHY,
       timestamp: new Date().toISOString(),
       error: 'Health check failed',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 });
@@ -95,6 +96,7 @@ app.get('/ready', async (_req: Request, res: Response) => {
     res.status(503).json({
       status: 'not ready',
       reason: 'Readiness check failed',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 });
