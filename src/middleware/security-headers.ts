@@ -138,7 +138,7 @@ export function createSecurityHeadersMiddleware() {
   const securityConfig = getSecurityHeadersConfig();
 
   // Build CSP directives for helmet
-  const cspDirectives: Record<string, string[] | boolean | null> = {};
+  const cspDirectives: Record<string, string[] | null> = {};
   if (securityConfig.contentSecurityPolicy.enabled) {
     Object.entries(securityConfig.contentSecurityPolicy.directives).forEach(([key, value]) => {
       if (key === 'upgradeInsecureRequests') {
@@ -175,7 +175,15 @@ export function createSecurityHeadersMiddleware() {
       action: securityConfig.xFrameOptions.toLowerCase() as 'deny' | 'sameorigin',
     },
     referrerPolicy: {
-      policy: securityConfig.referrerPolicy as any,
+      policy: securityConfig.referrerPolicy as
+        | 'no-referrer'
+        | 'no-referrer-when-downgrade'
+        | 'origin'
+        | 'origin-when-cross-origin'
+        | 'same-origin'
+        | 'strict-origin'
+        | 'strict-origin-when-cross-origin'
+        | 'unsafe-url',
     },
     // Additional helmet defaults
     xContentTypeOptions: securityConfig.xContentTypeOptions,

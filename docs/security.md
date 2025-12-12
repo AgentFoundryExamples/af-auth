@@ -5,6 +5,7 @@ This guide covers security best practices, secret management, JWT verification, 
 ## Table of Contents
 
 - [Security Overview](#security-overview)
+- [HTTP Security Headers](#http-security-headers)
 - [Secret Manager Setup](#secret-manager-setup)
 - [Secret Rotation](#secret-rotation)
 - [JWT Security](#jwt-security)
@@ -41,6 +42,279 @@ graph TD
 3. **Encryption**: Data encrypted in transit and at rest
 4. **Auditability**: All security events logged
 5. **Rotation**: Regular rotation of secrets and credentials
+
+## HTTP Security Headers
+
+AF Auth implements comprehensive HTTP security headers to protect against common web vulnerabilities including XSS, clickjacking, and protocol downgrade attacks.
+
+### Overview
+
+Security headers are applied globally via middleware before all route handlers, ensuring consistent protection across all endpoints including health checks, API routes, and OAuth flows.
+
+### Implemented Headers
+
+#### Content-Security-Policy (CSP)
+
+Mitigates cross-site scripting (XSS) and data injection attacks by restricting resource loading.
+
+**Default Policy:**
+```
+default-src 'self';
+script-src 'self' 'unsafe-inline';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: https:;
+connect-src 'self' https://github.com;
+font-src 'self' data:;
+object-src 'none';
+media-src 'self';
+frame-src 'none';
+form-action 'self' https://github.com;
+frame-ancestors 'none';
+base-uri 'self';
+```
+
+**Key Features:**
+- Allows inline scripts and styles for React-rendered pages
+- Includes GitHub OAuth domains in `connect-src` and `form-action`
+- Blocks framing via `frame-ancestors 'none'`
+- Automatically upgrades HTTP to HTTPS in production via `upgrade-insecure-requests`
+
+#### Strict-Transport-Security (HSTS)
+
+Forces browsers to use HTTPS connections only, protecting against protocol downgrade attacks.
+
+**Default Configuration:**
+- **Enabled:** Automatically in production (NODE_ENV=production)
+- **Max-Age:** 31536000 seconds (1 year)
+- **Include Subdomains:** Yes
+- **Preload:** Optional (disabled by default)
+
+**Example Header:**
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+```
+
+#### X-Frame-Options
+
+Prevents clickjacking attacks by controlling whether the page can be embedded in frames.
+
+**Default Value:** `DENY`
+
+**Options:**
+- `DENY`: Page cannot be framed
+- `SAMEORIGIN`: Page can only be framed by same origin
+
+#### X-Content-Type-Options
+
+Prevents MIME sniffing attacks by forcing browsers to respect declared content types.
+
+**Default Value:** `nosniff`
+
+#### Referrer-Policy
+
+Controls how much referrer information is sent with requests.
+
+**Default Value:** `strict-origin-when-cross-origin`
+
+**Behavior:**
+- Full referrer for same-origin requests
+- Origin only for cross-origin HTTPS requests
+- No referrer for HTTPS → HTTP downgrade
+
+#### Permissions-Policy
+
+Restricts browser feature access to prevent unauthorized use of sensitive APIs.
+
+**Default Configuration:**
+```
+camera=();
+microphone=();
+geolocation=();
+payment=();
+usb=()
+```
+
+All features are disabled by default. Enable specific features via environment variables.
+
+#### Additional Security Headers
+
+- **X-DNS-Prefetch-Control:** `off` (prevents DNS leakage)
+- **X-Download-Options:** `noopen` (prevents IE automatic file execution)
+- **X-Permitted-Cross-Domain-Policies:** `none` (blocks Flash/PDF cross-domain requests)
+
+### Configuration
+
+Security headers are highly configurable via environment variables for different deployment environments.
+
+#### Disabling/Enabling Headers
+
+```bash
+# Disable CSP (not recommended for production)
+CSP_ENABLED=false
+
+# Disable HSTS explicitly (already disabled in non-production)
+HSTS_ENABLED=false
+
+# Disable X-Content-Type-Options (not recommended)
+X_CONTENT_TYPE_OPTIONS=false
+```
+
+#### Customizing CSP Directives
+
+Override individual CSP directives with comma-separated values:
+
+```bash
+# Allow additional image sources
+CSP_IMG_SRC='self',data:,https:,https://cdn.example.com
+
+# Allow additional script sources (use with caution)
+CSP_SCRIPT_SRC='self','unsafe-inline','sha256-abc123...'
+
+# Customize connect-src for additional API endpoints
+CSP_CONNECT_SRC='self',https://github.com,https://api.example.com
+```
+
+#### HSTS Configuration
+
+```bash
+# HSTS is production-only by default
+# Force enable in non-production (not recommended)
+HSTS_ENABLED=true
+
+# Increase max-age to 2 years
+HSTS_MAX_AGE=63072000
+
+# Enable HSTS preload (requires max-age >= 1 year)
+HSTS_PRELOAD=true
+
+# Disable includeSubDomains
+HSTS_INCLUDE_SUBDOMAINS=false
+```
+
+#### Frame Options
+
+```bash
+# Allow framing from same origin
+X_FRAME_OPTIONS=SAMEORIGIN
+```
+
+#### Referrer Policy
+
+```bash
+# More strict: send no referrer
+REFERRER_POLICY=no-referrer
+
+# More permissive: send origin for cross-origin
+REFERRER_POLICY=origin-when-cross-origin
+```
+
+#### Permissions Policy
+
+Enable specific browser features:
+
+```bash
+# Allow camera for self origin
+PERMISSIONS_POLICY_CAMERA=self
+
+# Allow microphone for self and trusted domain
+PERMISSIONS_POLICY_MICROPHONE=self,https://trusted.com
+
+# Allow geolocation
+PERMISSIONS_POLICY_GEOLOCATION=self
+```
+
+### OAuth Compatibility
+
+Security headers are configured to support GitHub OAuth flows:
+
+1. **CSP connect-src:** Includes GitHub OAuth callback domain and `https://github.com`
+2. **CSP form-action:** Allows form submissions to GitHub OAuth endpoints
+3. **Frame blocking:** OAuth redirects work without iframe embedding
+
+### Testing Security Headers
+
+Verify security headers are correctly applied:
+
+```bash
+# Test health endpoint
+curl -I http://localhost:3000/health
+
+# Expected headers:
+# X-Frame-Options: DENY
+# X-Content-Type-Options: nosniff
+# Content-Security-Policy: default-src 'self'; ...
+# Referrer-Policy: strict-origin-when-cross-origin
+# Permissions-Policy: camera=(), microphone=(), ...
+```
+
+### Browser Compatibility
+
+All security headers are compatible with modern browsers:
+
+- Chrome 61+
+- Firefox 60+
+- Safari 12+
+- Edge 79+
+
+Legacy browsers gracefully ignore unsupported headers without breaking functionality.
+
+### Security Header Best Practices
+
+1. **Never disable CSP in production** - Critical for XSS protection
+2. **Test OAuth flows** after changing CSP directives
+3. **Enable HSTS in production** with max-age >= 1 year
+4. **Use frame-ancestors 'none'** unless embedding is required
+5. **Review Permissions-Policy** - Only enable needed features
+6. **Monitor CSP violations** in production via reporting endpoints
+7. **Test across browsers** after configuration changes
+
+### Troubleshooting
+
+#### OAuth Redirects Fail
+
+If GitHub OAuth redirects fail with CSP violations:
+
+```bash
+# Ensure GitHub domains are allowed
+CSP_CONNECT_SRC='self',https://github.com
+CSP_FORM_ACTION='self',https://github.com
+```
+
+#### Inline Styles/Scripts Blocked
+
+If page styling breaks with CSP violations:
+
+```bash
+# Allow unsafe-inline (already default for pages)
+CSP_SCRIPT_SRC='self','unsafe-inline'
+CSP_STYLE_SRC='self','unsafe-inline'
+
+# Better: Use nonces or hashes for specific scripts
+CSP_SCRIPT_SRC='self','sha256-abc123...'
+```
+
+#### HSTS Issues in Development
+
+HSTS forces HTTPS and can cause issues in local development:
+
+```bash
+# HSTS is automatically disabled when NODE_ENV != production
+# Explicitly disable if needed:
+HSTS_ENABLED=false
+```
+
+To clear HSTS settings in browser:
+- Chrome: chrome://net-internals/#hsts → Delete domain
+- Firefox: Clear site data for localhost
+
+### Security Monitoring
+
+Monitor CSP violations by adding a report-uri directive:
+
+```bash
+# Future enhancement: Add CSP reporting
+CSP_REPORT_URI=https://your-csp-reporter.example.com/report
+```
 
 ## Request Security
 
