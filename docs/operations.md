@@ -361,12 +361,12 @@ This indicates the result is from cache (up to 60 seconds old). To force a fresh
 5. Check for errors in metrics service configuration
 6. Restart the service to retry initialization
 
-**Metrics Degraded:**
+**Metrics Collection Failed (Empty Output):**
 ```json
 {
   "metrics": {
-    "status": "degraded",
-    "message": "Metrics registry returned no data",
+    "status": "unhealthy",
+    "message": "Metrics collection failed - no data available",
     "details": {
       "enabled": true,
       "registryInitialized": true,
@@ -376,11 +376,13 @@ This indicates the result is from cache (up to 60 seconds old). To force a fresh
 }
 ```
 **Actions:**
-1. This indicates registry is initialized but returning empty data
-2. Check if collectors are properly configured
-3. Verify default metrics collection is enabled (`METRICS_COLLECT_DEFAULT=true`)
-4. Review application metrics recording calls
-5. This is a warning state - service remains operational but observability is impaired
+1. This indicates registry is initialized but collection is failing (no data returned)
+2. This blocks readiness as it violates observability requirements
+3. Check if collectors are properly configured
+4. Verify default metrics collection is enabled (`METRICS_COLLECT_DEFAULT=true`)
+5. Review application metrics recording calls
+6. Check for errors in metrics service initialization or collection
+7. Restart the service to retry initialization
 
 **Metrics Disabled:**
 ```json
