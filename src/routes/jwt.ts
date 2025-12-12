@@ -69,9 +69,9 @@ router.post('/token', async (req: Request, res: Response) => {
       }
     }
   } catch (error) {
-    // Log error message only, not the full error object to avoid exposing sensitive details
+    // Outer catch for unexpected errors in request parsing
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error({ errorMessage }, 'Unexpected error during token refresh');
+    logger.error({ errorMessage }, 'Unexpected error in token refresh handler');
     return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'An unexpected error occurred. Please try again later.',
