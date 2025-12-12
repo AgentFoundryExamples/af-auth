@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 25
+Total files: 26
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -33,6 +33,15 @@ Total files: 25
 **LOC:** 347  
 **TODOs/FIXMEs:** 0  
 
+## scripts/migrate-encrypt-tokens.ts
+**Language:** TypeScript  
+**Role:** script  
+**Role Justification:** located in 'scripts' directory  
+**Summary:** TypeScript utility script (role: script)  
+**Size:** 7.72 KB  
+**LOC:** 188  
+**TODOs/FIXMEs:** 0  
+
 ## src/config/index.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -47,8 +56,8 @@ Total files: 25
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 8.11 KB  
-**LOC:** 206  
+**Size:** 8.51 KB  
+**LOC:** 216  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -92,8 +101,8 @@ Total files: 25
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 19.00 KB  
-**LOC:** 499  
+**Size:** 26.94 KB  
+**LOC:** 685  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.ts
@@ -101,8 +110,8 @@ Total files: 25
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.23 KB  
-**LOC:** 205  
+**Size:** 13.50 KB  
+**LOC:** 303  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.test.ts
@@ -146,8 +155,8 @@ Total files: 25
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 3.53 KB  
-**LOC:** 86  
+**Size:** 5.13 KB  
+**LOC:** 116  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/github-oauth.ts
@@ -155,8 +164,8 @@ Total files: 25
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.98 KB  
-**LOC:** 176  
+**Size:** 7.65 KB  
+**LOC:** 224  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.test.ts

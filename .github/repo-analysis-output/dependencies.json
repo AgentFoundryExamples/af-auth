@@ -35,6 +35,15 @@
       }
     },
     {
+      "id": "scripts/migrate-encrypt-tokens.ts",
+      "path": "scripts/migrate-encrypt-tokens.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "src/config/index.test.ts",
       "path": "src/config/index.test.ts",
       "type": "file",
@@ -287,6 +296,18 @@
       "target": "src/db/index.ts"
     },
     {
+      "source": "scripts/migrate-encrypt-tokens.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "scripts/migrate-encrypt-tokens.ts",
+      "target": "src/utils/encryption.ts"
+    },
+    {
+      "source": "scripts/migrate-encrypt-tokens.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/config/index.test.ts",
       "target": "src/config/index.ts"
     },
@@ -351,6 +372,10 @@
       "target": "src/services/service-registry.ts"
     },
     {
+      "source": "src/routes/github-token.test.ts",
+      "target": "src/services/github-oauth.ts"
+    },
+    {
       "source": "src/routes/github-token.ts",
       "target": "src/utils/logger.ts"
     },
@@ -365,6 +390,14 @@
     {
       "source": "src/routes/github-token.ts",
       "target": "src/utils/encryption.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/services/github-oauth.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/config/index.ts"
     },
     {
       "source": "src/routes/jwt.test.ts",

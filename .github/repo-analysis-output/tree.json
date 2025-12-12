@@ -169,6 +169,16 @@
               ]
             },
             {
+              "type": "directory",
+              "name": "20251213000000_encrypt_github_tokens",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
               "type": "file",
               "name": "migration_lock.toml"
             },
@@ -195,6 +205,10 @@
         {
           "type": "file",
           "name": "manage-services.ts"
+        },
+        {
+          "type": "file",
+          "name": "migrate-encrypt-tokens.ts"
         },
         {
           "type": "file",

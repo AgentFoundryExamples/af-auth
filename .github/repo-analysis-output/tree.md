@@ -37,12 +37,15 @@
       └── migration.sql
     ├── 20251212003212_
       └── migration.sql
+    ├── 20251213000000_encrypt_github_tokens
+      └── migration.sql
     ├── migration_lock.toml
     └── README.md
   └── schema.prisma
 ├── scripts
   ├── create-migration.sh
   ├── manage-services.ts
+  ├── migrate-encrypt-tokens.ts
   └── validate-db.sh
 ├── src
   ├── config
