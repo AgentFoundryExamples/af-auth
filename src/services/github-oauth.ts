@@ -16,6 +16,7 @@ import crypto from 'crypto';
 import { config } from '../config';
 import logger from '../utils/logger';
 import { getRedisClient, executeRedisOperation } from './redis-client';
+import { recordGitHubOAuthOperation } from './metrics';
 
 /**
  * GitHub OAuth token response
@@ -214,14 +215,17 @@ export async function exchangeCodeForToken(code: string): Promise<GitHubTokenRes
     );
 
     if (!response.data.access_token) {
+      recordGitHubOAuthOperation('token_exchange', 'failure');
       throw new Error('No access token in GitHub response');
     }
 
     logger.info('Successfully exchanged code for token');
+    recordGitHubOAuthOperation('token_exchange', 'success');
 
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to exchange code for token');
+    recordGitHubOAuthOperation('token_exchange', 'failure');
     throw new Error('Failed to exchange authorization code for token');
   }
 }
@@ -244,10 +248,12 @@ export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
     );
 
     logger.info({ githubUserId: response.data.id }, 'Successfully fetched GitHub user');
+    recordGitHubOAuthOperation('user_fetch', 'success');
 
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to fetch GitHub user information');
+    recordGitHubOAuthOperation('user_fetch', 'failure');
     throw new Error('Failed to fetch GitHub user information');
   }
 }
@@ -275,14 +281,17 @@ export async function refreshAccessToken(refreshToken: string): Promise<GitHubTo
     );
 
     if (!response.data.access_token) {
+      recordGitHubOAuthOperation('token_refresh', 'failure');
       throw new Error('No access token in GitHub refresh response');
     }
 
     logger.info('Successfully refreshed access token');
+    recordGitHubOAuthOperation('token_refresh', 'success');
 
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to refresh access token');
+    recordGitHubOAuthOperation('token_refresh', 'failure');
     throw new Error('Failed to refresh GitHub access token');
   }
 }

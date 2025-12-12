@@ -16,6 +16,7 @@ import RedisStore from 'rate-limit-redis';
 import { getRedisClient, isRedisConnected, getRedisStatus } from '../services/redis-client';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { recordRateLimitHit } from '../services/metrics';
 
 /**
  * Creates a rate limiting middleware with Redis store for distributed rate limiting.
@@ -49,10 +50,16 @@ function createRateLimiter(options: {
         },
         'Rate limit exceeded'
       );
+      recordRateLimitHit(keyPrefix, 'blocked');
       res.status(429).json({
         error: 'RATE_LIMIT_EXCEEDED',
         message,
       });
+    },
+    skip: (_req: any) => {
+      // Record allowed requests
+      recordRateLimitHit(keyPrefix, 'allowed');
+      return false; // Don't actually skip
     },
   };
 

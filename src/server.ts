@@ -19,9 +19,14 @@ import logger from './utils/logger';
 import db from './db';
 import { sanitizeRequestBody } from './middleware/validation';
 import { performHealthCheck, performReadinessCheck, HealthStatus } from './services/health-check';
+import { initializeMetrics } from './services/metrics';
+import { metricsMiddleware } from './middleware/metrics';
 
 const app = express();
 const server = http.createServer(app);
+
+// Initialize Prometheus metrics
+initializeMetrics();
 
 // Middleware
 app.use(express.json());
@@ -29,6 +34,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Sanitize request body to prevent prototype pollution
 app.use(sanitizeRequestBody);
+
+// Metrics collection middleware (before logging to capture all requests)
+app.use(metricsMiddleware);
 
 // HTTP request logging
 app.use(
@@ -127,6 +135,12 @@ app.use('/.well-known', jwtRoutes);
  */
 import githubTokenRoutes from './routes/github-token';
 app.use('/api', githubTokenRoutes);
+
+/**
+ * Metrics endpoint
+ */
+import metricsRoutes from './routes/metrics';
+app.use(metricsRoutes);
 
 /**
  * 404 handler for undefined routes.

@@ -98,6 +98,14 @@ interface Config {
     secure: boolean;
     sameSite: 'strict' | 'lax' | 'none';
   };
+  metrics: {
+    enabled: boolean;
+    prefix: string;
+    namespace: string;
+    collectDefaultMetrics: boolean;
+    endpoint: string;
+    authToken: string | null;
+  };
 }
 
 /**
@@ -338,6 +346,14 @@ export const config: Config = {
       }
       return value as 'strict' | 'lax' | 'none';
     })(),
+  },
+  metrics: {
+    enabled: getOptionalBooleanEnv('METRICS_ENABLED', true),
+    prefix: getOptionalEnv('METRICS_PREFIX', 'af_auth_'),
+    namespace: getOptionalEnv('METRICS_NAMESPACE', 'af_auth'),
+    collectDefaultMetrics: getOptionalBooleanEnv('METRICS_COLLECT_DEFAULT', true),
+    endpoint: getOptionalEnv('METRICS_ENDPOINT', '/metrics'),
+    authToken: process.env.METRICS_AUTH_TOKEN || null,
   },
 };
 
