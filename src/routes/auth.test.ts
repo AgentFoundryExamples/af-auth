@@ -183,7 +183,7 @@ describe('Auth Routes', () => {
         .expect('Content-Type', /html/);
 
       expect(response.text).toContain('Authentication Successful');
-      expect(response.text).toContain('Ready for Token Issuance');
+      expect(response.text).toContain('JWT Token Ready');
       expect(response.text).toContain('testuser');
     });
 

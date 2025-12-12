@@ -4,16 +4,18 @@ export interface TokenReadyPageProps {
   userId: string;
   githubLogin: string;
   serviceName?: string;
+  token?: string; // JWT token to display
 }
 
 /**
  * Token Ready page - shown to whitelisted users after successful authentication
- * This page confirms authentication and indicates that JWT tokens can be issued
+ * This page confirms authentication and displays the JWT token with copy functionality
  */
 export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({ 
   userId, 
   githubLogin,
-  serviceName = 'AF Auth' 
+  serviceName = 'AF Auth',
+  token
 }) => {
   return (
     <html lang="en">
@@ -158,11 +160,103 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
             line-height: 1.6;
           }
           
+          .token-container {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+          }
+          
+          .token-label {
+            color: #718096;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            text-align: left;
+          }
+          
+          .token-value {
+            background: #2d3748;
+            color: #f7fafc;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            white-space: pre-wrap;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+          }
+          
+          .copy-button {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            width: 100%;
+          }
+          
+          .copy-button:hover {
+            background: #2c5282;
+          }
+          
+          .copy-button:active {
+            transform: scale(0.98);
+          }
+          
+          .copy-success {
+            background: #38a169;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
+          }
+          
+          .copy-success.show {
+            display: block;
+          }
+          
           .footer {
             color: #a0aec0;
             font-size: 14px;
           }
         `}</style>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            function copyToken() {
+              const tokenElement = document.getElementById('jwt-token');
+              const copyButton = document.getElementById('copy-button');
+              const successMessage = document.getElementById('copy-success');
+              
+              if (tokenElement && tokenElement.textContent) {
+                navigator.clipboard.writeText(tokenElement.textContent.trim()).then(function() {
+                  copyButton.textContent = '✓ Copied!';
+                  successMessage.classList.add('show');
+                  setTimeout(function() {
+                    copyButton.textContent = 'Copy JWT Token';
+                    successMessage.classList.remove('show');
+                  }, 3000);
+                }).catch(function(err) {
+                  console.error('Failed to copy:', err);
+                  alert('Failed to copy token. Please copy manually.');
+                });
+              }
+            }
+          `
+        }}></script>
       </head>
       <body>
         <div className="container">
@@ -174,7 +268,7 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
           
           <div className="status-badge">
             <span className="status-dot"></span>
-            Ready for Token Issuance
+            JWT Token Ready
           </div>
           
           <div className="user-info">
@@ -188,17 +282,39 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
             </div>
           </div>
           
+          {token && (
+            <div className="token-container">
+              <div className="token-label">Your JWT Token (Valid for 30 days)</div>
+              <div className="token-value" id="jwt-token">{token}</div>
+              <button className="copy-button" id="copy-button">
+                Copy JWT Token
+              </button>
+              <div className="copy-success" id="copy-success">
+                Token copied to clipboard! You can now use it with the CLI.
+              </div>
+            </div>
+          )}
+          
           <div className="info-box">
             <p>
-              <strong>What's next?</strong> Your authentication has been verified and stored. 
-              JWT tokens will be issued through the API endpoints for use with the CLI and other services.
+              <strong>What's next?</strong> {token 
+                ? 'Your JWT token is ready to use. Copy it and use it to authenticate API requests or CLI commands. This token is valid for 30 days.'
+                : 'Your authentication has been verified and stored. JWT tokens will be issued through the API endpoints for use with the CLI and other services.'
+              }
             </p>
           </div>
           
           <p className="footer">
-            This authentication session is secure and ready for token issuance.
+            This authentication session is secure. Keep your token private and never share it publicly.
           </p>
         </div>
+        {token && (
+          <script dangerouslySetInnerHTML={{
+            __html: `
+              document.getElementById('copy-button').onclick = copyToken;
+            `
+          }}></script>
+        )}
       </body>
     </html>
   );

@@ -185,11 +185,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
 **File**: `src/pages/token-ready.tsx`
 
+**Purpose**: Displays JWT token to whitelisted users after successful authentication
+
 **Customization points**:
 - Success icon: Change `✅` 
+- Token display styling: Customize `.token-container` and `.token-value` CSS
+- Copy button behavior: Modify the `copyToken` JavaScript function
 - Info box content: Customize "What's next?" section
 - Add additional user information fields
 - Include next steps or links
+
+**Props**:
+- `userId`: User UUID
+- `githubLogin`: GitHub username
+- `serviceName`: Service name (default: 'AF Auth')
+- `token`: JWT token to display (optional)
 
 **Example customization**:
 
@@ -199,12 +209,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     <strong>What's next?</strong>
   </p>
   <ul>
-    <li>Download the CLI: <code>npm install -g af-cli</code></li>
-    <li>Configure your credentials: <code>af-cli login</code></li>
-    <li>Start building: <code>af-cli create project</code></li>
+    <li>Copy your JWT token using the button above</li>
+    <li>Store it securely: <code>echo "TOKEN" > ~/.af-auth-token</code></li>
+    <li>Use it with API requests: <code>curl -H "Authorization: Bearer TOKEN"</code></li>
+    <li>See <a href="/docs/jwt">JWT documentation</a> for more details</li>
   </ul>
 </div>
 ```
+
+**Token Display Features**:
+- Displays JWT in a monospace code block
+- One-click copy to clipboard functionality
+- Visual feedback when token is copied
+- Responsive design for mobile devices
+- Automatic scrolling for long tokens
+
+**Security Notes**:
+- Tokens are only displayed once after initial authentication
+- Users should copy and store tokens securely
+- Refresh page won't regenerate the same token
+- Each authentication generates a brand new token
 
 #### Error Page
 
