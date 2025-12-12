@@ -85,6 +85,8 @@
       └── redis-client.ts
     ├── github-oauth.test.ts
     ├── github-oauth.ts
+    ├── health-check.test.ts
+    ├── health-check.ts
     ├── jwt.test.ts
     ├── jwt.ts
     ├── redis-client.ts

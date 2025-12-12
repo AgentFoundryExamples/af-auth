@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 39,
+  "total_files": 41,
   "files": [
     {
       "schema_version": "2.0",
@@ -319,8 +319,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 3743,
-        "loc": 76,
+        "size_bytes": 7950,
+        "loc": 152,
         "todo_count": 0
       }
     },
@@ -333,8 +333,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5554,
-        "loc": 158,
+        "size_bytes": 6441,
+        "loc": 177,
         "todo_count": 0
       }
     },
@@ -391,6 +391,34 @@
       "metrics": {
         "size_bytes": 8660,
         "loc": 259,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/health-check.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 16266,
+        "loc": 316,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/health-check.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 13103,
+        "loc": 374,
         "todo_count": 0
       }
     },

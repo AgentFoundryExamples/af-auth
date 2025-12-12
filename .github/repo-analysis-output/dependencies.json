@@ -311,6 +311,26 @@
       }
     },
     {
+      "id": "src/services/health-check.test.ts",
+      "path": "src/services/health-check.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/services/health-check.ts",
+      "path": "src/services/health-check.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "jsonwebtoken"
+        ]
+      }
+    },
+    {
       "id": "src/services/jwt.test.ts",
       "path": "src/services/jwt.test.ts",
       "type": "file",
@@ -665,6 +685,14 @@
       "target": "src/server.ts"
     },
     {
+      "source": "src/server.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/server.test.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
       "source": "src/server.ts",
       "target": "src/config/index.ts"
     },
@@ -679,6 +707,10 @@
     {
       "source": "src/server.ts",
       "target": "src/middleware/validation.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/services/health-check.ts"
     },
     {
       "source": "src/server.ts",
@@ -715,6 +747,38 @@
     {
       "source": "src/services/github-oauth.ts",
       "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
+      "target": "src/services/health-check.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/services/health-check.test.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/health-check.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/health-check.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/services/health-check.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/health-check.ts",
+      "target": "src/utils/logger.ts"
     },
     {
       "source": "src/services/jwt.test.ts",

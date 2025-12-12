@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 39
+Total files: 41
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -209,8 +209,8 @@ Total files: 39
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 3.66 KB  
-**LOC:** 76  
+**Size:** 7.76 KB  
+**LOC:** 152  
 **TODOs/FIXMEs:** 0  
 
 ## src/server.ts
@@ -218,8 +218,8 @@ Total files: 39
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.42 KB  
-**LOC:** 158  
+**Size:** 6.29 KB  
+**LOC:** 177  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/__mocks__/github-oauth.ts
@@ -256,6 +256,24 @@ Total files: 39
 **Summary:** TypeScript core implementation  
 **Size:** 8.46 KB  
 **LOC:** 259  
+**TODOs/FIXMEs:** 0  
+
+## src/services/health-check.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 15.88 KB  
+**LOC:** 316  
+**TODOs/FIXMEs:** 0  
+
+## src/services/health-check.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 12.80 KB  
+**LOC:** 374  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.test.ts

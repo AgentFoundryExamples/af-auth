@@ -386,6 +386,14 @@
             },
             {
               "type": "file",
+              "name": "health-check.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "health-check.ts"
+            },
+            {
+              "type": "file",
               "name": "jwt.test.ts"
             },
             {
