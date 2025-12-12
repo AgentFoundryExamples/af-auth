@@ -104,9 +104,9 @@ describe('Encryption Utilities', () => {
 
     it('should handle empty string', () => {
       const encrypted = encryptGitHubToken('');
-      const decrypted = decryptGitHubToken(encrypted);
       
-      expect(decrypted).toBe('');
+      // Empty string should return null (same as null input)
+      expect(encrypted).toBeNull();
     });
   });
 
