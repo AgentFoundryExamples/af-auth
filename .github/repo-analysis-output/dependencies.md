@@ -11,7 +11,7 @@ Includes classification of external dependencies as stdlib vs third-party.
 - **Total files**: 23
 - **Intra-repo dependencies**: 46
 - **External stdlib dependencies**: 5
-- **External third-party dependencies**: 12
+- **External third-party dependencies**: 15
 
 ## External Dependencies
 
@@ -27,13 +27,15 @@ Total: 5 unique modules
 
 ### Third-Party Packages
 
-Total: 12 unique packages
+Total: 15 unique packages
 
+- `@eslint/js`
 - `@prisma/client`
 - `axios`
 - `bcrypt`
 - `dotenv`
 - `express`
+- `globals`
 - `jsonwebtoken`
 - `ms`
 - `pino`
@@ -41,6 +43,7 @@ Total: 12 unique packages
 - `react`
 - `react-dom/server`
 - `supertest`
+- `typescript-eslint`
 
 ## Most Depended Upon Files (Intra-Repo)
 

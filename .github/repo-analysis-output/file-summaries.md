@@ -6,13 +6,13 @@ Schema Version: 2.0
 
 Total files: 23
 
-## .eslintrc.js
+## eslint.config.js
 **Language:** JavaScript  
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
-**Summary:** JavaScript module for .eslintrc  
-**Size:** 1.24 KB  
-**LOC:** 25  
+**Summary:** JavaScript module for eslint.config  
+**Size:** 1.39 KB  
+**LOC:** 29  
 **TODOs/FIXMEs:** 0  
 
 ## jest.config.js
@@ -20,8 +20,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** JavaScript module for jest.config  
-**Size:** 1.09 KB  
-**LOC:** 22  
+**Size:** 1.13 KB  
+**LOC:** 25  
 **TODOs/FIXMEs:** 0  
 
 ## scripts/manage-services.ts

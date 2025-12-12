@@ -4,15 +4,15 @@
   "files": [
     {
       "schema_version": "2.0",
-      "path": ".eslintrc.js",
+      "path": "eslint.config.js",
       "language": "JavaScript",
       "role": "implementation",
       "role_justification": "general implementation file (default classification)",
-      "summary": "JavaScript module for .eslintrc",
-      "summary_text": "JavaScript module for .eslintrc",
+      "summary": "JavaScript module for eslint.config",
+      "summary_text": "JavaScript module for eslint.config",
       "metrics": {
-        "size_bytes": 1265,
-        "loc": 25,
+        "size_bytes": 1419,
+        "loc": 29,
         "todo_count": 0
       }
     },
@@ -25,8 +25,8 @@
       "summary": "JavaScript module for jest.config",
       "summary_text": "JavaScript module for jest.config",
       "metrics": {
-        "size_bytes": 1116,
-        "loc": 22,
+        "size_bytes": 1160,
+        "loc": 25,
         "todo_count": 0
       }
     },

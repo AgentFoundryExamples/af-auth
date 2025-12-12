@@ -79,12 +79,13 @@
   ├── server.test.ts
   └── server.ts
 ├── .env.example
-├── .eslintrc.js
 ├── .gitignore
 ├── CHANGELOG.md
 ├── docker-compose.yml
+├── eslint.config.js
 ├── jest.config.js
 ├── LICENSE
+├── package-lock.json
 ├── package.json
 ├── README.md
 ├── SECURITY_SUMMARY.md

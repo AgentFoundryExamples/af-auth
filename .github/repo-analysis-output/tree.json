@@ -360,10 +360,6 @@
     },
     {
       "type": "file",
-      "name": ".eslintrc.js"
-    },
-    {
-      "type": "file",
       "name": ".gitignore"
     },
     {
@@ -376,11 +372,19 @@
     },
     {
       "type": "file",
+      "name": "eslint.config.js"
+    },
+    {
+      "type": "file",
       "name": "jest.config.js"
     },
     {
       "type": "file",
       "name": "LICENSE"
+    },
+    {
+      "type": "file",
+      "name": "package-lock.json"
     },
     {
       "type": "file",

@@ -1,12 +1,16 @@
 {
   "nodes": [
     {
-      "id": ".eslintrc.js",
-      "path": ".eslintrc.js",
+      "id": "eslint.config.js",
+      "path": "eslint.config.js",
       "type": "file",
       "external_dependencies": {
         "stdlib": [],
-        "third-party": []
+        "third-party": [
+          "@eslint/js",
+          "globals",
+          "typescript-eslint"
+        ]
       }
     },
     {
@@ -450,20 +454,23 @@
       "readline"
     ],
     "third-party": [
+      "@eslint/js",
       "@prisma/client",
       "axios",
       "bcrypt",
       "dotenv",
       "express",
+      "globals",
       "jsonwebtoken",
       "ms",
       "pino",
       "pino-http",
       "react",
       "react-dom/server",
-      "supertest"
+      "supertest",
+      "typescript-eslint"
     ],
     "stdlib_count": 5,
-    "third-party_count": 12
+    "third-party_count": 15
   }
 }
