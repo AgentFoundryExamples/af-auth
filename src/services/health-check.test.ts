@@ -26,6 +26,7 @@ import db from '../db';
 import * as redisClient from './redis-client';
 import * as metricsService from './metrics';
 import { config } from '../config';
+import logger from '../utils/logger';
 
 // Mock dependencies
 jest.mock('../db');
@@ -257,7 +258,7 @@ describe('Health Check Service', () => {
       (config.metrics as any).enabled = originalEnabled;
     });
 
-    it('should return degraded status when metrics output is empty', async () => {
+    it('should return unhealthy status when metrics output is empty', async () => {
       const originalEnabled = config.metrics.enabled;
       (config.metrics as any).enabled = true;
       
@@ -270,8 +271,8 @@ describe('Health Check Service', () => {
 
       const result = await checkMetricsHealth();
 
-      expect(result.status).toBe(HealthStatus.DEGRADED);
-      expect(result.message).toBe('Metrics registry returned no data');
+      expect(result.status).toBe(HealthStatus.UNHEALTHY);
+      expect(result.message).toBe('Metrics collection failed - no data available');
       expect(result.details?.metricsOutputEmpty).toBe(true);
 
       // Restore
@@ -465,6 +466,9 @@ describe('Health Check Service', () => {
     });
 
     it('should return degraded status when only metrics are unhealthy', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = true;
+      
       (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(false);
       (metricsService.getRegistry as jest.Mock).mockReturnValue(null);
 
@@ -472,6 +476,23 @@ describe('Health Check Service', () => {
 
       expect(result.status).toBe(HealthStatus.DEGRADED);
       expect(result.components.metrics?.status).toBe(HealthStatus.UNHEALTHY);
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
+    });
+
+    it('should return healthy status when metrics are disabled', async () => {
+      const originalEnabled = config.metrics.enabled;
+      (config.metrics as any).enabled = false;
+
+      const result = await performHealthCheck();
+
+      expect(result.status).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics?.status).toBe(HealthStatus.HEALTHY);
+      expect(result.components.metrics?.message).toBe('Metrics disabled');
+
+      // Restore
+      (config.metrics as any).enabled = originalEnabled;
     });
 
     it('should return degraded status when database has degraded status', async () => {
@@ -598,8 +619,10 @@ describe('Health Check Service', () => {
 
       await performReadinessCheck();
 
-      // The warning is logged in the function - we just verify it doesn't affect readiness
-      expect(true).toBe(true);
+      // Verify the warning message is logged
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Metrics disabled - readiness passes but observability unavailable. Set METRICS_ENABLED=true for production.'
+      );
 
       // Restore
       (config.metrics as any).enabled = originalEnabled;

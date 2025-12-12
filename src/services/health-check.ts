@@ -243,13 +243,28 @@ export async function checkMetricsHealth(): Promise<ComponentHealth> {
       };
     }
 
-    // Check if metrics are initialized and registry exists
-    const registry = getRegistry();
-    if (!registry || !areMetricsEnabled()) {
+    // Check if metrics are initialized
+    if (!areMetricsEnabled()) {
       logger.error('Metrics registry not initialized despite being enabled');
       return {
         status: HealthStatus.UNHEALTHY,
         message: 'Metrics registry not initialized',
+        details: {
+          enabled: config.metrics.enabled,
+          registryInitialized: false,
+        },
+      };
+    }
+
+    // Registry is initialized, so we can safely get it
+    const registry = getRegistry();
+    if (!registry) {
+      // This case should ideally not be reached if areMetricsEnabled() is true,
+      // but as a safeguard, we handle it.
+      logger.error('Metrics registry is null even though areMetricsEnabled() is true');
+      return {
+        status: HealthStatus.UNHEALTHY,
+        message: 'Inconsistent metrics state',
         details: {
           enabled: config.metrics.enabled,
           registryInitialized: false,
@@ -262,11 +277,12 @@ export async function checkMetricsHealth(): Promise<ComponentHealth> {
       const metricsOutput = await registry.metrics();
       
       // Verify we got some output (should at least have default metrics if enabled)
+      // Empty output indicates collection failure and should block readiness
       if (!metricsOutput || metricsOutput.length === 0) {
-        logger.warn('Metrics registry returned empty output');
+        logger.error('Metrics registry returned empty output - collection failure');
         return {
-          status: HealthStatus.DEGRADED,
-          message: 'Metrics registry returned no data',
+          status: HealthStatus.UNHEALTHY,
+          message: 'Metrics collection failed - no data available',
           details: {
             enabled: true,
             registryInitialized: true,
@@ -424,18 +440,25 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   ]);
 
   // Determine overall status based on component health
-  const componentHealths = [databaseHealth, redisHealth, encryptionHealth, githubAppHealth, metricsHealth];
   const criticalHealths = [databaseHealth, redisHealth, encryptionHealth];
+  
+  // Non-critical components that can cause degraded status
+  // Only include enabled components in degraded status calculation
+  const nonCriticalHealths = [githubAppHealth];
+  if (config.metrics.enabled) {
+    nonCriticalHealths.push(metricsHealth);
+  }
 
   let overallStatus = HealthStatus.HEALTHY;
   
   // Determine overall status based on component criticality:
   // - Critical: database, redis, encryption (failures = unhealthy)
-  // - Non-critical: githubApp, metrics (failures = degraded)
+  // - Non-critical: githubApp, metrics when enabled (failures = degraded)
   if (criticalHealths.some(h => h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.UNHEALTHY;
   }
-  else if (componentHealths.some(h => h.status === HealthStatus.DEGRADED || h.status === HealthStatus.UNHEALTHY)) {
+  else if (criticalHealths.some(h => h.status === HealthStatus.DEGRADED) ||
+           nonCriticalHealths.some(h => h.status === HealthStatus.DEGRADED || h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.DEGRADED;
   }
 
