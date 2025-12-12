@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 14
+Total files: 18
 
 ## .eslintrc.js
 **Language:** JavaScript  
@@ -38,8 +38,8 @@ Total files: 14
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 4.03 KB  
-**LOC:** 121  
+**Size:** 4.74 KB  
+**LOC:** 143  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -65,7 +65,7 @@ Total files: 14
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.96 KB  
+**Size:** 9.95 KB  
 **LOC:** 241  
 **TODOs/FIXMEs:** 0  
 
@@ -74,8 +74,26 @@ Total files: 14
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.17 KB  
-**LOC:** 173  
+**Size:** 7.91 KB  
+**LOC:** 187  
+**TODOs/FIXMEs:** 0  
+
+## src/routes/jwt.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 9.42 KB  
+**LOC:** 215  
+**TODOs/FIXMEs:** 0  
+
+## src/routes/jwt.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 7.37 KB  
+**LOC:** 177  
 **TODOs/FIXMEs:** 0  
 
 ## src/server.test.ts
@@ -92,8 +110,8 @@ Total files: 14
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.00 KB  
-**LOC:** 145  
+**Size:** 5.12 KB  
+**LOC:** 151  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/github-oauth.test.ts
@@ -112,6 +130,24 @@ Total files: 14
 **Summary:** TypeScript core implementation  
 **Size:** 5.98 KB  
 **LOC:** 176  
+**TODOs/FIXMEs:** 0  
+
+## src/services/jwt.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 9.81 KB  
+**LOC:** 248  
+**TODOs/FIXMEs:** 0  
+
+## src/services/jwt.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 6.58 KB  
+**LOC:** 195  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/logger.test.ts

@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 14,
+  "total_files": 18,
   "files": [
     {
       "schema_version": "2.0",
@@ -53,8 +53,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 4128,
-        "loc": 121,
+        "size_bytes": 4850,
+        "loc": 143,
         "todo_count": 0
       }
     },
@@ -95,7 +95,7 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10201,
+        "size_bytes": 10192,
         "loc": 241,
         "todo_count": 0
       }
@@ -109,8 +109,36 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7338,
-        "loc": 173,
+        "size_bytes": 8095,
+        "loc": 187,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/routes/jwt.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 9644,
+        "loc": 215,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/routes/jwt.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 7548,
+        "loc": 177,
         "todo_count": 0
       }
     },
@@ -137,8 +165,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5123,
-        "loc": 145,
+        "size_bytes": 5248,
+        "loc": 151,
         "todo_count": 0
       }
     },
@@ -167,6 +195,34 @@
       "metrics": {
         "size_bytes": 6123,
         "loc": 176,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/jwt.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 10049,
+        "loc": 248,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/jwt.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 6740,
+        "loc": 195,
         "todo_count": 0
       }
     },

@@ -85,6 +85,28 @@
       }
     },
     {
+      "id": "src/routes/jwt.test.ts",
+      "path": "src/routes/jwt.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/routes/jwt.ts",
+      "path": "src/routes/jwt.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
       "id": "src/server.test.ts",
       "path": "src/server.test.ts",
       "type": "file",
@@ -128,6 +150,30 @@
         ],
         "third-party": [
           "axios"
+        ]
+      }
+    },
+    {
+      "id": "src/services/jwt.test.ts",
+      "path": "src/services/jwt.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "jsonwebtoken"
+        ]
+      }
+    },
+    {
+      "id": "src/services/jwt.ts",
+      "path": "src/services/jwt.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "fs"
+        ],
+        "third-party": [
+          "jsonwebtoken"
         ]
       }
     },
@@ -198,6 +244,26 @@
       "target": "src/services/github-oauth.ts"
     },
     {
+      "source": "src/routes/auth.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/routes/jwt.test.ts",
+      "target": "src/server.ts"
+    },
+    {
+      "source": "src/routes/jwt.test.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/server.test.ts",
       "target": "src/server.ts"
     },
@@ -218,6 +284,10 @@
       "target": "src/routes/auth.ts"
     },
     {
+      "source": "src/server.ts",
+      "target": "src/routes/jwt.ts"
+    },
+    {
       "source": "src/services/github-oauth.test.ts",
       "target": "src/services/github-oauth.ts"
     },
@@ -234,6 +304,26 @@
       "target": "src/utils/logger.ts"
     },
     {
+      "source": "src/services/jwt.test.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/services/jwt.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/jwt.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/jwt.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/jwt.ts",
+      "target": "src/db/index.ts"
+    },
+    {
       "source": "src/utils/logger.test.ts",
       "target": "src/utils/logger.ts"
     },
@@ -245,6 +335,7 @@
   "external_dependencies_summary": {
     "stdlib": [
       "crypto",
+      "fs",
       "http",
       "path"
     ],
@@ -253,13 +344,14 @@
       "axios",
       "dotenv",
       "express",
+      "jsonwebtoken",
       "pino",
       "pino-http",
       "react",
       "react-dom/server",
       "supertest"
     ],
-    "stdlib_count": 3,
-    "third-party_count": 9
+    "stdlib_count": 4,
+    "third-party_count": 10
   }
 }

@@ -18,6 +18,7 @@
 ├── docs
   ├── database.md
   ├── github-app-setup.md
+  ├── jwt.md
   ├── logging.md
   ├── setup.md
   └── ui.md
@@ -33,6 +34,9 @@
   └── validate-db.sh
 ├── src
   ├── config
+    ├── keys
+      ├── jwt-public.pem
+      └── README.md
     ├── index.test.ts
     └── index.ts
   ├── db
@@ -45,10 +49,14 @@
     └── unauthorized.tsx
   ├── routes
     ├── auth.test.ts
-    └── auth.ts
+    ├── auth.ts
+    ├── jwt.test.ts
+    └── jwt.ts
   ├── services
     ├── github-oauth.test.ts
-    └── github-oauth.ts
+    ├── github-oauth.ts
+    ├── jwt.test.ts
+    └── jwt.ts
   ├── utils
     ├── logger.test.ts
     └── logger.ts

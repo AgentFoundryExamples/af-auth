@@ -84,6 +84,10 @@
         },
         {
           "type": "file",
+          "name": "jwt.md"
+        },
+        {
+          "type": "file",
           "name": "logging.md"
         },
         {
@@ -153,6 +157,20 @@
           "name": "config",
           "children": [
             {
+              "type": "directory",
+              "name": "keys",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "jwt-public.pem"
+                },
+                {
+                  "type": "file",
+                  "name": "README.md"
+                }
+              ]
+            },
+            {
               "type": "file",
               "name": "index.test.ts"
             },
@@ -209,6 +227,14 @@
             {
               "type": "file",
               "name": "auth.ts"
+            },
+            {
+              "type": "file",
+              "name": "jwt.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "jwt.ts"
             }
           ]
         },
@@ -223,6 +249,14 @@
             {
               "type": "file",
               "name": "github-oauth.ts"
+            },
+            {
+              "type": "file",
+              "name": "jwt.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "jwt.ts"
             }
           ]
         },
