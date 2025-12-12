@@ -76,6 +76,10 @@
       "children": [
         {
           "type": "file",
+          "name": "api.md"
+        },
+        {
+          "type": "file",
           "name": "database.md"
         },
         {
@@ -89,6 +93,10 @@
         {
           "type": "file",
           "name": "logging.md"
+        },
+        {
+          "type": "file",
+          "name": "service-registry.md"
         },
         {
           "type": "file",
@@ -119,6 +127,26 @@
               ]
             },
             {
+              "type": "directory",
+              "name": "20251212003115_add_service_registry",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
+              "type": "directory",
+              "name": "20251212003212_",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
               "type": "file",
               "name": "migration_lock.toml"
             },
@@ -141,6 +169,10 @@
         {
           "type": "file",
           "name": "create-migration.sh"
+        },
+        {
+          "type": "file",
+          "name": "manage-services.ts"
         },
         {
           "type": "file",
@@ -230,6 +262,14 @@
             },
             {
               "type": "file",
+              "name": "github-token.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "github-token.ts"
+            },
+            {
+              "type": "file",
               "name": "jwt.test.ts"
             },
             {
@@ -257,6 +297,14 @@
             {
               "type": "file",
               "name": "jwt.ts"
+            },
+            {
+              "type": "file",
+              "name": "service-registry.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "service-registry.ts"
             }
           ]
         },
@@ -315,6 +363,10 @@
     {
       "type": "file",
       "name": "README.md"
+    },
+    {
+      "type": "file",
+      "name": "SECURITY_SUMMARY.md"
     },
     {
       "type": "file",

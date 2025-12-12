@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 18
+Total files: 23
 
 ## .eslintrc.js
 **Language:** JavaScript  
@@ -22,6 +22,15 @@ Total files: 18
 **Summary:** JavaScript module for jest.config  
 **Size:** 1.09 KB  
 **LOC:** 22  
+**TODOs/FIXMEs:** 0  
+
+## scripts/manage-services.ts
+**Language:** TypeScript  
+**Role:** script  
+**Role Justification:** located in 'scripts' directory  
+**Summary:** TypeScript utility script (role: script)  
+**Size:** 13.32 KB  
+**LOC:** 347  
 **TODOs/FIXMEs:** 0  
 
 ## src/config/index.test.ts
@@ -78,6 +87,24 @@ Total files: 18
 **LOC:** 187  
 **TODOs/FIXMEs:** 0  
 
+## src/routes/github-token.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 19.00 KB  
+**LOC:** 499  
+**TODOs/FIXMEs:** 0  
+
+## src/routes/github-token.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 8.06 KB  
+**LOC:** 203  
+**TODOs/FIXMEs:** 0  
+
 ## src/routes/jwt.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -110,8 +137,8 @@ Total files: 18
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.12 KB  
-**LOC:** 151  
+**Size:** 5.28 KB  
+**LOC:** 156  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/github-oauth.test.ts
@@ -146,8 +173,26 @@ Total files: 18
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.58 KB  
-**LOC:** 195  
+**Size:** 6.68 KB  
+**LOC:** 197  
+**TODOs/FIXMEs:** 0  
+
+## src/services/service-registry.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 13.61 KB  
+**LOC:** 356  
+**TODOs/FIXMEs:** 0  
+
+## src/services/service-registry.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 8.49 KB  
+**LOC:** 261  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/logger.test.ts

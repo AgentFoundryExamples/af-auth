@@ -16,21 +16,28 @@
   └── workflows
     └── af_maintenance.yml
 ├── docs
+  ├── api.md
   ├── database.md
   ├── github-app-setup.md
   ├── jwt.md
   ├── logging.md
+  ├── service-registry.md
   ├── setup.md
   └── ui.md
 ├── prisma
   ├── migrations
     ├── 20241211000000_initial_setup
       └── migration.sql
+    ├── 20251212003115_add_service_registry
+      └── migration.sql
+    ├── 20251212003212_
+      └── migration.sql
     ├── migration_lock.toml
     └── README.md
   └── schema.prisma
 ├── scripts
   ├── create-migration.sh
+  ├── manage-services.ts
   └── validate-db.sh
 ├── src
   ├── config
@@ -50,13 +57,17 @@
   ├── routes
     ├── auth.test.ts
     ├── auth.ts
+    ├── github-token.test.ts
+    ├── github-token.ts
     ├── jwt.test.ts
     └── jwt.ts
   ├── services
     ├── github-oauth.test.ts
     ├── github-oauth.ts
     ├── jwt.test.ts
-    └── jwt.ts
+    ├── jwt.ts
+    ├── service-registry.test.ts
+    └── service-registry.ts
   ├── utils
     ├── logger.test.ts
     └── logger.ts
@@ -70,4 +81,5 @@
 ├── LICENSE
 ├── package.json
 ├── README.md
+├── SECURITY_SUMMARY.md
 └── tsconfig.json

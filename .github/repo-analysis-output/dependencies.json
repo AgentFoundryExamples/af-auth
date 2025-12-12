@@ -19,6 +19,18 @@
       }
     },
     {
+      "id": "scripts/manage-services.ts",
+      "path": "scripts/manage-services.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto",
+          "readline"
+        ],
+        "third-party": []
+      }
+    },
+    {
       "id": "src/config/index.test.ts",
       "path": "src/config/index.test.ts",
       "type": "file",
@@ -81,6 +93,28 @@
           "express",
           "react",
           "react-dom/server"
+        ]
+      }
+    },
+    {
+      "id": "src/routes/github-token.test.ts",
+      "path": "src/routes/github-token.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/routes/github-token.ts",
+      "path": "src/routes/github-token.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
         ]
       }
     },
@@ -173,7 +207,30 @@
           "fs"
         ],
         "third-party": [
-          "jsonwebtoken"
+          "jsonwebtoken",
+          "ms"
+        ]
+      }
+    },
+    {
+      "id": "src/services/service-registry.test.ts",
+      "path": "src/services/service-registry.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "bcrypt"
+        ]
+      }
+    },
+    {
+      "id": "src/services/service-registry.ts",
+      "path": "src/services/service-registry.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "bcrypt"
         ]
       }
     },
@@ -199,6 +256,14 @@
     }
   ],
   "edges": [
+    {
+      "source": "scripts/manage-services.ts",
+      "target": "src/services/service-registry.ts"
+    },
+    {
+      "source": "scripts/manage-services.ts",
+      "target": "src/db/index.ts"
+    },
     {
       "source": "src/config/index.test.ts",
       "target": "src/config/index.ts"
@@ -248,6 +313,30 @@
       "target": "src/services/jwt.ts"
     },
     {
+      "source": "src/routes/github-token.test.ts",
+      "target": "src/server.ts"
+    },
+    {
+      "source": "src/routes/github-token.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/routes/github-token.test.ts",
+      "target": "src/services/service-registry.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/services/service-registry.ts"
+    },
+    {
       "source": "src/routes/jwt.test.ts",
       "target": "src/server.ts"
     },
@@ -288,6 +377,10 @@
       "target": "src/routes/jwt.ts"
     },
     {
+      "source": "src/server.ts",
+      "target": "src/routes/github-token.ts"
+    },
+    {
       "source": "src/services/github-oauth.test.ts",
       "target": "src/services/github-oauth.ts"
     },
@@ -324,6 +417,22 @@
       "target": "src/db/index.ts"
     },
     {
+      "source": "src/services/service-registry.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/service-registry.test.ts",
+      "target": "src/services/service-registry.ts"
+    },
+    {
+      "source": "src/services/service-registry.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/service-registry.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/utils/logger.test.ts",
       "target": "src/utils/logger.ts"
     },
@@ -337,21 +446,24 @@
       "crypto",
       "fs",
       "http",
-      "path"
+      "path",
+      "readline"
     ],
     "third-party": [
       "@prisma/client",
       "axios",
+      "bcrypt",
       "dotenv",
       "express",
       "jsonwebtoken",
+      "ms",
       "pino",
       "pino-http",
       "react",
       "react-dom/server",
       "supertest"
     ],
-    "stdlib_count": 4,
-    "third-party_count": 10
+    "stdlib_count": 5,
+    "third-party_count": 12
   }
 }
