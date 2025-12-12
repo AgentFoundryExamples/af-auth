@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { generateJWT, refreshJWT, getPublicKey } from '../services/jwt';
+import { generateJWT, refreshJWT, getPublicKeyForVerification } from '../services/jwt';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -60,11 +60,18 @@ router.post('/token', async (req: Request, res: Response) => {
           message: 'Your access has been revoked. Please contact the administrator.',
         });
       } else {
-        throw error; // Re-throw unexpected errors
+        // Log error message only, not the full error object to avoid exposing sensitive details
+        logger.error({ errorMessage }, 'Unexpected error during token refresh');
+        return res.status(500).json({
+          error: 'INTERNAL_ERROR',
+          message: 'An unexpected error occurred. Please try again later.',
+        });
       }
     }
   } catch (error) {
-    logger.error({ error }, 'Unexpected error during token refresh');
+    // Log error message only, not the full error object to avoid exposing sensitive details
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({ errorMessage }, 'Unexpected error during token refresh');
     return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'An unexpected error occurred. Please try again later.',
@@ -110,11 +117,18 @@ router.get('/token', async (req: Request, res: Response) => {
           message: 'The specified user does not exist.',
         });
       } else {
-        throw error; // Re-throw unexpected errors
+        // Log error message only, not the full error object to avoid exposing sensitive details
+        logger.error({ userId, errorMessage }, 'Unexpected error during token generation');
+        return res.status(500).json({
+          error: 'INTERNAL_ERROR',
+          message: 'An unexpected error occurred. Please try again later.',
+        });
       }
     }
   } catch (error) {
-    logger.error({ error }, 'Unexpected error during token generation');
+    // Log error message only, not the full error object to avoid exposing sensitive details
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error({ errorMessage }, 'Unexpected error during token generation');
     return res.status(500).json({
       error: 'INTERNAL_ERROR',
       message: 'An unexpected error occurred. Please try again later.',
@@ -130,7 +144,7 @@ router.get('/token', async (req: Request, res: Response) => {
  */
 router.get('/jwks', (_req: Request, res: Response) => {
   try {
-    const publicKey = getPublicKey();
+    const publicKey = getPublicKeyForVerification();
     
     logger.debug('Public key requested');
     
@@ -156,7 +170,7 @@ router.get('/jwks', (_req: Request, res: Response) => {
  */
 router.get('/jwks.json', (_req: Request, res: Response) => {
   try {
-    const publicKey = getPublicKey();
+    const publicKey = getPublicKeyForVerification();
     
     logger.debug('JWKS endpoint requested');
     

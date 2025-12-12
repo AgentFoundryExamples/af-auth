@@ -222,7 +222,7 @@ describe('JWT Routes', () => {
     it('should return public key in PEM format', async () => {
       const publicKey = '-----BEGIN PUBLIC KEY-----\ntest-key\n-----END PUBLIC KEY-----';
 
-      mockJwtService.getPublicKey.mockReturnValue(publicKey);
+      mockJwtService.getPublicKeyForVerification.mockReturnValue(publicKey);
 
       const response = await request(app)
         .get('/api/jwks')
@@ -231,11 +231,11 @@ describe('JWT Routes', () => {
 
       expect(response.text).toBe(publicKey);
       expect(response.text).toContain('BEGIN PUBLIC KEY');
-      expect(mockJwtService.getPublicKey).toHaveBeenCalled();
+      expect(mockJwtService.getPublicKeyForVerification).toHaveBeenCalled();
     });
 
     it('should handle errors when retrieving public key', async () => {
-      mockJwtService.getPublicKey.mockImplementation(() => {
+      mockJwtService.getPublicKeyForVerification.mockImplementation(() => {
         throw new Error('Key file not found');
       });
 
@@ -252,7 +252,7 @@ describe('JWT Routes', () => {
     it('should return JWKS with public key', async () => {
       const publicKey = '-----BEGIN PUBLIC KEY-----\ntest-key\n-----END PUBLIC KEY-----';
 
-      mockJwtService.getPublicKey.mockReturnValue(publicKey);
+      mockJwtService.getPublicKeyForVerification.mockReturnValue(publicKey);
 
       const response = await request(app)
         .get('/.well-known/jwks.json')
@@ -264,11 +264,11 @@ describe('JWT Routes', () => {
       expect(response.body).toHaveProperty('publicKeyPEM', publicKey);
       expect(response.body).toHaveProperty('keys');
       expect(Array.isArray(response.body.keys)).toBe(true);
-      expect(mockJwtService.getPublicKey).toHaveBeenCalled();
+      expect(mockJwtService.getPublicKeyForVerification).toHaveBeenCalled();
     });
 
     it('should handle errors when retrieving JWKS', async () => {
-      mockJwtService.getPublicKey.mockImplementation(() => {
+      mockJwtService.getPublicKeyForVerification.mockImplementation(() => {
         throw new Error('Key file not found');
       });
 

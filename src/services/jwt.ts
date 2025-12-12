@@ -28,33 +28,35 @@ export interface JWTVerifyResult {
 }
 
 /**
- * Load RSA private key from file
+ * Load RSA key from file
  */
-function loadPrivateKey(): string {
+function loadKey(path: string, type: 'private' | 'public'): string {
   try {
-    return fs.readFileSync(config.jwt.privateKeyPath, 'utf8');
+    return fs.readFileSync(path, 'utf8');
   } catch (error) {
-    logger.error(
-      { error, path: config.jwt.privateKeyPath },
-      'Failed to load JWT private key'
+    logger.error({ error, path }, `Failed to load JWT ${type} key`);
+    throw new Error(
+      `JWT ${type} key not found or unreadable. Please check the path and permissions.`
     );
-    throw new Error('JWT private key not found. Please generate keys using openssl.');
   }
 }
 
-/**
- * Load RSA public key from file
- */
-function loadPublicKey(): string {
-  try {
-    return fs.readFileSync(config.jwt.publicKeyPath, 'utf8');
-  } catch (error) {
-    logger.error(
-      { error, path: config.jwt.publicKeyPath },
-      'Failed to load JWT public key'
-    );
-    throw new Error('JWT public key not found. Please generate keys using openssl.');
+// Cache keys in memory for performance (loaded lazily on first use)
+let cachedPrivateKey: string | null = null;
+let cachedPublicKey: string | null = null;
+
+function getPrivateKey(): string {
+  if (!cachedPrivateKey) {
+    cachedPrivateKey = loadKey(config.jwt.privateKeyPath, 'private');
   }
+  return cachedPrivateKey;
+}
+
+function getPublicKey(): string {
+  if (!cachedPublicKey) {
+    cachedPublicKey = loadKey(config.jwt.publicKeyPath, 'public');
+  }
+  return cachedPublicKey;
 }
 
 /**
@@ -62,7 +64,7 @@ function loadPublicKey(): string {
  * Uses RS256 algorithm with private key
  */
 export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>): string {
-  const privateKey = loadPrivateKey();
+  const privateKey = getPrivateKey();
   
   const payload: Omit<JWTClaims, 'iat' | 'exp'> = {
     ...claims,
@@ -89,7 +91,7 @@ export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>):
  */
 export function verifyJWT(token: string): JWTVerifyResult {
   try {
-    const publicKey = loadPublicKey();
+    const publicKey = getPublicKey();
     
     const decoded = jwt.verify(token, publicKey, {
       algorithms: ['RS256'],
@@ -113,14 +115,16 @@ export function verifyJWT(token: string): JWTVerifyResult {
         expired: true,
       };
     } else if (error instanceof jwt.JsonWebTokenError) {
-      logger.debug({ error: error.message }, 'JWT verification failed: invalid token');
+      const errorMessage = error.message;
+      logger.debug({ errorMessage }, 'JWT verification failed: invalid token');
       return {
         valid: false,
-        error: error.message,
+        error: errorMessage,
         expired: false,
       };
     } else {
-      logger.error({ error }, 'Unexpected error during JWT verification');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error({ errorMessage }, 'Unexpected error during JWT verification');
       return {
         valid: false,
         error: 'Invalid token',
@@ -200,8 +204,8 @@ export async function refreshJWT(token: string): Promise<string> {
 /**
  * Get public key in PEM format for external verification
  */
-export function getPublicKey(): string {
-  return loadPublicKey();
+export function getPublicKeyForVerification(): string {
+  return getPublicKey();
 }
 
 /**
@@ -212,7 +216,7 @@ export function getPublicKey(): string {
  */
 export function getJWKS(): object {
   // Load public key to ensure it exists
-  loadPublicKey();
+  getPublicKey();
   
   return {
     note: 'This is a simplified JWKS response. For verification, use the PEM key from the publicKeyPEM field or /api/jwks endpoint.',

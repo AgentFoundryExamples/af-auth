@@ -214,7 +214,13 @@ router.get('/github/callback', async (req: Request, res: Response) => {
         })
       );
       
-      return res.setHeader('Content-Type', 'text/html').send(html);
+      // Prevent caching of sensitive token information
+      return res
+        .setHeader('Content-Type', 'text/html')
+        .setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+        .setHeader('Pragma', 'no-cache')
+        .setHeader('Expires', '0')
+        .send(html);
     } else {
       logger.info({ userId: user.id }, 'User is not whitelisted, rendering unauthorized page');
       

@@ -23,7 +23,7 @@ import {
   verifyJWT,
   generateJWT,
   refreshJWT,
-  getPublicKey,
+  getPublicKeyForVerification,
   JWTClaims,
 } from './jwt';
 import { prisma } from '../db';
@@ -301,9 +301,9 @@ describe('JWT Service', () => {
     });
   });
 
-  describe('getPublicKey', () => {
+  describe('getPublicKeyForVerification', () => {
     it('should return public key in PEM format', () => {
-      const publicKey = getPublicKey();
+      const publicKey = getPublicKeyForVerification();
 
       expect(publicKey).toBeDefined();
       expect(typeof publicKey).toBe('string');
