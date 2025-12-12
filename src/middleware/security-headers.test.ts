@@ -417,5 +417,32 @@ describe('Security Headers Middleware', () => {
       await request(app).get('/test').expect(200);
       // No errors should be thrown
     });
+
+    it('should handle invalid GITHUB_CALLBACK_URL gracefully', async () => {
+      process.env.GITHUB_CALLBACK_URL = 'not-a-valid-url';
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      app = express();
+      app.use(createSecurityHeadersMiddleware());
+      app.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(app).get('/test').expect(200);
+
+      // Should still apply security headers with fallback domain
+      expect(response.headers['content-security-policy']).toBeDefined();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'FATAL: Invalid GITHUB_CALLBACK_URL. Could not parse origin.',
+        expect.any(Object)
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Falling back to default GitHub domain')
+      );
+      
+      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
+    });
   });
 });
