@@ -425,4 +425,86 @@ describe('JWT Routes', () => {
       expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
     });
   });
+
+  describe('JWT expiration metadata in responses', () => {
+    it('GET /api/token should return configured expiresIn and expiresAt', async () => {
+      mockJwtService.generateJWT.mockResolvedValue('mock-jwt-token');
+
+      const response = await request(app)
+        .get('/api/token')
+        .query({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('token', 'mock-jwt-token');
+      expect(response.body).toHaveProperty('expiresIn');
+      expect(response.body).toHaveProperty('expiresAt');
+      
+      // Verify expiresIn matches config format (e.g., "30d", "7d", "24h")
+      expect(response.body.expiresIn).toMatch(/^\d+[smhd]$/);
+      
+      // Verify expiresAt is a valid ISO timestamp
+      expect(() => new Date(response.body.expiresAt)).not.toThrow();
+      const expiresAt = new Date(response.body.expiresAt);
+      expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('POST /api/token should return configured expiresIn and expiresAt', async () => {
+      mockJwtService.refreshJWT.mockResolvedValue('new-mock-jwt-token');
+
+      const response = await request(app)
+        .post('/api/token')
+        .send({ token: 'old-jwt-token' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      expect(response.body).toHaveProperty('token', 'new-mock-jwt-token');
+      expect(response.body).toHaveProperty('expiresIn');
+      expect(response.body).toHaveProperty('expiresAt');
+      
+      // Verify expiresIn matches config format
+      expect(response.body.expiresIn).toMatch(/^\d+[smhd]$/);
+      
+      // Verify expiresAt is a valid ISO timestamp in the future
+      expect(() => new Date(response.body.expiresAt)).not.toThrow();
+      const expiresAt = new Date(response.body.expiresAt);
+      expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    it('should return expiresAt timestamp consistent with expiresIn duration', async () => {
+      mockJwtService.generateJWT.mockResolvedValue('mock-jwt-token');
+
+      const beforeRequest = Date.now();
+      const response = await request(app)
+        .get('/api/token')
+        .query({ userId: '550e8400-e29b-41d4-a716-446655440000' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+      const afterRequest = Date.now();
+
+      const expiresAt = new Date(response.body.expiresAt).getTime();
+      
+      // Parse expiresIn to seconds
+      const expiresIn = response.body.expiresIn;
+      const match = expiresIn.match(/^(\d+)([smhd])$/);
+      expect(match).toBeTruthy();
+      
+      const value = parseInt(match[1], 10);
+      const unit = match[2];
+      let seconds = 0;
+      switch (unit) {
+        case 's': seconds = value; break;
+        case 'm': seconds = value * 60; break;
+        case 'h': seconds = value * 60 * 60; break;
+        case 'd': seconds = value * 24 * 60 * 60; break;
+      }
+      
+      // Verify expiresAt is approximately now + expiresIn (with tolerance for request processing)
+      const expectedMin = beforeRequest + (seconds * 1000);
+      const expectedMax = afterRequest + (seconds * 1000);
+      
+      expect(expiresAt).toBeGreaterThanOrEqual(expectedMin);
+      expect(expiresAt).toBeLessThanOrEqual(expectedMax + 1000); // +1s tolerance
+    });
+  });
 });

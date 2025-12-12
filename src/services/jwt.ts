@@ -255,3 +255,11 @@ export function getJWKS(): object {
     ],
   };
 }
+
+/**
+ * Get JWT expiration configuration value
+ * Returns the configured expiration string (e.g., "30d", "24h")
+ */
+export function getJWTExpiresIn(): string {
+  return config.jwt.expiresIn;
+}

@@ -171,6 +171,9 @@ LOG_LEVEL=debug
 LOG_PRETTY=true
 
 # JWT Configuration
+# Token expiration time - controls how long JWTs remain valid
+# Format: number + unit (s/m/h/d). Examples: 30d, 7d, 24h, 60m
+# Minimum: 60s, Recommended minimum: 5m, Default: 30d
 JWT_EXPIRES_IN=30d
 JWT_ISSUER=http://localhost:3000
 JWT_AUDIENCE=http://localhost:3000
@@ -519,7 +522,7 @@ npm run test:coverage
 | `SESSION_MAX_AGE_MS` | No | 600000 | Session lifetime in milliseconds (10 minutes) |
 | `JWT_PRIVATE_KEY` | Yes | - | RSA private key for JWT signing (base64-encoded PEM) |
 | `JWT_PUBLIC_KEY` | Yes | - | RSA public key for JWT verification (base64-encoded PEM) |
-| `JWT_EXPIRES_IN` | No | 30d | JWT expiration time (e.g., 30d, 24h, 7200s) |
+| `JWT_EXPIRES_IN` | No | 30d | JWT expiration time. Format: number+unit (s/m/h/d). Min: 60s, Recommended: 5m+, Max recommended: 90d. Examples: 30d, 7d, 24h, 60m, 3600s. Controls both token exp claim and API response metadata. |
 | `JWT_ISSUER` | No | {BASE_URL} | JWT issuer claim |
 | `JWT_AUDIENCE` | No | {BASE_URL} | JWT audience claim |
 | `JWT_CLOCK_TOLERANCE_SECONDS` | No | 60 | Clock skew tolerance for JWT validation |

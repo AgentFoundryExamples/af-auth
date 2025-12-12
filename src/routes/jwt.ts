@@ -17,6 +17,7 @@ import { revokeToken, getRevocationStatus } from '../services/token-revocation';
 import logger from '../utils/logger';
 import { jwtRateLimiter } from '../middleware/rate-limit';
 import { validateBody, validateQuery, schemas } from '../middleware/validation';
+import { config, calculateJWTExpiration } from '../config';
 
 const router = Router();
 
@@ -36,9 +37,12 @@ router.post('/token', jwtRateLimiter, validateBody(schemas.tokenRefresh), async 
       
       logger.info('Token refreshed successfully');
       
+      const expiresAt = calculateJWTExpiration();
+      
       return res.json({
         token: newToken,
-        expiresIn: '30d',
+        expiresIn: config.jwt.expiresIn,
+        expiresAt: expiresAt.toISOString(),
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -109,9 +113,12 @@ router.get('/token', jwtRateLimiter, validateQuery(schemas.tokenIssuanceQuery), 
       
       logger.info({ userId }, 'Token generated successfully');
       
+      const expiresAt = calculateJWTExpiration();
+      
       return res.json({
         token,
-        expiresIn: '30d',
+        expiresIn: config.jwt.expiresIn,
+        expiresAt: expiresAt.toISOString(),
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
