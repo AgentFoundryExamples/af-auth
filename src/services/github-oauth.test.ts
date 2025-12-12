@@ -45,6 +45,7 @@ import {
   validateState,
   getAuthorizationUrl,
   calculateTokenExpiration,
+  isTokenExpiringSoon,
 } from './github-oauth';
 import { config } from '../config';
 
@@ -115,6 +116,55 @@ describe('GitHub OAuth Service', () => {
       const expiration = calculateTokenExpiration(undefined);
 
       expect(expiration).toBeNull();
+    });
+  });
+
+  describe('isTokenExpiringSoon', () => {
+    it('should return false for null expiration date', () => {
+      const result = isTokenExpiringSoon(null, 3600);
+      
+      expect(result).toBe(false);
+    });
+
+    it('should return true when token expires within threshold', () => {
+      // Token expires in 30 minutes
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+      const threshold = 3600; // 1 hour
+      
+      const result = isTokenExpiringSoon(expiresAt, threshold);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should return false when token expires beyond threshold', () => {
+      // Token expires in 2 hours
+      const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      const threshold = 3600; // 1 hour
+      
+      const result = isTokenExpiringSoon(expiresAt, threshold);
+      
+      expect(result).toBe(false);
+    });
+
+    it('should return true for already expired tokens', () => {
+      // Token expired 1 hour ago
+      const expiresAt = new Date(Date.now() - 60 * 60 * 1000);
+      const threshold = 3600;
+      
+      const result = isTokenExpiringSoon(expiresAt, threshold);
+      
+      expect(result).toBe(true);
+    });
+
+    it('should handle custom thresholds', () => {
+      // Token expires in 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      
+      // Should be expiring soon with 15-minute threshold
+      expect(isTokenExpiringSoon(expiresAt, 15 * 60)).toBe(true);
+      
+      // Should not be expiring soon with 5-minute threshold
+      expect(isTokenExpiringSoon(expiresAt, 5 * 60)).toBe(false);
     });
   });
 });
