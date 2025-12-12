@@ -24,6 +24,7 @@
   ├── jwt.md
   ├── logging.md
   ├── operations.md
+  ├── ROADMAP.md
   ├── security.md
   ├── service-registry.md
   ├── setup.md
@@ -80,6 +81,7 @@
 ├── .env.example
 ├── .eslintrc.js
 ├── .gitignore
+├── CHANGELOG.md
 ├── docker-compose.yml
 ├── jest.config.js
 ├── LICENSE

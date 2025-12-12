@@ -110,6 +110,10 @@
         },
         {
           "type": "file",
+          "name": "ROADMAP.md"
+        },
+        {
+          "type": "file",
           "name": "security.md"
         },
         {
@@ -361,6 +365,10 @@
     {
       "type": "file",
       "name": ".gitignore"
+    },
+    {
+      "type": "file",
+      "name": "CHANGELOG.md"
     },
     {
       "type": "file",
