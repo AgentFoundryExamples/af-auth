@@ -53,83 +53,6 @@ function isTokenEncrypted(token: string | null): boolean {
 }
 
 /**
- * Migrate a single user's tokens
- */
-async function migrateUserTokens(userId: string, dryRun: boolean): Promise<{
-  accessTokenMigrated: boolean;
-  refreshTokenMigrated: boolean;
-}> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      githubUserId: true,
-      githubAccessToken: true,
-      githubRefreshToken: true,
-    },
-  });
-  
-  if (!user) {
-    throw new Error(`User ${userId} not found`);
-  }
-  
-  let accessTokenMigrated = false;
-  let refreshTokenMigrated = false;
-  
-  // Check and encrypt access token
-  if (user.githubAccessToken && !isTokenEncrypted(user.githubAccessToken)) {
-    logger.info(
-      { userId: user.id, githubUserId: user.githubUserId.toString() },
-      'Encrypting access token'
-    );
-    
-    const encryptedAccessToken = await encryptGitHubToken(user.githubAccessToken);
-    
-    // Validate by decrypting
-    const decrypted = await decryptGitHubToken(encryptedAccessToken);
-    if (decrypted !== user.githubAccessToken) {
-      throw new Error('Token encryption validation failed');
-    }
-    
-    if (!dryRun) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { githubAccessToken: encryptedAccessToken },
-      });
-    }
-    
-    accessTokenMigrated = true;
-  }
-  
-  // Check and encrypt refresh token
-  if (user.githubRefreshToken && !isTokenEncrypted(user.githubRefreshToken)) {
-    logger.info(
-      { userId: user.id, githubUserId: user.githubUserId.toString() },
-      'Encrypting refresh token'
-    );
-    
-    const encryptedRefreshToken = await encryptGitHubToken(user.githubRefreshToken);
-    
-    // Validate by decrypting
-    const decrypted = await decryptGitHubToken(encryptedRefreshToken);
-    if (decrypted !== user.githubRefreshToken) {
-      throw new Error('Token encryption validation failed');
-    }
-    
-    if (!dryRun) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { githubRefreshToken: encryptedRefreshToken },
-      });
-    }
-    
-    refreshTokenMigrated = true;
-  }
-  
-  return { accessTokenMigrated, refreshTokenMigrated };
-}
-
-/**
  * Main migration function
  */
 async function main() {
@@ -169,10 +92,83 @@ async function main() {
     let totalRefreshTokensMigrated = 0;
     let errors = 0;
     
-    // Process each user
+    // Process each user - wrap in transaction for safety
     for (const user of users) {
       try {
-        const result = await migrateUserTokens(user.id, dryRun);
+        // Use a transaction to ensure atomicity for each user's migration
+        const result = await prisma.$transaction(async (tx) => {
+          // Re-fetch user within transaction to ensure we have the latest data
+          const userInTx = await tx.user.findUnique({
+            where: { id: user.id },
+            select: {
+              id: true,
+              githubUserId: true,
+              githubAccessToken: true,
+              githubRefreshToken: true,
+            },
+          });
+          
+          if (!userInTx) {
+            throw new Error(`User ${user.id} not found in transaction`);
+          }
+          
+          let accessTokenMigrated = false;
+          let refreshTokenMigrated = false;
+          
+          // Prepare data to update - combine both tokens into a single atomic update
+          const dataToUpdate: {
+            githubAccessToken?: string;
+            githubRefreshToken?: string;
+          } = {};
+          
+          // Check and encrypt access token
+          if (userInTx.githubAccessToken && !isTokenEncrypted(userInTx.githubAccessToken)) {
+            logger.info(
+              { userId: userInTx.id, githubUserId: userInTx.githubUserId.toString() },
+              'Encrypting access token'
+            );
+            
+            const encryptedAccessToken = await encryptGitHubToken(userInTx.githubAccessToken);
+            
+            // Validate by decrypting
+            const decrypted = await decryptGitHubToken(encryptedAccessToken);
+            if (decrypted !== userInTx.githubAccessToken) {
+              throw new Error('Access token encryption validation failed');
+            }
+            
+            dataToUpdate.githubAccessToken = encryptedAccessToken;
+            accessTokenMigrated = true;
+          }
+          
+          // Check and encrypt refresh token
+          if (userInTx.githubRefreshToken && !isTokenEncrypted(userInTx.githubRefreshToken)) {
+            logger.info(
+              { userId: userInTx.id, githubUserId: userInTx.githubUserId.toString() },
+              'Encrypting refresh token'
+            );
+            
+            const encryptedRefreshToken = await encryptGitHubToken(userInTx.githubRefreshToken);
+            
+            // Validate by decrypting
+            const decrypted = await decryptGitHubToken(encryptedRefreshToken);
+            if (decrypted !== userInTx.githubRefreshToken) {
+              throw new Error('Refresh token encryption validation failed');
+            }
+            
+            dataToUpdate.githubRefreshToken = encryptedRefreshToken;
+            refreshTokenMigrated = true;
+          }
+          
+          // Perform a single atomic update for both tokens (if any need updating)
+          if (!dryRun && Object.keys(dataToUpdate).length > 0) {
+            await tx.user.update({
+              where: { id: userInTx.id },
+              data: dataToUpdate,
+            });
+          }
+          
+          return { accessTokenMigrated, refreshTokenMigrated };
+        });
         
         if (result.accessTokenMigrated) {
           totalAccessTokensMigrated++;
