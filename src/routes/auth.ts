@@ -26,6 +26,7 @@ import {
   calculateTokenExpiration,
 } from '../services/github-oauth';
 import { generateJWT } from '../services/jwt';
+import { encryptGitHubToken } from '../utils/encryption';
 import { LoginPage } from '../pages/login';
 import { UnauthorizedPage } from '../pages/unauthorized';
 import { TokenReadyPage } from '../pages/token-ready';
@@ -162,21 +163,25 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     // Calculate token expiration
     const tokenExpiresAt = calculateTokenExpiration(tokenResponse.expires_in);
     
+    // Encrypt tokens before storing
+    const encryptedAccessToken = encryptGitHubToken(tokenResponse.access_token);
+    const encryptedRefreshToken = encryptGitHubToken(tokenResponse.refresh_token || null);
+    
     // Upsert user in database
     const user = await prisma.user.upsert({
       where: {
         githubUserId: BigInt(githubUser.id),
       },
       update: {
-        githubAccessToken: tokenResponse.access_token,
-        githubRefreshToken: tokenResponse.refresh_token || null,
+        githubAccessToken: encryptedAccessToken,
+        githubRefreshToken: encryptedRefreshToken,
         githubTokenExpiresAt: tokenExpiresAt,
         updatedAt: new Date(),
       },
       create: {
         githubUserId: BigInt(githubUser.id),
-        githubAccessToken: tokenResponse.access_token,
-        githubRefreshToken: tokenResponse.refresh_token || null,
+        githubAccessToken: encryptedAccessToken,
+        githubRefreshToken: encryptedRefreshToken,
         githubTokenExpiresAt: tokenExpiresAt,
         isWhitelisted: false, // Default to not whitelisted
       },
