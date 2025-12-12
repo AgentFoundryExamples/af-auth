@@ -75,6 +75,16 @@
       "name": "docs",
       "children": [
         {
+          "type": "directory",
+          "name": "deployment",
+          "children": [
+            {
+              "type": "file",
+              "name": "cloud-run.md"
+            }
+          ]
+        },
+        {
           "type": "file",
           "name": "api.md"
         },
@@ -93,6 +103,14 @@
         {
           "type": "file",
           "name": "logging.md"
+        },
+        {
+          "type": "file",
+          "name": "operations.md"
+        },
+        {
+          "type": "file",
+          "name": "security.md"
         },
         {
           "type": "file",
