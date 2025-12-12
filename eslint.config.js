@@ -14,6 +14,7 @@
 
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
+const globals = require('globals');
 
 module.exports = tseslint.config(
   eslint.configs.recommended,
@@ -25,26 +26,8 @@ module.exports = tseslint.config(
         sourceType: 'module',
       },
       globals: {
-        // Node.js globals
-        console: 'readonly',
-        process: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        Buffer: 'readonly',
-        setInterval: 'readonly',
-        setTimeout: 'readonly',
-        clearInterval: 'readonly',
-        clearTimeout: 'readonly',
-        // Jest globals
-        describe: 'readonly',
-        test: 'readonly',
-        expect: 'readonly',
-        it: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        jest: 'readonly',
+        ...globals.node,
+        ...globals.jest,
       },
     },
     rules: {

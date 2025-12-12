@@ -164,7 +164,7 @@ Expected response:
 - All npm audit vulnerabilities resolved (0 high/critical issues)
 - Upgraded deprecated packages: axios 1.13.2, express 4.22.1, tsx 4.21.0, bcrypt 6.0.0
 - Remaining transitive deprecations (glob@7, inflight) from jest 29.x - no security impact
-- Updated TypeScript to 5.6.3 for improved compatibility
+- Updated TypeScript to 5.9.3 for improved compatibility
 
 ### Available Scripts
 
