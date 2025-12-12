@@ -42,6 +42,10 @@ function extractServiceCredentials(req: Request): {
  * POST /api/github-token
  * Retrieve a user's GitHub access token for authorized services
  * 
+ * NOTE: This endpoint does not implement rate limiting. For production deployments,
+ * consider implementing rate limiting per service (e.g., 1000 requests/hour) to prevent
+ * abuse. See docs/service-registry.md for recommendations.
+ * 
  * Request headers:
  * - Authorization: Bearer <serviceIdentifier>:<apiKey> or Basic <base64(serviceIdentifier:apiKey)>
  * 
