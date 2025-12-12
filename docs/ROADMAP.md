@@ -59,7 +59,7 @@ AF Auth is a production-ready authentication service suitable for **multi-instan
 - [x] RS256-signed JWT tokens (asymmetric cryptography)
 - [x] Configurable token validity period (JWT_EXPIRES_IN: 30d default, supports s/m/h/d units)
 - [x] Standard claims: `sub`, `iss`, `aud`, `iat`, `exp`, `jti`
-- [x] Custom claims: `githubId` (Note: `isWhitelisted` removed from JWT - whitelist status checked from database on each request for real-time enforcement)
+- [x] Custom claims: `githubId` (Note: `isWhitelisted` removed from JWT in v1.1.0 - whitelist status checked from database on each request for real-time enforcement. Existing tokens with `isWhitelisted` claim are still valid; middleware ignores the claim and checks database)
 - [x] RSA key pair generation and management
 - [x] Private key security (excluded from version control)
 - [x] Token generation on successful authentication

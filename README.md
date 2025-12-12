@@ -24,7 +24,7 @@
 - 🗄️ **PostgreSQL Database** - Prisma ORM with idempotent migrations and connection resilience
 - 🔴 **Redis Integration** - Distributed OAuth state storage for multi-instance deployments
 - 📝 **Structured Logging** - Pino logger with automatic sensitive data redaction
-- 📊 **Prometheus Metrics** - Comprehensive metrics for monitoring OAuth, JWT, rate limits, and performance
+- 📊 **Prometheus Metrics** - Exposes metrics for monitoring: `af_auth_github_oauth_operations_total`, `af_auth_jwt_operations_total`, `af_auth_token_revocation_checks_total`, `af_auth_rate_limit_hits_total`, `af_auth_auth_failures_total`, `af_auth_http_request_duration_seconds`, `af_auth_redis_connection_status`
 - ✅ **Health Checks** - Kubernetes/Cloud Run compatible endpoints (`/health`, `/ready`, `/live`) with component status
 - 🚀 **Cloud Run Ready** - Complete deployment guide with Secret Manager and VPC networking
 - 🎨 **SSR Pages** - React-based server-side rendered authentication pages
@@ -398,7 +398,7 @@ AF Auth implements comprehensive security controls across multiple layers. See t
 ### Key Security Features
 
 - **Secret Management**: All secrets stored in Google Secret Manager with versioning and rotation support
-- **JWT Authentication**: RS256-signed tokens with configurable expiration (default 30 days) and public key distribution
+- **JWT Authentication**: RS256-signed tokens with configurable expiration via `JWT_EXPIRES_IN` (default 30 days) and public key distribution
 - **Key Rotation Tracking**: Automated monitoring with warnings for overdue JWT, encryption, and service API key rotations
 - **GitHub Token Encryption**: AES-256-GCM authenticated encryption for GitHub tokens at rest
 - **Security Headers**: Comprehensive HTTP security headers including CSP, HSTS, and X-Frame-Options
