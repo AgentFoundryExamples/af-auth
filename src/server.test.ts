@@ -15,10 +15,12 @@ import request from 'supertest';
 import { app } from './server';
 import db from './db';
 import * as redisClient from './services/redis-client';
+import * as metricsService from './services/metrics';
 
 // Mock dependencies
 jest.mock('./db');
 jest.mock('./services/redis-client');
+jest.mock('./services/metrics');
 
 describe('Server', () => {
   beforeEach(() => {
@@ -34,6 +36,13 @@ describe('Server', () => {
     };
     (redisClient.getRedisClient as jest.Mock).mockReturnValue(mockRedis);
     (redisClient.isRedisConnected as jest.Mock).mockReturnValue(true);
+
+    // Setup default healthy metrics mocks
+    const mockRegistry = {
+      metrics: jest.fn().mockResolvedValue('# HELP metric_name description\nmetric_name 1'),
+    };
+    (metricsService.areMetricsEnabled as jest.Mock).mockReturnValue(true);
+    (metricsService.getRegistry as jest.Mock).mockReturnValue(mockRegistry);
   });
 
   describe('Health Endpoints', () => {
@@ -53,6 +62,7 @@ describe('Server', () => {
         expect(response.body.components).toHaveProperty('redis');
         expect(response.body.components).toHaveProperty('encryption');
         expect(response.body.components).toHaveProperty('githubApp');
+        expect(response.body.components).toHaveProperty('metrics');
       });
 
       it('should return 200 for healthy status', async () => {
@@ -114,6 +124,7 @@ describe('Server', () => {
         expect(response.body.components).toHaveProperty('database');
         expect(response.body.components).toHaveProperty('redis');
         expect(response.body.components).toHaveProperty('encryption');
+        expect(response.body.components).toHaveProperty('metrics');
       });
 
       it('should return 200 when ready', async () => {
