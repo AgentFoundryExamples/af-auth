@@ -244,6 +244,22 @@ describe('Token Revocation Service', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should fail-closed by returning true on database error', async () => {
+      const jti = 'error-jti';
+
+      (mockPrisma.revokedToken.findUnique as jest.Mock).mockRejectedValue(
+        new Error('Database connection error')
+      );
+
+      // Should return true (fail-closed) instead of throwing
+      const result = await isTokenRevoked(jti);
+
+      expect(result).toBe(true);
+      expect(mockPrisma.revokedToken.findUnique).toHaveBeenCalledWith({
+        where: { jti },
+      });
+    });
   });
 
   describe('cleanupExpiredRevokedTokens', () => {

@@ -33,9 +33,6 @@ function createRateLimiter(options: {
 }) {
   const { windowMs, maxRequests, keyPrefix, message } = options;
 
-  // Track if handler was called for this request
-  const requestBlockedMap = new WeakMap<any, boolean>();
-
   // Base configuration
   const baseConfig: any = {
     windowMs,
@@ -53,7 +50,6 @@ function createRateLimiter(options: {
         },
         'Rate limit exceeded'
       );
-      requestBlockedMap.set(req, true);
       recordRateLimitHit(keyPrefix, 'blocked');
       res.status(429).json({
         error: 'RATE_LIMIT_EXCEEDED',
@@ -89,20 +85,19 @@ function createRateLimiter(options: {
   const limiter = rateLimit(baseConfig);
   
   // Wrap the limiter to track allowed requests
+  // Note: We record 'allowed' for all requests that pass through the rate limiter
+  // The 'blocked' metric is recorded in the handler above when rate limit is exceeded
   return (req: any, res: any, next: any) => {
-    limiter(req, res, (err?: any) => {
-      // If handler wasn't called, request was allowed
-      if (!requestBlockedMap.has(req)) {
+    const originalNext = next;
+    const wrappedNext = (err?: any) => {
+      // Only record 'allowed' if the response wasn't already sent by the handler (status 429)
+      if (res.statusCode !== 429) {
         recordRateLimitHit(keyPrefix, 'allowed');
       }
-      // Clean up the WeakMap entry
-      requestBlockedMap.delete(req);
-      
-      if (err) {
-        return next(err);
-      }
-      next();
-    });
+      originalNext(err);
+    };
+    
+    limiter(req, res, wrappedNext);
   };
 }
 

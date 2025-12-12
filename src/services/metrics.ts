@@ -29,7 +29,11 @@ let redisConnectionGauge: Gauge | null = null;
 
 /**
  * Initialize Prometheus metrics registry and collectors.
- * Should be called once at application startup.
+ * 
+ * IMPORTANT: Must be called once at application startup, before the server starts
+ * accepting requests. This function is not thread-safe and should not be called
+ * concurrently from multiple threads/workers. The singleton pattern prevents
+ * re-initialization but does not provide locking for concurrent calls.
  */
 export function initializeMetrics(): void {
   // Check if metrics are disabled
@@ -39,6 +43,8 @@ export function initializeMetrics(): void {
   }
 
   // Prevent re-initialization
+  // Note: This check is not atomic. Ensure this function is called synchronously
+  // at startup before any concurrent request processing begins.
   if (registry !== null) {
     logger.warn('Metrics registry already initialized, skipping re-initialization');
     return;

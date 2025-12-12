@@ -43,20 +43,14 @@ function authenticateMetrics(req: Request, res: Response, next: Function): void 
 
   // Validate token (constant-time comparison to prevent timing attacks)
   const expectedToken = config.metrics.authToken;
-  if (token.length !== expectedToken.length) {
-    logger.warn({ ip: req.ip }, 'Metrics endpoint accessed with invalid token');
-    res.status(403).json({
-      error: 'Forbidden',
-      message: 'Invalid authentication token',
-    });
-    return;
-  }
-
+  
   // Use crypto.timingSafeEqual for constant-time comparison
+  // Note: We don't check length first to avoid timing attacks that could reveal token length
   const tokenBuffer = Buffer.from(token);
   const expectedBuffer = Buffer.from(expectedToken);
   
   try {
+    // timingSafeEqual will throw if buffer lengths differ, which we catch below
     if (!crypto.timingSafeEqual(tokenBuffer, expectedBuffer)) {
       logger.warn({ ip: req.ip }, 'Metrics endpoint accessed with invalid token');
       res.status(403).json({
@@ -66,8 +60,9 @@ function authenticateMetrics(req: Request, res: Response, next: Function): void 
       return;
     }
   } catch (error) {
-    // timingSafeEqual throws if buffer lengths differ (shouldn't happen due to length check above)
-    logger.warn({ ip: req.ip, error }, 'Metrics endpoint token comparison failed');
+    // timingSafeEqual throws if buffer lengths differ
+    // This prevents timing attacks that could reveal token length
+    logger.warn({ ip: req.ip }, 'Metrics endpoint accessed with invalid token');
     res.status(403).json({
       error: 'Forbidden',
       message: 'Invalid authentication token',

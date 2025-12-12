@@ -172,6 +172,7 @@ export async function revokeAllUserTokens(
  * Check if a token is revoked
  * @param jti - JWT ID to check
  * @returns True if revoked, false otherwise
+ * @throws Never throws - fails closed by returning true on error
  */
 export async function isTokenRevoked(jti: string): Promise<boolean> {
   try {
@@ -184,9 +185,10 @@ export async function isTokenRevoked(jti: string): Promise<boolean> {
     
     return isRevoked;
   } catch (error) {
-    logger.error({ jti, error }, 'Error checking token revocation status');
+    // Fail-closed: If we can't check revocation status, assume the token is revoked
+    logger.error({ jti, error }, 'Error checking token revocation status; assuming token is revoked for security');
     recordTokenRevocationCheck('failure', 'error');
-    throw error;
+    return true;
   }
 }
 
