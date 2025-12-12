@@ -22,16 +22,20 @@ function extractServiceCredentials(req: Request): {
   // or Basic auth format: "Basic <base64(serviceIdentifier:apiKey)>"
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    const parts = token.split(':');
-    if (parts.length === 2) {
-      return { serviceIdentifier: parts[0], apiKey: parts[1] };
+    const firstColonIndex = token.indexOf(':');
+    if (firstColonIndex > 0 && firstColonIndex < token.length - 1) {
+      const serviceIdentifier = token.substring(0, firstColonIndex);
+      const apiKey = token.substring(firstColonIndex + 1);
+      return { serviceIdentifier, apiKey };
     }
   } else if (authHeader.startsWith('Basic ')) {
     const base64Credentials = authHeader.substring(6);
     const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-    const parts = credentials.split(':');
-    if (parts.length === 2) {
-      return { serviceIdentifier: parts[0], apiKey: parts[1] };
+    const firstColonIndex = credentials.indexOf(':');
+    if (firstColonIndex > 0 && firstColonIndex < credentials.length - 1) {
+      const serviceIdentifier = credentials.substring(0, firstColonIndex);
+      const apiKey = credentials.substring(firstColonIndex + 1);
+      return { serviceIdentifier, apiKey };
     }
   }
   

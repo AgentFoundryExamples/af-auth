@@ -305,12 +305,14 @@ async function main() {
           process.exit(1);
         }
         
-        const description = args.includes('--description') 
-          ? args[args.indexOf('--description') + 1]
+        const descriptionIndex = args.indexOf('--description');
+        const description = descriptionIndex !== -1 && args.length > descriptionIndex + 1 && !args[descriptionIndex + 1].startsWith('--')
+          ? args[descriptionIndex + 1]
           : undefined;
         
-        const scopes = args.includes('--scopes')
-          ? args[args.indexOf('--scopes') + 1].split(',')
+        const scopesIndex = args.indexOf('--scopes');
+        const scopes = scopesIndex !== -1 && args.length > scopesIndex + 1 && !args[scopesIndex + 1].startsWith('--')
+          ? args[scopesIndex + 1].split(',')
           : undefined;
         
         await addService(serviceId, { description, scopes });
