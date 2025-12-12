@@ -78,7 +78,6 @@ describe('Service Registry', () => {
         updatedAt: new Date(),
         lastUsedAt: null,
         lastApiKeyRotatedAt: null,
-        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.create as jest.Mock).mockResolvedValue(mockService);
