@@ -37,12 +37,10 @@ router.post('/token', jwtRateLimiter, validateBody(schemas.tokenRefresh), async 
       
       logger.info('Token refreshed successfully');
       
-      const expiresAt = calculateJWTExpiration();
-      
       return res.json({
         token: newToken,
         expiresIn: config.jwt.expiresIn,
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: calculateJWTExpiration().toISOString(),
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -113,12 +111,10 @@ router.get('/token', jwtRateLimiter, validateQuery(schemas.tokenIssuanceQuery), 
       
       logger.info({ userId }, 'Token generated successfully');
       
-      const expiresAt = calculateJWTExpiration();
-      
       return res.json({
         token,
         expiresIn: config.jwt.expiresIn,
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: calculateJWTExpiration().toISOString(),
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
