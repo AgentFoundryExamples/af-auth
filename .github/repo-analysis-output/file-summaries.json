@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 23,
+  "total_files": 25,
   "files": [
     {
       "schema_version": "2.0",
@@ -53,8 +53,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 3005,
-        "loc": 62,
+        "size_bytes": 9952,
+        "loc": 196,
         "todo_count": 0
       }
     },
@@ -67,8 +67,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 4850,
-        "loc": 143,
+        "size_bytes": 8303,
+        "loc": 206,
         "todo_count": 0
       }
     },
@@ -123,8 +123,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 8095,
-        "loc": 187,
+        "size_bytes": 8339,
+        "loc": 190,
         "todo_count": 0
       }
     },
@@ -151,8 +151,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 8257,
-        "loc": 203,
+        "size_bytes": 8427,
+        "loc": 205,
         "todo_count": 0
       }
     },
@@ -263,8 +263,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6841,
-        "loc": 197,
+        "size_bytes": 6543,
+        "loc": 185,
         "todo_count": 0
       }
     },
@@ -293,6 +293,34 @@
       "metrics": {
         "size_bytes": 8698,
         "loc": 261,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/utils/encryption.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 5158,
+        "loc": 101,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/utils/encryption.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 5584,
+        "loc": 125,
         "todo_count": 0
       }
     },

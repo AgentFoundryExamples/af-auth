@@ -207,9 +207,7 @@
       "path": "src/services/jwt.ts",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [
-          "fs"
-        ],
+        "stdlib": [],
         "third-party": [
           "jsonwebtoken",
           "ms"
@@ -236,6 +234,26 @@
         "third-party": [
           "bcrypt"
         ]
+      }
+    },
+    {
+      "id": "src/utils/encryption.test.ts",
+      "path": "src/utils/encryption.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/utils/encryption.ts",
+      "path": "src/utils/encryption.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto"
+        ],
+        "third-party": []
       }
     },
     {
@@ -317,6 +335,10 @@
       "target": "src/services/jwt.ts"
     },
     {
+      "source": "src/routes/auth.ts",
+      "target": "src/utils/encryption.ts"
+    },
+    {
       "source": "src/routes/github-token.test.ts",
       "target": "src/server.ts"
     },
@@ -339,6 +361,10 @@
     {
       "source": "src/routes/github-token.ts",
       "target": "src/services/service-registry.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/utils/encryption.ts"
     },
     {
       "source": "src/routes/jwt.test.ts",
@@ -437,6 +463,18 @@
       "target": "src/utils/logger.ts"
     },
     {
+      "source": "src/utils/encryption.test.ts",
+      "target": "src/utils/encryption.ts"
+    },
+    {
+      "source": "src/utils/encryption.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/utils/encryption.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/utils/logger.test.ts",
       "target": "src/utils/logger.ts"
     },
@@ -448,7 +486,6 @@
   "external_dependencies_summary": {
     "stdlib": [
       "crypto",
-      "fs",
       "http",
       "path",
       "readline"
@@ -470,7 +507,7 @@
       "supertest",
       "typescript-eslint"
     ],
-    "stdlib_count": 5,
+    "stdlib_count": 4,
     "third-party_count": 15
   }
 }

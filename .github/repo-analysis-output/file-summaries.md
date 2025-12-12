@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 23
+Total files: 25
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -38,8 +38,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 2.93 KB  
-**LOC:** 62  
+**Size:** 9.72 KB  
+**LOC:** 196  
 **TODOs/FIXMEs:** 0  
 
 ## src/config/index.ts
@@ -47,8 +47,8 @@ Total files: 23
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 4.74 KB  
-**LOC:** 143  
+**Size:** 8.11 KB  
+**LOC:** 206  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -83,8 +83,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.91 KB  
-**LOC:** 187  
+**Size:** 8.14 KB  
+**LOC:** 190  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.test.ts
@@ -101,8 +101,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.06 KB  
-**LOC:** 203  
+**Size:** 8.23 KB  
+**LOC:** 205  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.test.ts
@@ -173,8 +173,8 @@ Total files: 23
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.68 KB  
-**LOC:** 197  
+**Size:** 6.39 KB  
+**LOC:** 185  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/service-registry.test.ts
@@ -193,6 +193,24 @@ Total files: 23
 **Summary:** TypeScript core implementation  
 **Size:** 8.49 KB  
 **LOC:** 261  
+**TODOs/FIXMEs:** 0  
+
+## src/utils/encryption.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.04 KB  
+**LOC:** 101  
+**TODOs/FIXMEs:** 0  
+
+## src/utils/encryption.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.45 KB  
+**LOC:** 125  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/logger.test.ts

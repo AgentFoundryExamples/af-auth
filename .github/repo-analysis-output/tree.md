@@ -74,6 +74,8 @@
     ├── service-registry.test.ts
     └── service-registry.ts
   ├── utils
+    ├── encryption.test.ts
+    ├── encryption.ts
     ├── logger.test.ts
     └── logger.ts
   ├── server.test.ts

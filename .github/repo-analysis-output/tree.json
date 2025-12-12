@@ -336,6 +336,14 @@
           "children": [
             {
               "type": "file",
+              "name": "encryption.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "encryption.ts"
+            },
+            {
+              "type": "file",
               "name": "logger.test.ts"
             },
             {
