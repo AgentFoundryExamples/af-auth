@@ -70,10 +70,14 @@
     ├── jwt.test.ts
     └── jwt.ts
   ├── services
+    ├── __mocks__
+      ├── github-oauth.ts
+      └── redis-client.ts
     ├── github-oauth.test.ts
     ├── github-oauth.ts
     ├── jwt.test.ts
     ├── jwt.ts
+    ├── redis-client.ts
     ├── service-registry.test.ts
     └── service-registry.ts
   ├── utils
@@ -84,11 +88,13 @@
   ├── server.test.ts
   └── server.ts
 ├── .env.example
+├── .env.test
 ├── .gitignore
 ├── CHANGELOG.md
 ├── docker-compose.yml
 ├── eslint.config.js
 ├── jest.config.js
+├── jest.setup.js
 ├── LICENSE
 ├── package-lock.json
 ├── package.json

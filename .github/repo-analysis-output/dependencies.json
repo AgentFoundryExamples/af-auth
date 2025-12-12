@@ -23,6 +23,17 @@
       }
     },
     {
+      "id": "jest.setup.js",
+      "path": "jest.setup.js",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "dotenv"
+        ]
+      }
+    },
+    {
       "id": "scripts/manage-services.ts",
       "path": "scripts/manage-services.ts",
       "type": "file",
@@ -179,6 +190,24 @@
       }
     },
     {
+      "id": "src/services/__mocks__/github-oauth.ts",
+      "path": "src/services/__mocks__/github-oauth.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/services/__mocks__/redis-client.ts",
+      "path": "src/services/__mocks__/redis-client.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "src/services/github-oauth.test.ts",
       "path": "src/services/github-oauth.test.ts",
       "type": "file",
@@ -220,6 +249,17 @@
         "third-party": [
           "jsonwebtoken",
           "ms"
+        ]
+      }
+    },
+    {
+      "id": "src/services/redis-client.ts",
+      "path": "src/services/redis-client.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "ioredis"
         ]
       }
     },
@@ -334,6 +374,10 @@
     {
       "source": "src/routes/auth.test.ts",
       "target": "src/services/github-oauth.ts"
+    },
+    {
+      "source": "src/routes/auth.test.ts",
+      "target": "src/services/redis-client.ts"
     },
     {
       "source": "src/routes/auth.ts",
@@ -452,12 +496,20 @@
       "target": "src/config/index.ts"
     },
     {
+      "source": "src/services/github-oauth.test.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
       "source": "src/services/github-oauth.ts",
       "target": "src/config/index.ts"
     },
     {
       "source": "src/services/github-oauth.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/github-oauth.ts",
+      "target": "src/services/redis-client.ts"
     },
     {
       "source": "src/services/jwt.test.ts",
@@ -478,6 +530,14 @@
     {
       "source": "src/services/jwt.ts",
       "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/redis-client.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/services/redis-client.ts",
+      "target": "src/utils/logger.ts"
     },
     {
       "source": "src/services/service-registry.test.ts",
@@ -531,6 +591,7 @@
       "dotenv",
       "express",
       "globals",
+      "ioredis",
       "jsonwebtoken",
       "ms",
       "pino",
@@ -541,6 +602,6 @@
       "typescript-eslint"
     ],
     "stdlib_count": 4,
-    "third-party_count": 15
+    "third-party_count": 16
   }
 }

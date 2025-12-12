@@ -319,6 +319,20 @@
           "name": "services",
           "children": [
             {
+              "type": "directory",
+              "name": "__mocks__",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "github-oauth.ts"
+                },
+                {
+                  "type": "file",
+                  "name": "redis-client.ts"
+                }
+              ]
+            },
+            {
               "type": "file",
               "name": "github-oauth.test.ts"
             },
@@ -333,6 +347,10 @@
             {
               "type": "file",
               "name": "jwt.ts"
+            },
+            {
+              "type": "file",
+              "name": "redis-client.ts"
             },
             {
               "type": "file",
@@ -382,6 +400,10 @@
     },
     {
       "type": "file",
+      "name": ".env.test"
+    },
+    {
+      "type": "file",
       "name": ".gitignore"
     },
     {
@@ -399,6 +421,10 @@
     {
       "type": "file",
       "name": "jest.config.js"
+    },
+    {
+      "type": "file",
+      "name": "jest.setup.js"
     },
     {
       "type": "file",

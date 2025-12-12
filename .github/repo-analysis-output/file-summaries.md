@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 26
+Total files: 30
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -20,8 +20,17 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** JavaScript module for jest.config  
-**Size:** 1.13 KB  
-**LOC:** 25  
+**Size:** 1.18 KB  
+**LOC:** 26  
+**TODOs/FIXMEs:** 0  
+
+## jest.setup.js
+**Language:** JavaScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** JavaScript module for jest.setup  
+**Size:** 0.66 KB  
+**LOC:** 1  
 **TODOs/FIXMEs:** 0  
 
 ## scripts/manage-services.ts
@@ -47,8 +56,8 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.72 KB  
-**LOC:** 196  
+**Size:** 10.08 KB  
+**LOC:** 205  
 **TODOs/FIXMEs:** 0  
 
 ## src/config/index.ts
@@ -56,8 +65,8 @@ Total files: 26
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 8.51 KB  
-**LOC:** 216  
+**Size:** 9.84 KB  
+**LOC:** 248  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -83,8 +92,8 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.95 KB  
-**LOC:** 241  
+**Size:** 10.94 KB  
+**LOC:** 265  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/auth.ts
@@ -92,8 +101,8 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.14 KB  
-**LOC:** 190  
+**Size:** 8.19 KB  
+**LOC:** 191  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.test.ts
@@ -150,13 +159,31 @@ Total files: 26
 **LOC:** 156  
 **TODOs/FIXMEs:** 0  
 
+## src/services/__mocks__/github-oauth.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 1.90 KB  
+**LOC:** 46  
+**TODOs/FIXMEs:** 0  
+
+## src/services/__mocks__/redis-client.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 1.32 KB  
+**LOC:** 26  
+**TODOs/FIXMEs:** 0  
+
 ## src/services/github-oauth.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.13 KB  
-**LOC:** 116  
+**Size:** 7.67 KB  
+**LOC:** 196  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/github-oauth.ts
@@ -164,8 +191,8 @@ Total files: 26
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.65 KB  
-**LOC:** 224  
+**Size:** 8.46 KB  
+**LOC:** 259  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.test.ts
@@ -184,6 +211,15 @@ Total files: 26
 **Summary:** TypeScript core implementation  
 **Size:** 6.39 KB  
 **LOC:** 185  
+**TODOs/FIXMEs:** 0  
+
+## src/services/redis-client.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.79 KB  
+**LOC:** 168  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/service-registry.test.ts

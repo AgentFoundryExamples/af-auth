@@ -8,10 +8,10 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 26
-- **Intra-repo dependencies**: 57
+- **Total files**: 30
+- **Intra-repo dependencies**: 62
 - **External stdlib dependencies**: 4
-- **External third-party dependencies**: 15
+- **External third-party dependencies**: 16
 
 ## External Dependencies
 
@@ -26,7 +26,7 @@ Total: 4 unique modules
 
 ### Third-Party Packages
 
-Total: 15 unique packages
+Total: 16 unique packages
 
 - `@eslint/js`
 - `@prisma/client`
@@ -35,6 +35,7 @@ Total: 15 unique packages
 - `dotenv`
 - `express`
 - `globals`
+- `ioredis`
 - `jsonwebtoken`
 - `ms`
 - `pino`
@@ -47,25 +48,25 @@ Total: 15 unique packages
 ## Most Depended Upon Files (Intra-Repo)
 
 - `src/db/index.ts` (12 dependents)
-- `src/utils/logger.ts` (11 dependents)
-- `src/config/index.ts` (10 dependents)
+- `src/utils/logger.ts` (12 dependents)
+- `src/config/index.ts` (11 dependents)
 - `src/services/github-oauth.ts` (5 dependents)
 - `src/services/service-registry.ts` (4 dependents)
 - `src/utils/encryption.ts` (4 dependents)
 - `src/server.ts` (4 dependents)
 - `src/services/jwt.ts` (4 dependents)
+- `src/services/redis-client.ts` (3 dependents)
 - `src/routes/auth.ts` (1 dependents)
-- `src/routes/jwt.ts` (1 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
 
 - `src/routes/auth.ts` (6 dependencies)
 - `src/routes/github-token.ts` (6 dependencies)
 - `src/server.ts` (6 dependencies)
+- `src/routes/auth.test.ts` (4 dependencies)
 - `src/routes/github-token.test.ts` (4 dependencies)
 - `scripts/migrate-encrypt-tokens.ts` (3 dependencies)
-- `src/routes/auth.test.ts` (3 dependencies)
+- `src/services/github-oauth.test.ts` (3 dependencies)
+- `src/services/github-oauth.ts` (3 dependencies)
 - `src/services/jwt.ts` (3 dependencies)
 - `scripts/manage-services.ts` (2 dependencies)
-- `src/db/index.ts` (2 dependencies)
-- `src/routes/jwt.test.ts` (2 dependencies)

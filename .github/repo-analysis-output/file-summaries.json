@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 26,
+  "total_files": 30,
   "files": [
     {
       "schema_version": "2.0",
@@ -25,8 +25,22 @@
       "summary": "JavaScript module for jest.config",
       "summary_text": "JavaScript module for jest.config",
       "metrics": {
-        "size_bytes": 1160,
-        "loc": 25,
+        "size_bytes": 1211,
+        "loc": 26,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "jest.setup.js",
+      "language": "JavaScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "JavaScript module for jest.setup",
+      "summary_text": "JavaScript module for jest.setup",
+      "metrics": {
+        "size_bytes": 676,
+        "loc": 1,
         "todo_count": 0
       }
     },
@@ -67,8 +81,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 9952,
-        "loc": 196,
+        "size_bytes": 10318,
+        "loc": 205,
         "todo_count": 0
       }
     },
@@ -81,8 +95,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 8717,
-        "loc": 216,
+        "size_bytes": 10073,
+        "loc": 248,
         "todo_count": 0
       }
     },
@@ -123,8 +137,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10192,
-        "loc": 241,
+        "size_bytes": 11198,
+        "loc": 265,
         "todo_count": 0
       }
     },
@@ -137,8 +151,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 8339,
-        "loc": 190,
+        "size_bytes": 8390,
+        "loc": 191,
         "todo_count": 0
       }
     },
@@ -228,6 +242,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/services/__mocks__/github-oauth.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 1945,
+        "loc": 46,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/__mocks__/redis-client.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 1352,
+        "loc": 26,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/services/github-oauth.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -235,8 +277,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5257,
-        "loc": 116,
+        "size_bytes": 7854,
+        "loc": 196,
         "todo_count": 0
       }
     },
@@ -249,8 +291,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7829,
-        "loc": 224,
+        "size_bytes": 8660,
+        "loc": 259,
         "todo_count": 0
       }
     },
@@ -279,6 +321,20 @@
       "metrics": {
         "size_bytes": 6543,
         "loc": 185,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/redis-client.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 5930,
+        "loc": 168,
         "todo_count": 0
       }
     },
