@@ -135,7 +135,7 @@ function validateBase64(value: string, name: string): void {
     if (!decoded || decoded.length === 0) {
       throw new Error(`${name} appears to be empty after base64 decoding`);
     }
-  } catch (error) {
+  } catch {
     throw new Error(`${name} must be a valid base64-encoded value`);
   }
 }
