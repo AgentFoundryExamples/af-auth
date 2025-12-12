@@ -99,6 +99,12 @@ app.use('/api', jwtRoutes);
 app.use('/.well-known', jwtRoutes);
 
 /**
+ * GitHub token access routes (for authorized services)
+ */
+import githubTokenRoutes from './routes/github-token';
+app.use('/api', githubTokenRoutes);
+
+/**
  * 404 handler for undefined routes.
  */
 app.use((req: Request, res: Response) => {

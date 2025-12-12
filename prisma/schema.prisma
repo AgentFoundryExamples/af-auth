@@ -22,3 +22,37 @@ model User {
 
   @@map("users")
 }
+
+model ServiceRegistry {
+  id                     String    @id @default(uuid()) @db.Uuid
+  serviceIdentifier      String    @unique @map("service_identifier") @db.VarChar(255)
+  hashedApiKey           String    @map("hashed_api_key") @db.Text
+  allowedScopes          String[]  @default([]) @map("allowed_scopes")
+  isActive               Boolean   @default(true) @map("is_active")
+  description            String?   @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastUsedAt             DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  @@index([serviceIdentifier])
+  @@index([isActive])
+  @@map("service_registry")
+}
+
+model ServiceAuditLog {
+  id                     String    @id @default(uuid()) @db.Uuid
+  serviceId              String    @map("service_id") @db.Uuid
+  userId                 String    @map("user_id") @db.Uuid
+  action                 String    @db.VarChar(100)
+  success                Boolean   @default(true)
+  errorMessage           String?   @map("error_message") @db.Text
+  ipAddress              String?   @map("ip_address") @db.VarChar(45)
+  userAgent              String?   @map("user_agent") @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([serviceId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([success])
+  @@map("service_audit_logs")
+}

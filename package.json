@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "service-registry": "tsx scripts/manage-services.ts"
   },
   "keywords": [
     "auth",
@@ -29,6 +30,7 @@
   "dependencies": {
     "@prisma/client": "5.22.0",
     "axios": "1.7.9",
+    "bcrypt": "^5.1.1",
     "dotenv": "16.4.5",
     "express": "4.21.1",
     "jsonwebtoken": "^9.0.2",
@@ -39,6 +41,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/express": "4.17.21",
     "@types/jest": "29.5.14",
     "@types/jsonwebtoken": "^9.0.7",
