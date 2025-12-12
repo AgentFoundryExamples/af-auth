@@ -55,61 +55,38 @@ export async function recordKeyRotation(
     nextRotationDue.setDate(nextRotationDue.getDate() + rotationIntervalDays);
   }
   
-  // Check if record already exists
-  const existing = await prisma.jWTKeyRotation.findUnique({
+  // Use upsert to avoid race conditions between check and create/update
+  const upserted = await prisma.jWTKeyRotation.upsert({
     where: { keyIdentifier },
+    update: {
+      lastRotatedAt: now,
+      nextRotationDue,
+      rotationIntervalDays,
+      metadata: options?.metadata, // Let metadata be updated if provided
+      updatedAt: now,
+    },
+    create: {
+      keyIdentifier,
+      keyType,
+      lastRotatedAt: now,
+      nextRotationDue,
+      isActive: true,
+      rotationIntervalDays,
+      metadata: options?.metadata || null,
+    },
   });
   
-  if (existing) {
-    // Update existing record
-    const updated = await prisma.jWTKeyRotation.update({
-      where: { keyIdentifier },
-      data: {
-        lastRotatedAt: now,
-        nextRotationDue,
-        rotationIntervalDays,
-        metadata: options?.metadata || existing.metadata,
-        updatedAt: now,
-      },
-    });
-    
-    logger.info(
-      {
-        keyIdentifier,
-        keyType,
-        lastRotatedAt: now,
-        nextRotationDue,
-      },
-      'Key rotation recorded (updated existing)'
-    );
-    
-    return mapToKeyRotationRecord(updated);
-  } else {
-    // Create new record
-    const created = await prisma.jWTKeyRotation.create({
-      data: {
-        keyIdentifier,
-        keyType,
-        lastRotatedAt: now,
-        nextRotationDue,
-        isActive: true,
-        rotationIntervalDays,
-        metadata: options?.metadata || null,
-      },
-    });
-    
-    logger.info(
-      {
-        keyIdentifier,
-        keyType,
-        lastRotatedAt: now,
-        nextRotationDue,
-      },
-      'Key rotation recorded (new)'
-    );
-    
-    return mapToKeyRotationRecord(created);
-  }
+  logger.info(
+    {
+      keyIdentifier,
+      keyType,
+      lastRotatedAt: now,
+      nextRotationDue,
+    },
+    'Key rotation recorded'
+  );
+  
+  return mapToKeyRotationRecord(upserted);
 }
 
 /**

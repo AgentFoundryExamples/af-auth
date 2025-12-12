@@ -53,6 +53,9 @@ function getPrivateKey(): string {
     logger.debug('JWT private key loaded from configuration');
     
     // Check for overdue key rotations on first load (async, non-blocking)
+    // This is fire-and-forget by design: startup should not be blocked by rotation checks
+    // as they are informational only and do not affect key functionality.
+    // Database unavailability is logged but does not prevent service operation.
     checkAndLogOverdueRotations().catch((error) => {
       logger.error({ error }, 'Failed to check key rotation status');
     });

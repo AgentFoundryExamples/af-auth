@@ -50,8 +50,9 @@ function formatDays(days: number | null, isOverdue: boolean): string {
 
 /**
  * Display key rotation status
+ * @returns true if any keys are overdue
  */
-async function displayKeyRotationStatus(activeOnly: boolean): Promise<void> {
+async function displayKeyRotationStatus(activeOnly: boolean): Promise<boolean> {
   console.log('🔑 JWT Key Rotation Status');
   console.log('═'.repeat(80));
   console.log('');
@@ -70,7 +71,7 @@ async function displayKeyRotationStatus(activeOnly: boolean): Promise<void> {
     console.log('✓ Key rotation tracking initialized.');
     console.log('');
     console.log('Run this command again to see the status.');
-    return;
+    return false;
   }
   
   let hasOverdue = false;
@@ -112,12 +113,15 @@ async function displayKeyRotationStatus(activeOnly: boolean): Promise<void> {
     console.log('   Review docs/security.md for rotation procedures.');
     console.log('');
   }
+  
+  return hasOverdue;
 }
 
 /**
  * Display service API key rotation status
+ * @returns true if any service API keys are overdue
  */
-async function displayServiceRotationStatus(activeOnly: boolean): Promise<void> {
+async function displayServiceRotationStatus(activeOnly: boolean): Promise<boolean> {
   console.log('🔐 Service API Key Rotation Status');
   console.log('═'.repeat(80));
   console.log('');
@@ -127,11 +131,13 @@ async function displayServiceRotationStatus(activeOnly: boolean): Promise<void> 
   if (services.length === 0) {
     console.log('No services found.');
     console.log('');
-    return;
+    return false;
   }
   
   const now = new Date();
-  const rotationIntervalMs = config.rotation.serviceApiKeyRotationIntervalDays * 24 * 60 * 60 * 1000;
+  const rotationIntervalDays = config.rotation.serviceApiKeyRotationIntervalDays;
+  const rotationIntervalMs = rotationIntervalDays * 24 * 60 * 60 * 1000;
+  let hasOverdue = false;
   
   for (const service of services) {
     const activeFlag = service.isActive ? '✓' : '✗';
@@ -141,16 +147,24 @@ async function displayServiceRotationStatus(activeOnly: boolean): Promise<void> 
       const daysSinceRotation = Math.floor(
         (now.getTime() - service.lastApiKeyRotatedAt.getTime()) / (1000 * 60 * 60 * 24)
       );
-      
-      const nextDue = new Date(service.lastApiKeyRotatedAt.getTime() + rotationIntervalMs);
-      const daysUntilDue = Math.floor(
-        (nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      const isOverdue = daysUntilDue < 0;
-      
       console.log(`  Last Rotated:     ${formatDate(service.lastApiKeyRotatedAt)} (${daysSinceRotation} days ago)`);
-      console.log(`  Next Rotation:    ${formatDate(nextDue)}`);
-      console.log(`  Status:           ${formatDays(daysUntilDue, isOverdue)}`);
+      
+      if (rotationIntervalDays > 0) {
+        const nextDue = new Date(service.lastApiKeyRotatedAt.getTime() + rotationIntervalMs);
+        const daysUntilDue = Math.floor(
+          (nextDue.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const isOverdue = daysUntilDue < 0;
+        
+        console.log(`  Next Rotation:    ${formatDate(nextDue)}`);
+        console.log(`  Status:           ${formatDays(daysUntilDue, isOverdue)}`);
+        
+        if (isOverdue) {
+          hasOverdue = true;
+        }
+      } else {
+        console.log(`  Status:           No rotation policy configured`);
+      }
     } else {
       console.log(`  Last Rotated:     Never (created ${formatDate(service.createdAt)})`);
       console.log(`  Status:           ⚠️  No rotation history - consider rotating soon`);
@@ -165,6 +179,8 @@ async function displayServiceRotationStatus(activeOnly: boolean): Promise<void> 
   
   console.log('─'.repeat(80));
   console.log('');
+  
+  return hasOverdue;
 }
 
 /**
@@ -177,8 +193,8 @@ async function main() {
   try {
     await db.connect();
     
-    await displayKeyRotationStatus(!includeInactive);
-    await displayServiceRotationStatus(!includeInactive);
+    const jwtKeysOverdue = await displayKeyRotationStatus(!includeInactive);
+    const serviceKeysOverdue = await displayServiceRotationStatus(!includeInactive);
     
     console.log('✓ Key rotation status check complete.');
     console.log('');
@@ -188,6 +204,12 @@ async function main() {
     console.log('');
     
     await db.disconnect();
+    
+    // Exit with non-zero code if any keys are overdue (for CI/CD integration)
+    if (jwtKeysOverdue || serviceKeysOverdue) {
+      process.exit(1);
+    }
+    
     process.exit(0);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

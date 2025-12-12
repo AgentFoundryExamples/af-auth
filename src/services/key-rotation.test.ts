@@ -17,6 +17,7 @@ jest.mock('../db', () => ({
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      upsert: jest.fn(),
     },
   },
 }));
@@ -57,8 +58,7 @@ describe('Key Rotation Service', () => {
       const keyIdentifier = 'test_key';
       const keyType = 'jwt_signing';
 
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(null);
-      mockPrisma.jWTKeyRotation.create.mockResolvedValue({
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier,
         keyType,
@@ -76,9 +76,10 @@ describe('Key Rotation Service', () => {
       expect(result.keyIdentifier).toBe(keyIdentifier);
       expect(result.keyType).toBe(keyType);
       expect(result.isActive).toBe(true);
-      expect(mockPrisma.jWTKeyRotation.create).toHaveBeenCalledWith(
+      expect(mockPrisma.jWTKeyRotation.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          where: { keyIdentifier },
+          create: expect.objectContaining({
             keyIdentifier,
             keyType,
             isActive: true,
@@ -87,7 +88,7 @@ describe('Key Rotation Service', () => {
       );
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.objectContaining({ keyIdentifier, keyType }),
-        expect.stringContaining('new')
+        expect.stringContaining('recorded')
       );
     });
 
@@ -95,34 +96,27 @@ describe('Key Rotation Service', () => {
       const now = new Date();
       const keyIdentifier = 'test_key';
       const keyType = 'jwt_signing';
-      const existing = {
+
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier,
         keyType,
-        lastRotatedAt: new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000),
-        nextRotationDue: now,
+        lastRotatedAt: now,
+        nextRotationDue: new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000),
         isActive: true,
         rotationIntervalDays: 180,
         metadata: 'old metadata',
         createdAt: now,
-        updatedAt: now,
-      };
-
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(existing);
-      mockPrisma.jWTKeyRotation.update.mockResolvedValue({
-        ...existing,
-        lastRotatedAt: now,
-        nextRotationDue: new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000),
         updatedAt: now,
       });
 
       const result = await recordKeyRotation(keyIdentifier, keyType);
 
       expect(result.keyIdentifier).toBe(keyIdentifier);
-      expect(mockPrisma.jWTKeyRotation.update).toHaveBeenCalled();
+      expect(mockPrisma.jWTKeyRotation.upsert).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.objectContaining({ keyIdentifier, keyType }),
-        expect.stringContaining('updated')
+        expect.stringContaining('recorded')
       );
     });
 
@@ -132,8 +126,7 @@ describe('Key Rotation Service', () => {
       const keyType = 'jwt_signing';
       const rotationIntervalDays = 90;
 
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(null);
-      mockPrisma.jWTKeyRotation.create.mockResolvedValue({
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier,
         keyType,
@@ -148,9 +141,9 @@ describe('Key Rotation Service', () => {
 
       await recordKeyRotation(keyIdentifier, keyType, { rotationIntervalDays });
 
-      expect(mockPrisma.jWTKeyRotation.create).toHaveBeenCalledWith(
+      expect(mockPrisma.jWTKeyRotation.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          create: expect.objectContaining({
             rotationIntervalDays,
           }),
         })
@@ -162,8 +155,7 @@ describe('Key Rotation Service', () => {
       const keyIdentifier = 'test_key';
       const keyType = 'other';
 
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(null);
-      mockPrisma.jWTKeyRotation.create.mockResolvedValue({
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier,
         keyType,
@@ -178,9 +170,9 @@ describe('Key Rotation Service', () => {
 
       await recordKeyRotation(keyIdentifier, keyType, { rotationIntervalDays: 0 });
 
-      expect(mockPrisma.jWTKeyRotation.create).toHaveBeenCalledWith(
+      expect(mockPrisma.jWTKeyRotation.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          create: expect.objectContaining({
             nextRotationDue: null,
           }),
         })
@@ -537,8 +529,7 @@ describe('Key Rotation Service', () => {
       const now = new Date();
       const metadata = 'Rotated due to security incident #123 - "emergency rotation"';
 
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(null);
-      mockPrisma.jWTKeyRotation.create.mockResolvedValue({
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier: 'test_key',
         keyType: 'jwt_signing',
@@ -560,8 +551,7 @@ describe('Key Rotation Service', () => {
       const now = new Date();
       const largeInterval = 3650; // 10 years
 
-      mockPrisma.jWTKeyRotation.findUnique.mockResolvedValue(null);
-      mockPrisma.jWTKeyRotation.create.mockResolvedValue({
+      mockPrisma.jWTKeyRotation.upsert.mockResolvedValue({
         id: 'test-id',
         keyIdentifier: 'test_key',
         keyType: 'other',
@@ -576,9 +566,9 @@ describe('Key Rotation Service', () => {
 
       await recordKeyRotation('test_key', 'other', { rotationIntervalDays: largeInterval });
 
-      expect(mockPrisma.jWTKeyRotation.create).toHaveBeenCalledWith(
+      expect(mockPrisma.jWTKeyRotation.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
+          create: expect.objectContaining({
             rotationIntervalDays: largeInterval,
           }),
         })
