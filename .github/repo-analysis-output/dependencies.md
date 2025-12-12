@@ -8,10 +8,10 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 50
-- **Intra-repo dependencies**: 142
+- **Total files**: 53
+- **Intra-repo dependencies**: 146
 - **External stdlib dependencies**: 4
-- **External third-party dependencies**: 20
+- **External third-party dependencies**: 21
 
 ## External Dependencies
 
@@ -26,7 +26,7 @@ Total: 4 unique modules
 
 ### Third-Party Packages
 
-Total: 20 unique packages
+Total: 21 unique packages
 
 - `@eslint/js`
 - `@prisma/client`
@@ -36,6 +36,7 @@ Total: 20 unique packages
 - `express`
 - `express-rate-limit`
 - `globals`
+- `helmet`
 - `ioredis`
 - `jsonwebtoken`
 - `ms`
@@ -47,11 +48,11 @@ Total: 20 unique packages
 - `react-dom/server`
 - `supertest`
 - `typescript-eslint`
-- `zod`
+- ... and 1 more (see JSON for full list)
 
 ## Most Depended Upon Files (Intra-Repo)
 
-- `src/config/index.ts` (23 dependents)
+- `src/config/index.ts` (24 dependents)
 - `src/db/index.ts` (23 dependents)
 - `src/utils/logger.ts` (22 dependents)
 - `src/services/metrics.ts` (13 dependents)
@@ -59,12 +60,12 @@ Total: 20 unique packages
 - `src/services/redis-client.ts` (8 dependents)
 - `src/services/token-revocation.ts` (6 dependents)
 - `src/services/service-registry.ts` (5 dependents)
+- `src/server.ts` (5 dependents)
 - `src/services/github-oauth.ts` (5 dependents)
-- `src/utils/encryption.ts` (4 dependents)
 
 ## Files with Most Dependencies (Intra-Repo)
 
-- `src/server.ts` (11 dependencies)
+- `src/server.ts` (12 dependencies)
 - `src/routes/auth.ts` (8 dependencies)
 - `src/routes/github-token.ts` (8 dependencies)
 - `src/routes/jwt.ts` (6 dependencies)

@@ -183,6 +183,41 @@
       }
     },
     {
+      "id": "src/middleware/security-headers.integration.test.ts",
+      "path": "src/middleware/security-headers.integration.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/security-headers.test.ts",
+      "path": "src/middleware/security-headers.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/security-headers.ts",
+      "path": "src/middleware/security-headers.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "helmet"
+        ]
+      }
+    },
+    {
       "id": "src/middleware/validation.test.ts",
       "path": "src/middleware/validation.test.ts",
       "type": "file",
@@ -679,6 +714,18 @@
       "target": "src/services/metrics.ts"
     },
     {
+      "source": "src/middleware/security-headers.integration.test.ts",
+      "target": "src/server.ts"
+    },
+    {
+      "source": "src/middleware/security-headers.test.ts",
+      "target": "src/middleware/security-headers.ts"
+    },
+    {
+      "source": "src/middleware/security-headers.ts",
+      "target": "src/config/index.ts"
+    },
+    {
       "source": "src/middleware/validation.test.ts",
       "target": "src/middleware/validation.ts"
     },
@@ -885,6 +932,10 @@
     {
       "source": "src/server.ts",
       "target": "src/middleware/metrics.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/middleware/security-headers.ts"
     },
     {
       "source": "src/server.ts",
@@ -1127,6 +1178,7 @@
       "express",
       "express-rate-limit",
       "globals",
+      "helmet",
       "ioredis",
       "jsonwebtoken",
       "ms",
@@ -1141,6 +1193,6 @@
       "zod"
     ],
     "stdlib_count": 4,
-    "third-party_count": 20
+    "third-party_count": 21
   }
 }

@@ -70,6 +70,9 @@
     ├── metrics.ts
     ├── rate-limit.test.ts
     ├── rate-limit.ts
+    ├── security-headers.integration.test.ts
+    ├── security-headers.test.ts
+    ├── security-headers.ts
     ├── validation.test.ts
     └── validation.ts
   ├── pages

@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 50,
+  "total_files": 53,
   "files": [
     {
       "schema_version": "2.0",
@@ -242,6 +242,48 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/middleware/security-headers.integration.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 6625,
+        "loc": 127,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/security-headers.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 16336,
+        "loc": 323,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/security-headers.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 9460,
+        "loc": 206,
+        "todo_count": 1
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/middleware/validation.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -403,8 +445,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6812,
-        "loc": 186,
+        "size_bytes": 6994,
+        "loc": 188,
         "todo_count": 0
       }
     },

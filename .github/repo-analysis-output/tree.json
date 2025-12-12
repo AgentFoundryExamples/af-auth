@@ -320,6 +320,18 @@
             },
             {
               "type": "file",
+              "name": "security-headers.integration.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "security-headers.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "security-headers.ts"
+            },
+            {
+              "type": "file",
               "name": "validation.test.ts"
             },
             {
