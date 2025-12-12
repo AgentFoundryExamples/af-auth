@@ -11,16 +11,46 @@ const IV_LENGTH = 16; // 128 bits for GCM
 const SALT_LENGTH = 32; // 256 bits salt for key derivation
 
 /**
- * Derives an encryption key from the master key using PBKDF2
+ * Cache for derived keys to avoid expensive PBKDF2 operations on every encrypt/decrypt.
+ * Maps: base64(salt) -> derived key Buffer
+ * This cache is safe because:
+ * 1. Each salt produces a unique key
+ * 2. The master key (tokenEncryptionKey) doesn't change during runtime
+ * 3. Memory usage is bounded by unique salts encountered
  */
-function deriveKey(masterKey: string, salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(
-    masterKey,
-    salt,
-    100000, // iterations
-    32, // key length (256 bits for AES-256)
-    'sha256'
-  );
+const keyCache = new Map<string, Buffer>();
+
+/**
+ * Derives an encryption key from the master key using PBKDF2
+ * Uses async implementation to prevent blocking the event loop
+ * Results are cached by salt to improve performance
+ */
+async function deriveKey(masterKey: string, salt: Buffer): Promise<Buffer> {
+  const saltKey = salt.toString('base64');
+  
+  // Check cache first
+  if (keyCache.has(saltKey)) {
+    return keyCache.get(saltKey)!;
+  }
+  
+  // Derive key asynchronously
+  return new Promise((resolve, reject) => {
+    crypto.pbkdf2(
+      masterKey,
+      salt,
+      100000, // iterations - provides strong security
+      32, // key length (256 bits for AES-256)
+      'sha256',
+      (err, derivedKey) => {
+        if (err) {
+          return reject(err);
+        }
+        // Cache the result
+        keyCache.set(saltKey, derivedKey);
+        resolve(derivedKey);
+      }
+    );
+  });
 }
 
 /**
@@ -30,14 +60,14 @@ function deriveKey(masterKey: string, salt: Buffer): Buffer {
  * @param plaintext - The text to encrypt
  * @returns Base64-encoded encrypted data with metadata
  */
-export function encrypt(plaintext: string): string {
+export async function encrypt(plaintext: string): Promise<string> {
   try {
     // Generate random salt and IV
     const salt = crypto.randomBytes(SALT_LENGTH);
     const iv = crypto.randomBytes(IV_LENGTH);
     
     // Derive encryption key
-    const key = deriveKey(config.github.tokenEncryptionKey, salt);
+    const key = await deriveKey(config.github.tokenEncryptionKey, salt);
     
     // Create cipher
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -68,15 +98,18 @@ export function encrypt(plaintext: string): string {
 
 /**
  * Decrypts a ciphertext string encrypted with encrypt()
+ * Implements timing attack mitigation by performing consistent operations
  * 
  * @param encryptedData - Base64-encoded encrypted data with metadata (salt:iv:authTag:ciphertext)
  * @returns Decrypted plaintext string
  */
-export function decrypt(encryptedData: string): string {
+export async function decrypt(encryptedData: string): Promise<string> {
   try {
     // Split the encrypted data
     const parts = encryptedData.split(':');
     if (parts.length !== 4) {
+      // Timing attack mitigation: perform dummy key derivation even on format errors
+      await deriveKey(config.github.tokenEncryptionKey, crypto.randomBytes(SALT_LENGTH));
       throw new Error('Invalid encrypted data format');
     }
     
@@ -88,7 +121,7 @@ export function decrypt(encryptedData: string): string {
     const authTag = Buffer.from(authTagB64, 'base64');
     
     // Derive the same encryption key
-    const key = deriveKey(config.github.tokenEncryptionKey, salt);
+    const key = await deriveKey(config.github.tokenEncryptionKey, salt);
     
     // Create decipher
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
@@ -111,7 +144,7 @@ export function decrypt(encryptedData: string): string {
  * Encrypts a GitHub token for storage
  * Returns null if the input is null (to handle optional tokens)
  */
-export function encryptGitHubToken(token: string | null): string | null {
+export async function encryptGitHubToken(token: string | null): Promise<string | null> {
   if (token === null) {
     return null;
   }
@@ -122,7 +155,7 @@ export function encryptGitHubToken(token: string | null): string | null {
  * Decrypts a GitHub token from storage
  * Returns null if the input is null (to handle optional tokens)
  */
-export function decryptGitHubToken(encryptedToken: string | null): string | null {
+export async function decryptGitHubToken(encryptedToken: string | null): Promise<string | null> {
   if (encryptedToken === null) {
     return null;
   }

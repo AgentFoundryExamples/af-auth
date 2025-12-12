@@ -164,8 +164,8 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     const tokenExpiresAt = calculateTokenExpiration(tokenResponse.expires_in);
     
     // Encrypt tokens before storing
-    const encryptedAccessToken = encryptGitHubToken(tokenResponse.access_token);
-    const encryptedRefreshToken = encryptGitHubToken(tokenResponse.refresh_token || null);
+    const encryptedAccessToken = await encryptGitHubToken(tokenResponse.access_token);
+    const encryptedRefreshToken = await encryptGitHubToken(tokenResponse.refresh_token || null);
     
     // Upsert user in database
     const user = await prisma.user.upsert({

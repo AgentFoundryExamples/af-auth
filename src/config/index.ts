@@ -190,27 +190,15 @@ if (dbSslEnabled) {
   // Add SSL mode parameter
   url.searchParams.set('sslmode', 'require');
   
-  // If rejectUnauthorized is false, allow self-signed certificates
-  if (!dbSslRejectUnauthorized) {
-    url.searchParams.set('sslmode', 'require');
-    // Note: Prisma doesn't have a direct equivalent to rejectUnauthorized in connection string
-    // This is handled at the connection level, not in the URL
-  }
+  // Note: Prisma/PostgreSQL connection strings don't have a direct equivalent to 
+  // Node's rejectUnauthorized option. SSL certificate validation is controlled by:
+  // - sslmode=require: Requires SSL but doesn't verify certificates
+  // - sslmode=verify-ca: Requires SSL and verifies the CA
+  // - sslmode=verify-full: Requires SSL, verifies CA and hostname
+  // The rejectUnauthorized config is stored for potential future use with custom
+  // connection handlers or middleware.
   
   databaseUrl = url.toString();
-  
-  // Log SSL configuration (without sensitive data)
-  if (dbSslEnabled) {
-    const sslConfigSummary = {
-      enabled: true,
-      rejectUnauthorized: dbSslRejectUnauthorized,
-      hasCA: !!dbSslCa,
-      hasCert: !!dbSslCert,
-      hasKey: !!dbSslKey,
-    };
-    // This will be logged when config is initialized
-    process.env.__DB_SSL_CONFIG_SUMMARY = JSON.stringify(sslConfigSummary);
-  }
 }
 
 export const config: Config = {

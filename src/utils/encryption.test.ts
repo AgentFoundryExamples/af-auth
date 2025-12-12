@@ -22,60 +22,60 @@ import { encrypt, decrypt, encryptGitHubToken, decryptGitHubToken } from './encr
 
 describe('Encryption Utilities', () => {
   describe('encrypt and decrypt', () => {
-    it('should encrypt and decrypt a string correctly', () => {
+    it('should encrypt and decrypt a string correctly', async () => {
       const plaintext = 'my-secret-github-token';
-      const encrypted = encrypt(plaintext);
-      const decrypted = decrypt(encrypted);
+      const encrypted = await encrypt(plaintext);
+      const decrypted = await decrypt(encrypted);
       
       expect(decrypted).toBe(plaintext);
     });
 
-    it('should produce different ciphertext for the same plaintext', () => {
+    it('should produce different ciphertext for the same plaintext', async () => {
       const plaintext = 'my-secret-github-token';
-      const encrypted1 = encrypt(plaintext);
-      const encrypted2 = encrypt(plaintext);
+      const encrypted1 = await encrypt(plaintext);
+      const encrypted2 = await encrypt(plaintext);
       
       // Different because of random IV and salt
       expect(encrypted1).not.toBe(encrypted2);
       
       // But both should decrypt to the same value
-      expect(decrypt(encrypted1)).toBe(plaintext);
-      expect(decrypt(encrypted2)).toBe(plaintext);
+      expect(await decrypt(encrypted1)).toBe(plaintext);
+      expect(await decrypt(encrypted2)).toBe(plaintext);
     });
 
-    it('should encrypt and decrypt long strings', () => {
+    it('should encrypt and decrypt long strings', async () => {
       const plaintext = 'a'.repeat(10000);
-      const encrypted = encrypt(plaintext);
-      const decrypted = decrypt(encrypted);
+      const encrypted = await encrypt(plaintext);
+      const decrypted = await decrypt(encrypted);
       
       expect(decrypted).toBe(plaintext);
     });
 
-    it('should encrypt and decrypt strings with special characters', () => {
+    it('should encrypt and decrypt strings with special characters', async () => {
       const plaintext = '!@#$%^&*()_+-={}[]|\\:";\'<>?,./\n\t\r';
-      const encrypted = encrypt(plaintext);
-      const decrypted = decrypt(encrypted);
+      const encrypted = await encrypt(plaintext);
+      const decrypted = await decrypt(encrypted);
       
       expect(decrypted).toBe(plaintext);
     });
 
-    it('should throw error when decrypting invalid data', () => {
-      expect(() => decrypt('invalid-encrypted-data')).toThrow('Decryption failed');
+    it('should throw error when decrypting invalid data', async () => {
+      await expect(decrypt('invalid-encrypted-data')).rejects.toThrow('Decryption failed');
     });
 
-    it('should throw error when decrypting tampered data', () => {
+    it('should throw error when decrypting tampered data', async () => {
       const plaintext = 'my-secret-token';
-      const encrypted = encrypt(plaintext);
+      const encrypted = await encrypt(plaintext);
       
       // Tamper with the encrypted data
       const tampered = encrypted + 'extra';
       
-      expect(() => decrypt(tampered)).toThrow('Decryption failed');
+      await expect(decrypt(tampered)).rejects.toThrow('Decryption failed');
     });
 
-    it('should produce encrypted data with correct format', () => {
+    it('should produce encrypted data with correct format', async () => {
       const plaintext = 'test-token';
-      const encrypted = encrypt(plaintext);
+      const encrypted = await encrypt(plaintext);
       
       // Should have 4 parts separated by colons
       const parts = encrypted.split(':');
@@ -89,22 +89,22 @@ describe('Encryption Utilities', () => {
   });
 
   describe('encryptGitHubToken and decryptGitHubToken', () => {
-    it('should encrypt and decrypt a GitHub token', () => {
+    it('should encrypt and decrypt a GitHub token', async () => {
       const token = 'gho_1234567890abcdefghijklmnopqrstuvwxyz';
-      const encrypted = encryptGitHubToken(token);
-      const decrypted = decryptGitHubToken(encrypted);
+      const encrypted = await encryptGitHubToken(token);
+      const decrypted = await decryptGitHubToken(encrypted);
       
       expect(decrypted).toBe(token);
     });
 
-    it('should handle null tokens', () => {
-      expect(encryptGitHubToken(null)).toBeNull();
-      expect(decryptGitHubToken(null)).toBeNull();
+    it('should handle null tokens', async () => {
+      expect(await encryptGitHubToken(null)).toBeNull();
+      expect(await decryptGitHubToken(null)).toBeNull();
     });
 
-    it('should handle empty string by encrypting it', () => {
-      const encrypted = encryptGitHubToken('');
-      const decrypted = decryptGitHubToken(encrypted);
+    it('should handle empty string by encrypting it', async () => {
+      const encrypted = await encryptGitHubToken('');
+      const decrypted = await decryptGitHubToken(encrypted);
       
       // Empty string should be encrypted like any other string
       expect(encrypted).not.toBeNull();
@@ -113,10 +113,10 @@ describe('Encryption Utilities', () => {
   });
 
   describe('security properties', () => {
-    it('should use different salts for each encryption', () => {
+    it('should use different salts for each encryption', async () => {
       const plaintext = 'test';
-      const encrypted1 = encrypt(plaintext);
-      const encrypted2 = encrypt(plaintext);
+      const encrypted1 = await encrypt(plaintext);
+      const encrypted2 = await encrypt(plaintext);
       
       const salt1 = encrypted1.split(':')[0];
       const salt2 = encrypted2.split(':')[0];
@@ -124,10 +124,10 @@ describe('Encryption Utilities', () => {
       expect(salt1).not.toBe(salt2);
     });
 
-    it('should use different IVs for each encryption', () => {
+    it('should use different IVs for each encryption', async () => {
       const plaintext = 'test';
-      const encrypted1 = encrypt(plaintext);
-      const encrypted2 = encrypt(plaintext);
+      const encrypted1 = await encrypt(plaintext);
+      const encrypted2 = await encrypt(plaintext);
       
       const iv1 = encrypted1.split(':')[1];
       const iv2 = encrypted2.split(':')[1];

@@ -239,7 +239,7 @@ router.post('/github-token', async (req: Request, res: Response) => {
     );
     
     // Decrypt token before returning
-    const decryptedToken = decryptGitHubToken(user.githubAccessToken);
+    const decryptedToken = await decryptGitHubToken(user.githubAccessToken);
     
     // Return token and metadata
     return res.json({
