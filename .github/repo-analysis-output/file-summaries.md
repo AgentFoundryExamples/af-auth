@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 30
+Total files: 34
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -65,8 +65,8 @@ Total files: 30
 **Role:** entry-point  
 **Role Justification:** common entry point name 'index'  
 **Summary:** TypeScript main entry point (role: entry-point)  
-**Size:** 9.84 KB  
-**LOC:** 248  
+**Size:** 11.29 KB  
+**LOC:** 292  
 **TODOs/FIXMEs:** 0  
 
 ## src/db/index.test.ts
@@ -87,6 +87,42 @@ Total files: 30
 **LOC:** 122  
 **TODOs/FIXMEs:** 0  
 
+## src/middleware/rate-limit.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 3.79 KB  
+**LOC:** 80  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/rate-limit.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 3.81 KB  
+**LOC:** 94  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/validation.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 7.26 KB  
+**LOC:** 177  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/validation.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.86 KB  
+**LOC:** 178  
+**TODOs/FIXMEs:** 0  
+
 ## src/routes/auth.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -101,8 +137,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.19 KB  
-**LOC:** 191  
+**Size:** 8.29 KB  
+**LOC:** 192  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.test.ts
@@ -110,8 +146,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 26.94 KB  
-**LOC:** 685  
+**Size:** 26.80 KB  
+**LOC:** 677  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.ts
@@ -119,8 +155,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 13.50 KB  
-**LOC:** 303  
+**Size:** 13.46 KB  
+**LOC:** 301  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.test.ts
@@ -128,8 +164,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.42 KB  
-**LOC:** 215  
+**Size:** 9.57 KB  
+**LOC:** 219  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.ts
@@ -137,8 +173,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.37 KB  
-**LOC:** 177  
+**Size:** 7.16 KB  
+**LOC:** 165  
 **TODOs/FIXMEs:** 0  
 
 ## src/server.test.ts
@@ -155,8 +191,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.28 KB  
-**LOC:** 156  
+**Size:** 5.42 KB  
+**LOC:** 158  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/__mocks__/github-oauth.ts
@@ -173,8 +209,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 1.32 KB  
-**LOC:** 26  
+**Size:** 1.35 KB  
+**LOC:** 27  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/github-oauth.test.ts
@@ -263,8 +299,8 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.06 KB  
-**LOC:** 169  
+**Size:** 10.57 KB  
+**LOC:** 259  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/logger.ts
@@ -272,6 +308,6 @@ Total files: 30
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.63 KB  
-**LOC:** 168  
+**Size:** 5.87 KB  
+**LOC:** 195  
 **TODOs/FIXMEs:** 0  

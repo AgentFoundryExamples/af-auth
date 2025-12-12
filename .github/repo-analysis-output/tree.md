@@ -57,6 +57,11 @@
   ├── db
     ├── index.test.ts
     └── index.ts
+  ├── middleware
+    ├── rate-limit.test.ts
+    ├── rate-limit.ts
+    ├── validation.test.ts
+    └── validation.ts
   ├── pages
     ├── error.tsx
     ├── login.tsx

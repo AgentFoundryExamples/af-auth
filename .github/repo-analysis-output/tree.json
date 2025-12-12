@@ -264,6 +264,28 @@
         },
         {
           "type": "directory",
+          "name": "middleware",
+          "children": [
+            {
+              "type": "file",
+              "name": "rate-limit.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "rate-limit.ts"
+            },
+            {
+              "type": "file",
+              "name": "validation.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "validation.ts"
+            }
+          ]
+        },
+        {
+          "type": "directory",
           "name": "pages",
           "children": [
             {

@@ -97,6 +97,56 @@
       }
     },
     {
+      "id": "src/middleware/rate-limit.test.ts",
+      "path": "src/middleware/rate-limit.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/rate-limit.ts",
+      "path": "src/middleware/rate-limit.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express-rate-limit",
+          "rate-limit-redis"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/validation.test.ts",
+      "path": "src/middleware/validation.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "supertest"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/validation.ts",
+      "path": "src/middleware/validation.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto"
+        ],
+        "third-party": [
+          "express",
+          "zod"
+        ]
+      }
+    },
+    {
       "id": "src/routes/auth.test.ts",
       "path": "src/routes/auth.test.ts",
       "type": "file",
@@ -364,6 +414,34 @@
       "target": "src/utils/logger.ts"
     },
     {
+      "source": "src/middleware/rate-limit.test.ts",
+      "target": "src/middleware/rate-limit.ts"
+    },
+    {
+      "source": "src/middleware/rate-limit.test.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/middleware/rate-limit.ts",
+      "target": "src/services/redis-client.ts"
+    },
+    {
+      "source": "src/middleware/rate-limit.ts",
+      "target": "src/config/index.ts"
+    },
+    {
+      "source": "src/middleware/rate-limit.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/middleware/validation.test.ts",
+      "target": "src/middleware/validation.ts"
+    },
+    {
+      "source": "src/middleware/validation.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "src/routes/auth.test.ts",
       "target": "src/server.ts"
     },
@@ -404,6 +482,10 @@
       "target": "src/utils/encryption.ts"
     },
     {
+      "source": "src/routes/auth.ts",
+      "target": "src/middleware/rate-limit.ts"
+    },
+    {
       "source": "src/routes/github-token.test.ts",
       "target": "src/server.ts"
     },
@@ -444,6 +526,14 @@
       "target": "src/config/index.ts"
     },
     {
+      "source": "src/routes/github-token.ts",
+      "target": "src/middleware/rate-limit.ts"
+    },
+    {
+      "source": "src/routes/github-token.ts",
+      "target": "src/middleware/validation.ts"
+    },
+    {
       "source": "src/routes/jwt.test.ts",
       "target": "src/server.ts"
     },
@@ -458,6 +548,14 @@
     {
       "source": "src/routes/jwt.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/middleware/rate-limit.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/middleware/validation.ts"
     },
     {
       "source": "src/server.test.ts",
@@ -474,6 +572,10 @@
     {
       "source": "src/server.ts",
       "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/middleware/validation.ts"
     },
     {
       "source": "src/server.ts",
@@ -590,18 +692,21 @@
       "bcrypt",
       "dotenv",
       "express",
+      "express-rate-limit",
       "globals",
       "ioredis",
       "jsonwebtoken",
       "ms",
       "pino",
       "pino-http",
+      "rate-limit-redis",
       "react",
       "react-dom/server",
       "supertest",
-      "typescript-eslint"
+      "typescript-eslint",
+      "zod"
     ],
     "stdlib_count": 4,
-    "third-party_count": 16
+    "third-party_count": 19
   }
 }

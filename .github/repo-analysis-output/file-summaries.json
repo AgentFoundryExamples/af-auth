@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 30,
+  "total_files": 34,
   "files": [
     {
       "schema_version": "2.0",
@@ -95,8 +95,8 @@
       "summary": "TypeScript main entry point (role: entry-point)",
       "summary_text": "TypeScript main entry point (role: entry-point)",
       "metrics": {
-        "size_bytes": 10073,
-        "loc": 248,
+        "size_bytes": 11557,
+        "loc": 292,
         "todo_count": 0
       }
     },
@@ -130,6 +130,62 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/middleware/rate-limit.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 3881,
+        "loc": 80,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/rate-limit.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 3897,
+        "loc": 94,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/validation.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 7433,
+        "loc": 177,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/validation.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 6005,
+        "loc": 178,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/routes/auth.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -151,8 +207,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 8390,
-        "loc": 191,
+        "size_bytes": 8484,
+        "loc": 192,
         "todo_count": 0
       }
     },
@@ -165,8 +221,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 27588,
-        "loc": 685,
+        "size_bytes": 27445,
+        "loc": 677,
         "todo_count": 0
       }
     },
@@ -179,8 +235,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 13823,
-        "loc": 303,
+        "size_bytes": 13784,
+        "loc": 301,
         "todo_count": 0
       }
     },
@@ -193,8 +249,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 9644,
-        "loc": 215,
+        "size_bytes": 9799,
+        "loc": 219,
         "todo_count": 0
       }
     },
@@ -207,8 +263,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7548,
-        "loc": 177,
+        "size_bytes": 7327,
+        "loc": 165,
         "todo_count": 0
       }
     },
@@ -235,8 +291,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5404,
-        "loc": 156,
+        "size_bytes": 5554,
+        "loc": 158,
         "todo_count": 0
       }
     },
@@ -263,8 +319,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 1352,
-        "loc": 26,
+        "size_bytes": 1379,
+        "loc": 27,
         "todo_count": 0
       }
     },
@@ -403,8 +459,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7233,
-        "loc": 169,
+        "size_bytes": 10822,
+        "loc": 259,
         "todo_count": 0
       }
     },
@@ -417,8 +473,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 5768,
-        "loc": 168,
+        "size_bytes": 6006,
+        "loc": 195,
         "todo_count": 0
       }
     }
