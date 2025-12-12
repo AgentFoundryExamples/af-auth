@@ -266,7 +266,10 @@ AF Auth requires the following secrets:
 
 ```bash
 # Database URL
-echo -n "postgresql://USER:PASSWORD@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE" | \
+# Recommended: Use IAM database authentication. The user should be the service account email.
+# Example for IAM auth: postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable
+# Example for password auth: postgresql://USER:PASSWORD@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable
+echo -n "postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable" | \
   gcloud secrets create database-url --data-file=-
 
 # GitHub OAuth Client ID

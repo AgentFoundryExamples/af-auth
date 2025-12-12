@@ -609,6 +609,8 @@ gcloud logging metrics create auth_failures_high \
 gcloud alpha monitoring policies create \
   --notification-channels=EMAIL_CHANNEL_ID \
   --display-name="High Auth Failure Rate" \
+  --condition-filter='metric.type="logging.googleapis.com/user/auth_failures_high" AND resource.type="cloud_run_revision"' \
+  --condition-comparison="GREATER_THAN" \
   --condition-threshold-value=10 \
   --condition-threshold-duration=60s \
   --condition-display-name="Auth failures > 10/min"

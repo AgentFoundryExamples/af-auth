@@ -283,8 +283,14 @@ Connect to database and grant permissions:
 
 ```sql
 -- Connect via Cloud SQL Proxy or direct connection
-GRANT ALL PRIVILEGES ON DATABASE af_auth TO "af-auth-sa@project-id.iam.gserviceaccount.com";
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+
+-- Grant CONNECT permission on the database
+GRANT CONNECT ON DATABASE af_auth TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+
+-- Grant permissions on tables in the public schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+
+-- Grant permissions on sequences
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "af-auth-sa@project-id.iam.gserviceaccount.com";
 ```
 

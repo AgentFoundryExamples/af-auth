@@ -193,6 +193,9 @@ gcloud alpha monitoring policies create \
   --notification-channels=CHANNEL_ID \
   --display-name="AF Auth High Error Rate" \
   --condition-display-name="4xx/5xx errors > 5% of requests" \
+  --condition-ratio-filter='metric.type="run.googleapis.com/request_count" resource.type="cloud_run_revision" resource.label.service_name="af-auth" metric.label.response_code_class!="2xx"' \
+  --condition-ratio-denominator-filter='metric.type="run.googleapis.com/request_count" resource.type="cloud_run_revision" resource.label.service_name="af-auth"' \
+  --condition-comparison="GREATER_THAN" \
   --condition-threshold-value=0.05 \
   --condition-threshold-duration=300s
 
