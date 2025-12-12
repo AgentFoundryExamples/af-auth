@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 34,
+  "total_files": 39,
   "files": [
     {
       "schema_version": "2.0",
@@ -41,6 +41,20 @@
       "metrics": {
         "size_bytes": 676,
         "loc": 1,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "scripts/cleanup-revoked-tokens.ts",
+      "language": "TypeScript",
+      "role": "script",
+      "role_justification": "located in 'scripts' directory",
+      "summary": "TypeScript utility script (role: script)",
+      "summary_text": "TypeScript utility script (role: script)",
+      "metrics": {
+        "size_bytes": 3822,
+        "loc": 63,
         "todo_count": 0
       }
     },
@@ -130,6 +144,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/middleware/jwt-auth.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 9965,
+        "loc": 276,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/jwt-auth.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 5911,
+        "loc": 173,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/middleware/rate-limit.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -179,8 +221,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6005,
-        "loc": 178,
+        "size_bytes": 6315,
+        "loc": 186,
         "todo_count": 0
       }
     },
@@ -249,8 +291,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 9799,
-        "loc": 219,
+        "size_bytes": 14022,
+        "loc": 321,
         "todo_count": 0
       }
     },
@@ -263,8 +305,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 7327,
-        "loc": 165,
+        "size_bytes": 10006,
+        "loc": 242,
         "todo_count": 0
       }
     },
@@ -361,8 +403,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 10049,
-        "loc": 248,
+        "size_bytes": 10857,
+        "loc": 271,
         "todo_count": 0
       }
     },
@@ -375,8 +417,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6543,
-        "loc": 185,
+        "size_bytes": 6999,
+        "loc": 196,
         "todo_count": 0
       }
     },
@@ -419,6 +461,34 @@
       "metrics": {
         "size_bytes": 8698,
         "loc": 261,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/token-revocation.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 9025,
+        "loc": 245,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/services/token-revocation.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 6731,
+        "loc": 187,
         "todo_count": 0
       }
     },

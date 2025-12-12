@@ -37,12 +37,15 @@
       └── migration.sql
     ├── 20251212003212_
       └── migration.sql
+    ├── 20251212091408_add_revoked_tokens
+      └── migration.sql
     ├── 20251213000000_encrypt_github_tokens
       └── migration.sql
     ├── migration_lock.toml
     └── README.md
   └── schema.prisma
 ├── scripts
+  ├── cleanup-revoked-tokens.ts
   ├── create-migration.sh
   ├── manage-services.ts
   ├── migrate-encrypt-tokens.ts
@@ -58,6 +61,8 @@
     ├── index.test.ts
     └── index.ts
   ├── middleware
+    ├── jwt-auth.test.ts
+    ├── jwt-auth.ts
     ├── rate-limit.test.ts
     ├── rate-limit.ts
     ├── validation.test.ts
@@ -84,7 +89,9 @@
     ├── jwt.ts
     ├── redis-client.ts
     ├── service-registry.test.ts
-    └── service-registry.ts
+    ├── service-registry.ts
+    ├── token-revocation.test.ts
+    └── token-revocation.ts
   ├── utils
     ├── encryption.test.ts
     ├── encryption.ts

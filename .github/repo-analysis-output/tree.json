@@ -170,6 +170,16 @@
             },
             {
               "type": "directory",
+              "name": "20251212091408_add_revoked_tokens",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "migration.sql"
+                }
+              ]
+            },
+            {
+              "type": "directory",
               "name": "20251213000000_encrypt_github_tokens",
               "children": [
                 {
@@ -198,6 +208,10 @@
       "type": "directory",
       "name": "scripts",
       "children": [
+        {
+          "type": "file",
+          "name": "cleanup-revoked-tokens.ts"
+        },
         {
           "type": "file",
           "name": "create-migration.sh"
@@ -266,6 +280,14 @@
           "type": "directory",
           "name": "middleware",
           "children": [
+            {
+              "type": "file",
+              "name": "jwt-auth.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "jwt-auth.ts"
+            },
             {
               "type": "file",
               "name": "rate-limit.test.ts"
@@ -381,6 +403,14 @@
             {
               "type": "file",
               "name": "service-registry.ts"
+            },
+            {
+              "type": "file",
+              "name": "token-revocation.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "token-revocation.ts"
             }
           ]
         },

@@ -34,6 +34,15 @@
       }
     },
     {
+      "id": "scripts/cleanup-revoked-tokens.ts",
+      "path": "scripts/cleanup-revoked-tokens.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
       "id": "scripts/manage-services.ts",
       "path": "scripts/manage-services.ts",
       "type": "file",
@@ -93,6 +102,28 @@
         "stdlib": [],
         "third-party": [
           "@prisma/client"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/jwt-auth.test.ts",
+      "path": "src/middleware/jwt-auth.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/jwt-auth.ts",
+      "path": "src/middleware/jwt-auth.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express"
         ]
       }
     },
@@ -295,7 +326,9 @@
       "path": "src/services/jwt.ts",
       "type": "file",
       "external_dependencies": {
-        "stdlib": [],
+        "stdlib": [
+          "crypto"
+        ],
         "third-party": [
           "jsonwebtoken",
           "ms"
@@ -333,6 +366,24 @@
         "third-party": [
           "bcrypt"
         ]
+      }
+    },
+    {
+      "id": "src/services/token-revocation.test.ts",
+      "path": "src/services/token-revocation.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
+      }
+    },
+    {
+      "id": "src/services/token-revocation.ts",
+      "path": "src/services/token-revocation.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": []
       }
     },
     {
@@ -378,6 +429,18 @@
   ],
   "edges": [
     {
+      "source": "scripts/cleanup-revoked-tokens.ts",
+      "target": "src/services/token-revocation.ts"
+    },
+    {
+      "source": "scripts/cleanup-revoked-tokens.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "scripts/cleanup-revoked-tokens.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
       "source": "scripts/manage-services.ts",
       "target": "src/services/service-registry.ts"
     },
@@ -411,6 +474,38 @@
     },
     {
       "source": "src/db/index.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.test.ts",
+      "target": "src/middleware/jwt-auth.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.test.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.test.ts",
+      "target": "src/services/token-revocation.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.ts",
+      "target": "src/services/token-revocation.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/middleware/jwt-auth.ts",
       "target": "src/utils/logger.ts"
     },
     {
@@ -542,8 +637,16 @@
       "target": "src/services/jwt.ts"
     },
     {
+      "source": "src/routes/jwt.test.ts",
+      "target": "src/services/token-revocation.ts"
+    },
+    {
       "source": "src/routes/jwt.ts",
       "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/routes/jwt.ts",
+      "target": "src/services/token-revocation.ts"
     },
     {
       "source": "src/routes/jwt.ts",
@@ -656,6 +759,34 @@
     {
       "source": "src/services/service-registry.ts",
       "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/token-revocation.test.ts",
+      "target": "src/services/token-revocation.ts"
+    },
+    {
+      "source": "src/services/token-revocation.test.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/services/token-revocation.test.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/token-revocation.ts",
+      "target": "src/db/index.ts"
+    },
+    {
+      "source": "src/services/token-revocation.ts",
+      "target": "src/utils/logger.ts"
+    },
+    {
+      "source": "src/services/token-revocation.ts",
+      "target": "src/services/jwt.ts"
+    },
+    {
+      "source": "src/services/token-revocation.ts",
+      "target": "src/config/index.ts"
     },
     {
       "source": "src/utils/encryption.test.ts",

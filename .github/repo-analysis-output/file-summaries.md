@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 34
+Total files: 39
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -31,6 +31,15 @@ Total files: 34
 **Summary:** JavaScript module for jest.setup  
 **Size:** 0.66 KB  
 **LOC:** 1  
+**TODOs/FIXMEs:** 0  
+
+## scripts/cleanup-revoked-tokens.ts
+**Language:** TypeScript  
+**Role:** script  
+**Role Justification:** located in 'scripts' directory  
+**Summary:** TypeScript utility script (role: script)  
+**Size:** 3.73 KB  
+**LOC:** 63  
 **TODOs/FIXMEs:** 0  
 
 ## scripts/manage-services.ts
@@ -87,6 +96,24 @@ Total files: 34
 **LOC:** 122  
 **TODOs/FIXMEs:** 0  
 
+## src/middleware/jwt-auth.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 9.73 KB  
+**LOC:** 276  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/jwt-auth.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.77 KB  
+**LOC:** 173  
+**TODOs/FIXMEs:** 0  
+
 ## src/middleware/rate-limit.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -119,8 +146,8 @@ Total files: 34
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.86 KB  
-**LOC:** 178  
+**Size:** 6.17 KB  
+**LOC:** 186  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/auth.test.ts
@@ -164,8 +191,8 @@ Total files: 34
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.57 KB  
-**LOC:** 219  
+**Size:** 13.69 KB  
+**LOC:** 321  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/jwt.ts
@@ -173,8 +200,8 @@ Total files: 34
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 7.16 KB  
-**LOC:** 165  
+**Size:** 9.77 KB  
+**LOC:** 242  
 **TODOs/FIXMEs:** 0  
 
 ## src/server.test.ts
@@ -236,8 +263,8 @@ Total files: 34
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.81 KB  
-**LOC:** 248  
+**Size:** 10.60 KB  
+**LOC:** 271  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/jwt.ts
@@ -245,8 +272,8 @@ Total files: 34
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.39 KB  
-**LOC:** 185  
+**Size:** 6.83 KB  
+**LOC:** 196  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/redis-client.ts
@@ -274,6 +301,24 @@ Total files: 34
 **Summary:** TypeScript core implementation  
 **Size:** 8.49 KB  
 **LOC:** 261  
+**TODOs/FIXMEs:** 0  
+
+## src/services/token-revocation.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 8.81 KB  
+**LOC:** 245  
+**TODOs/FIXMEs:** 0  
+
+## src/services/token-revocation.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 6.57 KB  
+**LOC:** 187  
 **TODOs/FIXMEs:** 0  
 
 ## src/utils/encryption.test.ts
