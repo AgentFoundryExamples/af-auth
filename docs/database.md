@@ -38,6 +38,80 @@ model User {
 | `created_at` | TIMESTAMPTZ | NOT NULL | Record creation timestamp (UTC) |
 | `updated_at` | TIMESTAMPTZ | NOT NULL | Record last update timestamp (UTC) |
 
+### Service Registry Table
+
+The `service_registry` table controls which downstream services can access user GitHub tokens.
+
+```prisma
+model ServiceRegistry {
+  id                     String    @id @default(uuid()) @db.Uuid
+  serviceIdentifier      String    @unique @map("service_identifier") @db.VarChar(255)
+  hashedApiKey           String    @map("hashed_api_key") @db.Text
+  allowedScopes          String[]  @default([]) @map("allowed_scopes")
+  isActive               Boolean   @default(true) @map("is_active")
+  description            String?   @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastUsedAt             DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  @@index([serviceIdentifier])
+  @@index([isActive])
+  @@map("service_registry")
+}
+```
+
+#### Column Descriptions
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Unique identifier for the service |
+| `service_identifier` | VARCHAR(255) | UNIQUE, NOT NULL | Human-readable service name |
+| `hashed_api_key` | TEXT | NOT NULL | Bcrypt-hashed API key (12 rounds) |
+| `allowed_scopes` | TEXT[] | DEFAULT [] | Future: scopes this service can access |
+| `is_active` | BOOLEAN | DEFAULT TRUE | Whether service is active |
+| `description` | TEXT | NULLABLE | Human-readable description |
+| `created_at` | TIMESTAMPTZ | NOT NULL | Record creation timestamp (UTC) |
+| `updated_at` | TIMESTAMPTZ | NOT NULL | Record last update timestamp (UTC) |
+| `last_used_at` | TIMESTAMPTZ | NULLABLE | Last time service accessed API |
+
+### Service Audit Logs Table
+
+The `service_audit_logs` table provides an audit trail of all service registry access attempts.
+
+```prisma
+model ServiceAuditLog {
+  id                     String    @id @default(uuid()) @db.Uuid
+  serviceId              String    @map("service_id") @db.Uuid
+  userId                 String    @map("user_id") @db.Uuid
+  action                 String    @db.VarChar(100)
+  success                Boolean   @default(true)
+  errorMessage           String?   @map("error_message") @db.Text
+  ipAddress              String?   @map("ip_address") @db.VarChar(45)
+  userAgent              String?   @map("user_agent") @db.Text
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([serviceId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([success])
+  @@map("service_audit_logs")
+}
+```
+
+#### Column Descriptions
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Unique identifier for the log entry |
+| `service_id` | UUID | NOT NULL | Service that made the request |
+| `user_id` | UUID | NOT NULL | User whose token was requested |
+| `action` | VARCHAR(100) | NOT NULL | Action performed (e.g., "github_token_access") |
+| `success` | BOOLEAN | DEFAULT TRUE | Whether the action succeeded |
+| `error_message` | TEXT | NULLABLE | Error message if action failed |
+| `ip_address` | VARCHAR(45) | NULLABLE | IP address of requester |
+| `user_agent` | TEXT | NULLABLE | User agent of requester |
+| `created_at` | TIMESTAMPTZ | NOT NULL | Timestamp of the action |
+
 ### Design Decisions
 
 1. **UUID Primary Key**: UUIDs are used instead of sequential integers to prevent enumeration attacks and allow for distributed ID generation.
@@ -49,6 +123,10 @@ model User {
 4. **Timestamps in UTC**: All timestamps are stored in UTC (`TIMESTAMPTZ`) to avoid issues with clock drift, time zones, and daylight saving time changes.
 
 5. **Nullable Tokens**: Token fields are nullable to support users who haven't completed authentication or whose tokens have been revoked.
+
+6. **Bcrypt for API Keys**: Service API keys are hashed using bcrypt with 12 rounds before storage for security.
+
+7. **Audit Indexing**: Service audit logs are indexed on serviceId, userId, createdAt, and success for efficient querying.
 
 ## Local Development Setup
 
@@ -144,6 +222,257 @@ npm run db:studio
 ```
 
 Access at `http://localhost:5555`
+
+## Cloud SQL Setup
+
+For production deployment on Google Cloud Platform:
+
+### Creating Cloud SQL Instance
+
+```bash
+# Set variables
+export PROJECT_ID="your-project-id"
+export REGION="us-central1"
+export INSTANCE_NAME="af-auth-db"
+
+# Create PostgreSQL instance
+gcloud sql instances create ${INSTANCE_NAME} \
+  --database-version=POSTGRES_15 \
+  --tier=db-f1-micro \
+  --region=${REGION} \
+  --root-password="$(openssl rand -base64 32)" \
+  --backup-start-time=02:00 \
+  --enable-bin-log \
+  --retained-backups-count=30 \
+  --database-flags=max_connections=100
+
+# Create database
+gcloud sql databases create af_auth \
+  --instance=${INSTANCE_NAME}
+
+# Get connection name (needed for Cloud Run)
+gcloud sql instances describe ${INSTANCE_NAME} \
+  --format='value(connectionName)'
+# Output: project-id:region:instance-name
+```
+
+### IAM Authentication (Recommended)
+
+Use Cloud IAM for secure, keyless database authentication:
+
+```bash
+# Create service account for Cloud Run
+gcloud iam service-accounts create af-auth-sa \
+  --display-name="AF Auth Service Account"
+
+# Get service account email
+export SA_EMAIL="af-auth-sa@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# Create database user with IAM authentication
+gcloud sql users create ${SA_EMAIL} \
+  --instance=${INSTANCE_NAME} \
+  --type=CLOUD_IAM_SERVICE_ACCOUNT
+
+# Grant Cloud SQL Client role
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${SA_EMAIL}" \
+  --role="roles/cloudsql.client"
+```
+
+Connect to database and grant permissions:
+
+```sql
+-- Connect via Cloud SQL Proxy or direct connection
+GRANT ALL PRIVILEGES ON DATABASE af_auth TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "af-auth-sa@project-id.iam.gserviceaccount.com";
+```
+
+Connection string with IAM auth:
+
+```
+postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/project-id:region:instance-name&sslmode=disable
+```
+
+### SSL/TLS Configuration
+
+For public IP connections, enforce SSL:
+
+```bash
+# Require SSL connections
+gcloud sql instances patch ${INSTANCE_NAME} \
+  --require-ssl
+
+# Download server certificate
+gcloud sql ssl-certs create client-cert client-key.pem \
+  --instance=${INSTANCE_NAME}
+
+# Get server CA certificate
+gcloud sql ssl-certs list --instance=${INSTANCE_NAME}
+```
+
+Connection string with SSL:
+
+```
+postgresql://user:password@public-ip:5432/af_auth?sslmode=require&sslrootcert=server-ca.pem&sslcert=client-cert.pem&sslkey=client-key.pem
+```
+
+### Private IP (VPC)
+
+For enhanced security, use private IP:
+
+```bash
+# Enable private IP
+gcloud sql instances patch ${INSTANCE_NAME} \
+  --network=projects/${PROJECT_ID}/global/networks/default \
+  --no-assign-ip
+
+# Create VPC connector for Cloud Run
+gcloud compute networks vpc-access connectors create af-auth-connector \
+  --region=${REGION} \
+  --network=default \
+  --range=10.8.0.0/28
+
+# Configure Cloud Run to use VPC connector
+gcloud run services update af-auth \
+  --region=${REGION} \
+  --vpc-connector=af-auth-connector \
+  --vpc-egress=private-ranges-only
+```
+
+### Running Migrations on Cloud SQL
+
+#### Option A: Cloud SQL Proxy (Local)
+
+```bash
+# Download Cloud SQL Proxy
+curl -o cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64
+chmod +x cloud_sql_proxy
+
+# Start proxy
+./cloud_sql_proxy -instances=${PROJECT_ID}:${REGION}:${INSTANCE_NAME}=tcp:5432 &
+
+# Run migrations
+DATABASE_URL="postgresql://user:password@localhost:5432/af_auth" npm run db:migrate
+
+# Stop proxy
+killall cloud_sql_proxy
+```
+
+#### Option B: Cloud Run Jobs (Recommended)
+
+```bash
+# Create migration job
+gcloud run jobs create af-auth-migrate \
+  --image=us-central1-docker.pkg.dev/${PROJECT_ID}/af-auth/af-auth:latest \
+  --region=${REGION} \
+  --service-account=${SA_EMAIL} \
+  --set-secrets="DATABASE_URL=database-url:latest" \
+  --add-cloudsql-instances=${PROJECT_ID}:${REGION}:${INSTANCE_NAME} \
+  --task-timeout=5m \
+  --command=npm \
+  --args="run,db:migrate"
+
+# Execute migration
+gcloud run jobs execute af-auth-migrate --region=${REGION}
+
+# View logs
+gcloud logging read "resource.type=cloud_run_job AND resource.labels.job_name=af-auth-migrate" \
+  --limit=50
+```
+
+### SQL Schema Creation
+
+If not using Prisma migrations, create tables manually:
+
+```sql
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  github_user_id BIGINT UNIQUE NOT NULL,
+  github_access_token TEXT,
+  github_refresh_token TEXT,
+  github_token_expires_at TIMESTAMPTZ,
+  is_whitelisted BOOLEAN DEFAULT FALSE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_github_user_id ON users(github_user_id);
+CREATE INDEX IF NOT EXISTS idx_users_is_whitelisted ON users(is_whitelisted);
+
+-- Service registry table
+CREATE TABLE IF NOT EXISTS service_registry (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_identifier VARCHAR(255) UNIQUE NOT NULL,
+  hashed_api_key TEXT NOT NULL,
+  allowed_scopes TEXT[] DEFAULT '{}',
+  is_active BOOLEAN DEFAULT TRUE NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  last_used_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_service_registry_identifier ON service_registry(service_identifier);
+CREATE INDEX IF NOT EXISTS idx_service_registry_is_active ON service_registry(is_active);
+
+-- Service audit logs table
+CREATE TABLE IF NOT EXISTS service_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  success BOOLEAN DEFAULT TRUE NOT NULL,
+  error_message TEXT,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_service_audit_logs_service_id ON service_audit_logs(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_audit_logs_user_id ON service_audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_service_audit_logs_created_at ON service_audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_service_audit_logs_success ON service_audit_logs(success);
+
+-- Trigger for updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_service_registry_updated_at
+  BEFORE UPDATE ON service_registry
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+### Connectivity Verification
+
+Test database connectivity from Cloud Run:
+
+```bash
+# Deploy test service
+gcloud run deploy af-auth-test \
+  --image=gcr.io/cloudsql-docker/gce-proxy:latest \
+  --region=${REGION} \
+  --service-account=${SA_EMAIL} \
+  --add-cloudsql-instances=${PROJECT_ID}:${REGION}:${INSTANCE_NAME} \
+  --command="/cloud_sql_proxy" \
+  --args="${PROJECT_ID}:${REGION}:${INSTANCE_NAME}"
+
+# Check logs for successful connection
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=af-auth-test" \
+  --limit=10
+```
 
 ## Connection Pooling
 
