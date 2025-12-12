@@ -429,14 +429,12 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 
   let overallStatus = HealthStatus.HEALTHY;
   
-  // If any critical component is unhealthy, the service is unhealthy
+  // Determine overall status based on component criticality:
+  // - Critical: database, redis, encryption (failures = unhealthy)
+  // - Non-critical: githubApp, metrics (failures = degraded)
   if (criticalHealths.some(h => h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.UNHEALTHY;
   }
-  // Otherwise, if any component is degraded or the non-critical components (GitHub App, Metrics) are unhealthy, the service is degraded
-  // GitHub App is not critical because the service can handle existing authenticated users and issue JWTs
-  // even if GitHub App is down. Only new OAuth flows will fail.
-  // Metrics are not critical because the service can operate without observability, though it's not ideal for production.
   else if (componentHealths.some(h => h.status === HealthStatus.DEGRADED || h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.DEGRADED;
   }
@@ -500,8 +498,10 @@ export async function performReadinessCheck(): Promise<{
   if (config.metrics.enabled) {
     criticalHealths.push(metricsHealth);
   } else {
-    // Log warning if metrics are disabled to ensure visibility
-    logger.warn('Metrics are disabled - deployment will proceed without observability checks');
+    // Warn if metrics disabled: OK for dev/test, but production should have observability
+    logger.warn(
+      'Metrics disabled - readiness passes but observability unavailable. Set METRICS_ENABLED=true for production.'
+    );
   }
 
   const ready = criticalHealths.every(h => h.status === HealthStatus.HEALTHY);
