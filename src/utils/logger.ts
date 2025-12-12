@@ -106,16 +106,12 @@ function redactSensitiveData(obj: any, visited = new WeakSet()): any {
       // Exact match
       if (lowerKey === lowerField) return true;
       // Ends with underscore + field (e.g., user_password, github_access_token)
-      if (lowerKey.endsWith('_' + lowerField)) return true;
+      if (lowerKey.endsWith(`_${lowerField}`)) return true;
       // CamelCase/PascalCase pattern (e.g., userPassword, githubAccessToken)
-      // Check if it ends with the field and there's a proper camelCase boundary
       if (lowerKey.endsWith(lowerField) && lowerKey.length > lowerField.length) {
-        const prefixEndIndex = key.length - lowerField.length;
-        // Get the original case at the boundary
-        const boundaryChar = key[prefixEndIndex];
-        // It's a camelCase boundary if the field part starts with uppercase
-        // (e.g., userPassword has 'P', hasPassword has 'P')
-        // but mypassword has 'p' (not camelCase)
+        const boundaryIndex = key.length - field.length;
+        const boundaryChar = key.charAt(boundaryIndex);
+        // Check if the character at the boundary is uppercase (e.g., 'P' in 'userPassword')
         return boundaryChar === boundaryChar.toUpperCase() && boundaryChar !== boundaryChar.toLowerCase();
       }
       return false;

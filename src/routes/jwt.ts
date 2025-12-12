@@ -30,14 +30,6 @@ router.post('/token', jwtRateLimiter, validateBody(schemas.tokenRefresh), async 
   try {
     const { token } = req.body;
     
-    if (!token || typeof token !== 'string') {
-      logger.warn('Token refresh attempted without token');
-      return res.status(400).json({
-        error: 'MISSING_TOKEN',
-        message: 'Token is required in request body',
-      });
-    }
-    
     try {
       const newToken = await refreshJWT(token);
       
@@ -105,16 +97,8 @@ router.get('/token', jwtRateLimiter, validateQuery(schemas.tokenIssuanceQuery), 
   try {
     const { userId } = req.query;
     
-    if (!userId || typeof userId !== 'string') {
-      logger.warn('Token generation attempted without userId');
-      return res.status(400).json({
-        error: 'MISSING_USER_ID',
-        message: 'userId is required as a query parameter',
-      });
-    }
-    
     try {
-      const token = await generateJWT(userId);
+      const token = await generateJWT(userId as string);
       
       logger.info({ userId }, 'Token generated successfully');
       

@@ -241,7 +241,6 @@ describe('GitHub Token Routes', () => {
         expect(response.body.error).toBe('VALIDATION_ERROR');
         expect(response.body).toHaveProperty('requestId');
       });
-      });
 
       it('should find user by userId', async () => {
         const mockUser = {

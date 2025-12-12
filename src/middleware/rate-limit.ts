@@ -1,4 +1,6 @@
 import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
+import { getRedisClient, isRedisConnected, getRedisStatus } from '../services/redis-client';
 import { config } from '../config';
 import logger from '../utils/logger';
 
@@ -41,7 +43,30 @@ function createRateLimiter(options: {
     },
   };
 
-  // Use in-memory store for testing or when Redis is not available
+  // Use Redis store if connected, otherwise fall back to in-memory store
+  try {
+    const redisClient = getRedisClient();
+    if (isRedisConnected() && redisClient && redisClient.status === 'ready') {
+      const store = new RedisStore({
+        // @ts-expect-error - Known issue with ioredis v5 and express-rate-limit
+        sendCommand: (...args: string[]) => redisClient.call(...args),
+        prefix: `rate-limit:${keyPrefix}:`,
+      });
+      baseConfig.store = store;
+      logger.debug({ keyPrefix }, 'Rate limiting with Redis store');
+    } else {
+      logger.warn(
+        { keyPrefix, redisStatus: getRedisStatus() },
+        'Rate limiting with in-memory store. Redis is not connected.'
+      );
+    }
+  } catch (error) {
+    logger.warn(
+      { keyPrefix, redisStatus: getRedisStatus(), error },
+      'Failed to create Redis store for rate limiting. Using in-memory store.'
+    );
+  }
+
   return rateLimit(baseConfig);
 }
 

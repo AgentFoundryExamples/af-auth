@@ -331,7 +331,13 @@ export const config: Config = {
   cookies: {
     httpOnly: getOptionalBooleanEnv('COOKIE_HTTP_ONLY', true),
     secure: getOptionalBooleanEnv('COOKIE_SECURE', process.env.NODE_ENV === 'production'),
-    sameSite: (getOptionalEnv('COOKIE_SAME_SITE', 'strict') as 'strict' | 'lax' | 'none'),
+    sameSite: (() => {
+      const value = getOptionalEnv('COOKIE_SAME_SITE', 'strict');
+      if (!['strict', 'lax', 'none'].includes(value)) {
+        throw new Error(`Invalid COOKIE_SAME_SITE value: "${value}". Must be 'strict', 'lax', or 'none'.`);
+      }
+      return value as 'strict' | 'lax' | 'none';
+    })(),
   },
 };
 

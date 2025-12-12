@@ -16,6 +16,7 @@ export const getRedisClient = jest.fn(() => ({
   setex: jest.fn(),
   get: jest.fn(),
   del: jest.fn(),
+  call: jest.fn(),
   pipeline: jest.fn(() => ({
     get: jest.fn(),
     del: jest.fn(),
@@ -24,8 +25,8 @@ export const getRedisClient = jest.fn(() => ({
   status: 'ready',
 }));
 
-export const isRedisConnected = jest.fn(() => true);
-export const getRedisStatus = jest.fn(() => 'ready');
+export const isRedisConnected = jest.fn(() => false);
+export const getRedisStatus = jest.fn(() => 'disconnected');
 export const disconnectRedis = jest.fn();
 export const executeRedisOperation = jest.fn((operation) => operation());
 
