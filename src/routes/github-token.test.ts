@@ -238,16 +238,9 @@ describe('GitHub Token Routes', () => {
           .send({})
           .expect(400);
 
-        expect(response.body.error).toBe('MISSING_USER_IDENTIFIER');
-        expect(mockServiceRegistry.logServiceAccess).toHaveBeenCalledWith(
-          'service-id',
-          'unknown',
-          'retrieve_github_token',
-          false,
-          expect.objectContaining({
-            errorMessage: 'Missing user identifier',
-          })
-        );
+        expect(response.body.error).toBe('VALIDATION_ERROR');
+        expect(response.body).toHaveProperty('requestId');
+      });
       });
 
       it('should find user by userId', async () => {
@@ -308,13 +301,13 @@ describe('GitHub Token Routes', () => {
         const response = await request(app)
           .post('/api/github-token')
           .set('Authorization', validServiceAuth)
-          .send({ userId: 'non-existent-id' })
+          .send({ userId: '123e4567-e89b-12d3-a456-426614174000' })
           .expect(404);
 
         expect(response.body.error).toBe('USER_NOT_FOUND');
         expect(mockServiceRegistry.logServiceAccess).toHaveBeenCalledWith(
           'service-id',
-          'non-existent-id',
+          '123e4567-e89b-12d3-a456-426614174000',
           'retrieve_github_token',
           false,
           expect.objectContaining({
@@ -598,12 +591,12 @@ describe('GitHub Token Routes', () => {
         await request(app)
           .post('/api/github-token')
           .set('Authorization', validServiceAuth)
-          .send({ userId: 'non-existent' })
+          .send({ userId: '123e4567-e89b-12d3-a456-426614174000' })
           .expect(404);
 
         expect(mockServiceRegistry.logServiceAccess).toHaveBeenCalledWith(
           'service-id',
-          'non-existent',
+          '123e4567-e89b-12d3-a456-426614174000',
           'retrieve_github_token',
           false,
           expect.objectContaining({

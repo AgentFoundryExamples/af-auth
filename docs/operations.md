@@ -680,6 +680,84 @@ CREATE INDEX idx_users_github_id ON users(github_user_id);
 CREATE INDEX idx_service_audit_logs_created_at ON service_audit_logs(created_at);
 ```
 
+### Rate Limiting Tuning
+
+Rate limits protect against abuse but must be balanced with legitimate usage patterns:
+
+#### Default Limits
+
+| Endpoint Category | Window | Max Requests | Typical Use Case |
+|-------------------|--------|--------------|------------------|
+| Authentication | 15 min | 10 | User login attempts |
+| JWT Operations | 15 min | 100 | Token refresh, public key retrieval |
+| GitHub Token Access | 1 hour | 1000 | Service-to-service API calls |
+
+#### Adjusting Limits
+
+Update environment variables based on observed traffic:
+
+```bash
+# For stricter auth protection (e.g., after attack)
+gcloud run services update af-auth \
+  --region=us-central1 \
+  --update-env-vars="RATE_LIMIT_AUTH_MAX=5,RATE_LIMIT_AUTH_WINDOW_MS=900000"
+
+# For high-volume service-to-service traffic
+gcloud run services update af-auth \
+  --region=us-central1 \
+  --update-env-vars="RATE_LIMIT_GITHUB_TOKEN_MAX=5000,RATE_LIMIT_GITHUB_TOKEN_WINDOW_MS=3600000"
+
+# For development/staging (more lenient)
+gcloud run services update af-auth-staging \
+  --region=us-central1 \
+  --update-env-vars="RATE_LIMIT_AUTH_MAX=50,RATE_LIMIT_JWT_MAX=500"
+```
+
+#### Monitoring Rate Limits
+
+Watch for rate limit violations in Cloud Logging:
+
+```bash
+# Check rate limit violations
+gcloud logging read 'jsonPayload.message="Rate limit exceeded"' \
+  --limit=100 \
+  --format=json
+
+# Count violations by endpoint
+gcloud logging read 'jsonPayload.message="Rate limit exceeded"' \
+  --format='value(jsonPayload.keyPrefix)' \
+  --limit=1000 | sort | uniq -c | sort -rn
+
+# Check which IPs are being rate limited
+gcloud logging read 'jsonPayload.message="Rate limit exceeded"' \
+  --format='value(jsonPayload.ip)' \
+  --limit=1000 | sort | uniq -c | sort -rn
+```
+
+#### Tuning Guidelines
+
+1. **Monitor actual usage** before changing limits
+2. **Increase gradually** (e.g., double the limit, observe for a day)
+3. **Document changes** in deployment notes
+4. **Set alerts** for unusual rate limit patterns
+5. **Test changes** in staging environment first
+
+**Warning:** Setting limits too high defeats the protection. Setting them too low causes false positives for legitimate users.
+
+#### Distributed Enforcement
+
+For multi-instance deployments, rate limits should use Redis for consistency:
+
+```bash
+# Ensure Redis is configured
+gcloud run services update af-auth \
+  --region=us-central1 \
+  --set-env-vars="REDIS_HOST=10.0.0.3,REDIS_PORT=6379"
+```
+
+Without Redis, each instance maintains its own counters, effectively multiplying the limit by the number of instances.
+```
+
 ## Troubleshooting
 
 ### High Error Rate

@@ -160,13 +160,14 @@ describe('JWT Routes', () => {
         .expect(400)
         .expect('Content-Type', /json/);
 
-      expect(response.body).toHaveProperty('error', 'MISSING_TOKEN');
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
+      expect(response.body).toHaveProperty('requestId');
     });
   });
 
   describe('GET /api/token', () => {
     it('should generate token for valid user', async () => {
-      const userId = 'test-user-id';
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
       const token = 'generated.jwt.token';
 
       mockJwtService.generateJWT.mockResolvedValue(token);
