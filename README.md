@@ -208,10 +208,25 @@ sequenceDiagram
 
 ## Documentation
 
+### Setup and Configuration
+
+- [Local Setup Guide](./docs/setup.md) - Complete local development setup
 - [GitHub App Setup Guide](./docs/github-app-setup.md) - Complete guide for creating and configuring GitHub OAuth
-- [UI Customization Guide](./docs/ui.md) - Customize SSR pages and branding
-- [Database Schema & Setup](./docs/database.md) - Database structure and management
+- [Database Schema & Setup](./docs/database.md) - Database structure, migrations, and Cloud SQL setup
+
+### Deployment
+
+- [Cloud Run Deployment Guide](./docs/deployment/cloud-run.md) - Comprehensive Cloud Run deployment with Secret Manager, IAM, and scaling
+- [Security Guide](./docs/security.md) - Security best practices, secret rotation, and JWT verification
+- [Operations Guide](./docs/operations.md) - Operational runbooks for logging, monitoring, and whitelist management
+
+### Features and APIs
+
+- [API Documentation](./docs/api.md) - Complete API reference
+- [JWT Authentication](./docs/jwt.md) - JWT token generation and verification
+- [Service Registry](./docs/service-registry.md) - Managing downstream service access
 - [Logging Practices](./docs/logging.md) - Structured logging and security
+- [UI Customization Guide](./docs/ui.md) - Customize SSR pages and branding
 
 ## API Endpoints
 
@@ -266,29 +281,57 @@ npm run test:watch
 
 ## Deployment
 
-### Cloud Run
+### Quick Start for Cloud Run
 
-The service is optimized for Google Cloud Run deployment:
+For comprehensive deployment instructions, see the [Cloud Run Deployment Guide](./docs/deployment/cloud-run.md).
 
-1. Build and push container:
+Quick deployment workflow:
+
+1. **Build and push container**:
    ```bash
-   gcloud builds submit --tag gcr.io/PROJECT_ID/af-auth
+   gcloud builds submit --tag us-central1-docker.pkg.dev/PROJECT_ID/af-auth/af-auth:latest
    ```
 
-2. Deploy to Cloud Run:
+2. **Create Cloud SQL instance**:
+   ```bash
+   gcloud sql instances create af-auth-db \
+     --database-version=POSTGRES_15 \
+     --tier=db-f1-micro \
+     --region=us-central1
+   ```
+
+3. **Configure secrets**:
+   ```bash
+   echo -n "your_github_client_id" | gcloud secrets create github-client-id --data-file=-
+   echo -n "your_github_client_secret" | gcloud secrets create github-client-secret --data-file=-
+   openssl rand -hex 32 | gcloud secrets create session-secret --data-file=-
+   ```
+
+4. **Deploy to Cloud Run**:
    ```bash
    gcloud run deploy af-auth \
-     --image gcr.io/PROJECT_ID/af-auth \
-     --platform managed \
-     --region us-central1 \
-     --allow-unauthenticated
+     --image=us-central1-docker.pkg.dev/PROJECT_ID/af-auth/af-auth:latest \
+     --region=us-central1 \
+     --set-secrets="GITHUB_CLIENT_ID=github-client-id:latest" \
+     --set-secrets="GITHUB_CLIENT_SECRET=github-client-secret:latest" \
+     --set-secrets="SESSION_SECRET=session-secret:latest" \
+     --add-cloudsql-instances=PROJECT_ID:us-central1:af-auth-db
    ```
 
-3. Set environment variables via Secret Manager:
+5. **Run database migrations**:
    ```bash
-   gcloud run services update af-auth \
-     --update-secrets DATABASE_URL=database-url:latest
+   gcloud run jobs create af-auth-migrate \
+     --image=us-central1-docker.pkg.dev/PROJECT_ID/af-auth/af-auth:latest \
+     --command=npm --args="run,db:migrate"
    ```
+
+See the [full deployment guide](./docs/deployment/cloud-run.md) for:
+- IAM and service account setup
+- Secret Manager configuration
+- VPC networking
+- Custom domains and HTTPS
+- Scaling configuration
+- Monitoring and logging setup
 
 ## Production Deployment Notes
 
@@ -313,11 +356,73 @@ See [docs/github-app-setup.md](./docs/github-app-setup.md#production-deployment-
 
 ## Security
 
-- Sensitive data is automatically redacted from logs
-- Database tokens should be encrypted at rest (future enhancement)
-- Whitelist-based access control
-- Connection retry with exponential backoff
-- Health checks for monitoring
+AF Auth implements comprehensive security controls across multiple layers. See the [Security Guide](./docs/security.md) for complete details.
+
+### Key Security Features
+
+- **Secret Management**: All secrets stored in Google Secret Manager with versioning and rotation support
+- **JWT Authentication**: RS256-signed tokens with 30-day validity and public key distribution
+- **Audit Logging**: Comprehensive audit trail with automatic sensitive data redaction
+- **IAM Integration**: Cloud IAM for database and secret access
+- **Whitelist-Based Access**: Default-deny access model with explicit user approval
+- **Encryption**: Data encrypted in transit (TLS) and at rest (AES-256)
+
+### Security Best Practices
+
+1. **Secret Rotation**: Rotate secrets regularly (GitHub OAuth: 90 days, Session: 60 days, JWT keys: 180 days)
+2. **Least Privilege**: Grant minimal required IAM permissions
+3. **Network Isolation**: Use VPC connectors for private database access
+4. **Monitoring**: Enable alerts for failed authentication attempts and unauthorized access
+5. **Incident Response**: Follow documented playbooks for security incidents
+
+### Verifying JWTs in Downstream Services
+
+Downstream services can verify JWTs using the public key:
+
+```bash
+# Download public key
+curl https://auth.example.com/api/jwks > jwt-public.pem
+```
+
+Node.js example:
+
+```javascript
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+const publicKey = fs.readFileSync('jwt-public.pem', 'utf8');
+
+function verifyToken(token) {
+  return jwt.verify(token, publicKey, {
+    algorithms: ['RS256'],
+    issuer: 'https://auth.example.com',
+    audience: 'https://auth.example.com'
+  });
+}
+```
+
+See [Security Guide](./docs/security.md) for verification examples in Python, Go, and other languages.
+
+### Data Protection
+
+- **Logged Data**: Tokens, passwords, and secrets automatically redacted from all logs
+- **Database**: Recommend encrypting tokens at application layer before storage
+- **Backups**: Encrypted with same keys as primary instance
+- **Audit Logs**: Retained for 90 days with queryable structured format
+
+### Known Security Limitations
+
+**For Development/Single-Instance Only**:
+- OAuth state storage uses in-memory Map (not multi-instance safe)
+- No rate limiting on authentication endpoints
+- Tokens stored in plaintext in database
+
+**Production Requirements**:
+- For `max-instances > 1`: Implement Redis-based OAuth state storage
+- Add rate limiting middleware (express-rate-limit)
+- Consider encrypting GitHub tokens at rest
+
+See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#production-deployment-considerations) for detailed solutions.
 
 ## Roadmap
 
