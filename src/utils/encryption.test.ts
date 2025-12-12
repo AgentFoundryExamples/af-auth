@@ -102,11 +102,13 @@ describe('Encryption Utilities', () => {
       expect(decryptGitHubToken(null)).toBeNull();
     });
 
-    it('should handle empty string', () => {
+    it('should handle empty string by encrypting it', () => {
       const encrypted = encryptGitHubToken('');
+      const decrypted = decryptGitHubToken(encrypted);
       
-      // Empty string should return null (same as null input)
-      expect(encrypted).toBeNull();
+      // Empty string should be encrypted like any other string
+      expect(encrypted).not.toBeNull();
+      expect(decrypted).toBe('');
     });
   });
 

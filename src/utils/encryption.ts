@@ -112,7 +112,7 @@ export function decrypt(encryptedData: string): string {
  * Returns null if the input is null (to handle optional tokens)
  */
 export function encryptGitHubToken(token: string | null): string | null {
-  if (!token) {
+  if (token === null) {
     return null;
   }
   return encrypt(token);
@@ -123,7 +123,7 @@ export function encryptGitHubToken(token: string | null): string | null {
  * Returns null if the input is null (to handle optional tokens)
  */
 export function decryptGitHubToken(encryptedToken: string | null): string | null {
-  if (!encryptedToken) {
+  if (encryptedToken === null) {
     return null;
   }
   return decrypt(encryptedToken);
