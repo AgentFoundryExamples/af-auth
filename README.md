@@ -478,7 +478,7 @@ See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#pr
 - [x] Database migrations with Prisma
 - [x] Health check endpoints
 
-### 🚧 Planned (v1.2.0 - Q1 2025)
+### 🚧 Planned (v1.2.0 - Q1 2026)
 
 - [ ] Redis-based OAuth state storage (multi-instance support)
 - [ ] Rate limiting on authentication and API endpoints

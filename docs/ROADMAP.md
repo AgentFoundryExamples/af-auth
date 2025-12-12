@@ -13,7 +13,7 @@ This document outlines the completed features, current capabilities, and planned
 
 ## Current Status (v1.1.0)
 
-**Release Date**: December 12, 2024
+**Release Date**: December 12, 2025
 
 AF Auth is a production-ready authentication service suitable for **single-instance deployments** with comprehensive OAuth, JWT, and service registry capabilities. The system provides enterprise-grade security features including secret rotation, audit logging, and deployment automation.
 
@@ -215,7 +215,7 @@ Currently, there are no features actively in development. The v1.1.0 release rep
 
 ## Planned Features
 
-### High Priority (v1.2.0 - Q1 2025)
+### High Priority (v1.2.0 - Q1 2026)
 
 #### Multi-Instance Support
 - [ ] **Redis-based OAuth State Storage**: Replace in-memory Map with Redis for horizontal scaling
@@ -248,7 +248,7 @@ Currently, there are no features actively in development. The v1.1.0 release rep
 - [ ] **Admin API Endpoints**: REST API for programmatic admin operations
 - [ ] **Admin UI Documentation**: Usage guide and screenshots
 
-### Medium Priority (v1.3.0 - Q2 2025)
+### Medium Priority (v1.3.0 - Q2 2026)
 
 #### Enhanced Whitelist Management
 - [ ] **Whitelist Management Script**: CLI tool for whitelist operations
@@ -282,7 +282,7 @@ Currently, there are no features actively in development. The v1.1.0 release rep
   - Authentication support for testing
 - [ ] **SDK Generation**: Auto-generated client libraries (Node.js, Python, Go)
 
-### Low Priority (v1.4.0+ - Q3 2025 and beyond)
+### Low Priority (v1.4.0+ - Q3 2026 and beyond)
 
 #### Multi-Factor Authentication (MFA)
 - [ ] **TOTP Support**: Time-based one-time passwords
@@ -414,6 +414,6 @@ For questions, reach out via GitHub Issues or contact the maintainers.
 
 ---
 
-**Last Updated**: December 12, 2024  
+**Last Updated**: December 12, 2025  
 **Current Version**: 1.1.0  
-**Next Planned Release**: 1.2.0 (Q1 2025)
+**Next Planned Release**: 1.2.0 (Q1 2026)

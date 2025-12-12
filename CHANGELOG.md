@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2024-12-12
+## [1.1.0] - 2025-12-12
 
 ### Added
 
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Service Authentication**: Secure API for downstream services to access user GitHub tokens
   - Service registration with bcrypt-hashed API keys (12 rounds)
   - 64-character hex API keys (256-bit entropy) via `crypto.randomBytes(32)`
-  - Basic authentication scheme: `Authorization: Bearer serviceId:apiKey`
+  - Basic authentication scheme: `Authorization: Basic <base64(serviceId:apiKey)>`
   - Endpoint: `POST /api/github-token` with `userId` or `githubId` in request body
 - **Audit Logging**: Comprehensive access tracking without exposing sensitive data
   - Logs service IDs, user UUIDs, action names, success/failure, IP addresses, user agents
@@ -122,7 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Secret Rotation**: Regular rotation schedules documented
   - GitHub OAuth credentials: 90 days
   - Session secrets: 60 days
-  - JWT signing keys: 180 days
+  - JWT signing keys: 90 days
   - Database passwords: 90 days
   - Zero-downtime rotation procedures for all credential types
 - **JWT Verification**: Examples for downstream services
