@@ -645,9 +645,115 @@ it('should redact tokens', () => {
 });
 ```
 
+## Integration with Prometheus Metrics
+
+The service integrates structured logging with Prometheus metrics to provide comprehensive observability. While logs provide detailed context about individual events, metrics aggregate data for trend analysis and alerting.
+
+### Logging vs. Metrics
+
+**Use Logs For:**
+- Detailed event information with full context
+- Debugging specific failures
+- Auditing user actions
+- Request/response tracing
+- Error stack traces
+
+**Use Metrics For:**
+- Aggregated performance data
+- Real-time alerting
+- Trend analysis over time
+- Service-level indicators (SLIs)
+- Capacity planning
+
+### Complementary Monitoring
+
+Events that generate both logs and metrics:
+
+1. **Authentication Failures**
+   - Log: Detailed error with user context (redacted)
+   - Metric: `af_auth_auth_failures_total{type, reason}`
+
+2. **OAuth Token Exchange**
+   - Log: Success/failure with GitHub user ID
+   - Metric: `af_auth_github_oauth_operations_total{operation="token_exchange", status}`
+
+3. **JWT Operations**
+   - Log: Token issuance/validation with user ID
+   - Metric: `af_auth_jwt_operations_total{operation, status}`
+
+4. **Rate Limiting**
+   - Log: Rate limit hit with IP and endpoint
+   - Metric: `af_auth_rate_limit_hits_total{endpoint, action}`
+
+5. **Request Duration**
+   - Log: HTTP request with status code and duration
+   - Metric: `af_auth_http_request_duration_seconds{method, route, status_code}`
+
+### Correlating Logs and Metrics
+
+When investigating issues:
+
+1. **Start with metrics** to identify trends and anomalies:
+   ```promql
+   # High authentication failure rate
+   rate(af_auth_auth_failures_total[5m]) > 1
+   ```
+
+2. **Drill down to logs** for specific details:
+   ```bash
+   # Find authentication failures in the time window
+   gcloud logging read 'jsonPayload.msg=~"authentication.*fail"
+     AND timestamp>="2024-12-12T10:00:00Z"
+     AND timestamp<="2024-12-12T10:05:00Z"'
+     --limit=50
+   ```
+
+3. **Use request IDs** to trace complete request flows:
+   ```bash
+   # Find all log entries for a specific request
+   gcloud logging read 'jsonPayload.requestId="abc-123-def"'
+   ```
+
+### Best Practices
+
+1. **Always include request context** in both logs and metrics
+2. **Use consistent naming** between log fields and metric labels
+3. **Avoid high-cardinality data** in metrics (use logs instead)
+4. **Set up alerts on metrics** for proactive monitoring
+5. **Use logs for post-incident analysis** and debugging
+
+### Example Investigation Workflow
+
+**Scenario:** Alert fires for high JWT validation failures
+
+1. Check metric for trend:
+   ```promql
+   rate(af_auth_jwt_operations_total{operation="validate", status="failure"}[5m])
+   ```
+
+2. Query logs for details:
+   ```bash
+   gcloud logging read 'severity>=WARNING
+     AND jsonPayload.msg=~"JWT verification failed"'
+     --limit=100
+   ```
+
+3. Analyze failure reasons:
+   ```promql
+   sum by (reason) (rate(af_auth_auth_failures_total{type="jwt"}[5m]))
+   ```
+
+4. Identify affected users (if needed):
+   ```bash
+   gcloud logging read 'jsonPayload.msg="JWT verification failed"'
+     --format=json | jq '.[] | .jsonPayload.userId'
+   ```
+
 ## References
 
 - [Pino Documentation](https://getpino.io/)
 - [Google Cloud Logging](https://cloud.google.com/logging/docs)
 - [Cloud Run Logging](https://cloud.google.com/run/docs/logging)
 - [Structured Logging Best Practices](https://cloud.google.com/logging/docs/structured-logging)
+- [Prometheus Best Practices](https://prometheus.io/docs/practices/)
+- [Prometheus Metrics Documentation](../operations.md#prometheus-metrics)

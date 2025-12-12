@@ -6,6 +6,7 @@ This guide provides operational runbooks for managing the AF Auth service, inclu
 
 - [Daily Operations](#daily-operations)
 - [Logging and Monitoring](#logging-and-monitoring)
+- [Prometheus Metrics](#prometheus-metrics)
 - [Whitelist Management](#whitelist-management)
 - [JWT Token Revocation](#jwt-token-revocation)
 - [Service Registry Operations](#service-registry-operations)
@@ -483,6 +484,530 @@ gcloud alpha monitoring policies create \
   --condition-display-name="P95 latency > 2 seconds" \
   --condition-threshold-value=2000 \
   --condition-threshold-duration=300s
+```
+
+## Prometheus Metrics
+
+The service exposes Prometheus metrics for monitoring authentication flows, operations, and system health. Metrics are available at a protected endpoint and provide deep visibility into service behavior.
+
+### Configuration
+
+Metrics are configured via environment variables in `.env`:
+
+```bash
+# Enable/disable metrics collection
+METRICS_ENABLED=true
+
+# Metric name prefix (e.g., af_auth_http_requests_total)
+METRICS_PREFIX=af_auth_
+
+# Namespace for default labels
+METRICS_NAMESPACE=af_auth
+
+# Collect default Node.js metrics (CPU, memory, event loop, etc.)
+METRICS_COLLECT_DEFAULT=true
+
+# Metrics endpoint path
+METRICS_ENDPOINT=/metrics
+
+# Bearer token for metrics endpoint authentication
+# Generate with: openssl rand -hex 32
+# If not set, metrics endpoint is public (NOT recommended for production)
+METRICS_AUTH_TOKEN=your_metrics_auth_token_here
+```
+
+**Security Note:** Always configure `METRICS_AUTH_TOKEN` in production to prevent unauthorized access to operational data. Metrics may contain information about system behavior, error rates, and usage patterns.
+
+### Accessing Metrics
+
+#### With Authentication (Recommended)
+
+```bash
+# Set your metrics authentication token
+export METRICS_TOKEN="your_metrics_auth_token"
+
+# Fetch metrics
+curl -H "Authorization: Bearer ${METRICS_TOKEN}" \
+  https://your-service-url/metrics
+```
+
+#### Without Authentication (Development Only)
+
+```bash
+# Only works if METRICS_AUTH_TOKEN is not configured
+curl http://localhost:3000/metrics
+```
+
+### Prometheus Scrape Configuration
+
+Add the service to your Prometheus scrape configuration:
+
+```yaml
+scrape_configs:
+  - job_name: 'af-auth'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials: 'your_metrics_auth_token'
+    static_configs:
+      - targets:
+          - 'your-service-url'
+        labels:
+          environment: 'production'
+          service: 'af-auth'
+```
+
+For Cloud Run with service-to-service authentication:
+
+```yaml
+scrape_configs:
+  - job_name: 'af-auth-cloudrun'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials: 'your_metrics_auth_token'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'af_auth_.*'
+        action: keep
+```
+
+### Available Metrics
+
+#### GitHub OAuth Operations
+
+Tracks GitHub OAuth flow operations:
+
+```
+af_auth_github_oauth_operations_total{operation, status}
+```
+
+**Labels:**
+- `operation`: authorize, token_exchange, token_refresh, user_fetch
+- `status`: success, failure
+
+**Example Queries:**
+```promql
+# Rate of successful token exchanges
+rate(af_auth_github_oauth_operations_total{operation="token_exchange", status="success"}[5m])
+
+# OAuth failure rate
+sum(rate(af_auth_github_oauth_operations_total{status="failure"}[5m])) by (operation)
+
+# Total OAuth operations
+sum(af_auth_github_oauth_operations_total)
+```
+
+#### JWT Operations
+
+Tracks JWT token lifecycle operations:
+
+```
+af_auth_jwt_operations_total{operation, status}
+```
+
+**Labels:**
+- `operation`: issue, validate, revoke
+- `status`: success, failure
+
+**Example Queries:**
+```promql
+# JWT issuance rate
+rate(af_auth_jwt_operations_total{operation="issue", status="success"}[5m])
+
+# JWT validation failure rate
+rate(af_auth_jwt_operations_total{operation="validate", status="failure"}[5m])
+
+# Percentage of valid JWT validations
+100 * sum(rate(af_auth_jwt_operations_total{operation="validate", status="success"}[5m]))
+  / sum(rate(af_auth_jwt_operations_total{operation="validate"}[5m]))
+```
+
+#### Token Revocation Checks
+
+Tracks revocation check operations:
+
+```
+af_auth_token_revocation_checks_total{status, result}
+```
+
+**Labels:**
+- `status`: success, failure
+- `result`: revoked, valid, error
+
+**Example Queries:**
+```promql
+# Revoked token hit rate
+rate(af_auth_token_revocation_checks_total{result="revoked"}[5m])
+
+# Revocation check error rate
+rate(af_auth_token_revocation_checks_total{status="failure"}[5m])
+
+# Percentage of revoked tokens encountered
+100 * sum(rate(af_auth_token_revocation_checks_total{result="revoked"}[5m]))
+  / sum(rate(af_auth_token_revocation_checks_total{status="success"}[5m]))
+```
+
+#### Rate Limiting
+
+Tracks rate limiting enforcement:
+
+```
+af_auth_rate_limit_hits_total{endpoint, action}
+```
+
+**Labels:**
+- `endpoint`: auth, jwt, github-token
+- `action`: allowed, blocked
+
+**Example Queries:**
+```promql
+# Rate limit block rate by endpoint
+rate(af_auth_rate_limit_hits_total{action="blocked"}[5m])
+
+# Percentage of requests blocked
+100 * sum(rate(af_auth_rate_limit_hits_total{action="blocked"}[5m])) by (endpoint)
+  / sum(rate(af_auth_rate_limit_hits_total[5m])) by (endpoint)
+
+# Total rate limit hits
+sum(af_auth_rate_limit_hits_total)
+```
+
+#### Authentication Failures
+
+Tracks authentication failures and suspicious attempts:
+
+```
+af_auth_auth_failures_total{type, reason}
+```
+
+**Labels:**
+- `type`: oauth, jwt, whitelist, suspicious
+- `reason`: Specific failure reason (e.g., invalid_state, token_expired, not_whitelisted)
+
+**Example Queries:**
+```promql
+# Auth failure rate by type
+rate(af_auth_auth_failures_total[5m]) by (type)
+
+# Top failure reasons
+topk(10, sum(rate(af_auth_auth_failures_total[1h])) by (reason))
+
+# Whitelist rejection rate
+rate(af_auth_auth_failures_total{type="whitelist"}[5m])
+```
+
+**Common Failure Reasons:**
+- OAuth: `github_oauth_error`, `missing_code`, `missing_state`, `invalid_state`, `callback_processing_error`
+- JWT: `missing_auth_header`, `token_expired`, `invalid_token`, `invalid_claims`, `token_revoked`, `user_not_found`
+- Whitelist: `not_whitelisted`, `whitelist_revoked`
+
+#### HTTP Request Duration
+
+Tracks request latency as a histogram:
+
+```
+af_auth_http_request_duration_seconds{method, route, status_code}
+```
+
+**Labels:**
+- `method`: GET, POST, etc.
+- `route`: Route pattern (e.g., /auth/github, /api/jwt/issue)
+- `status_code`: HTTP status code
+
+**Buckets:** 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10 seconds
+
+**Example Queries:**
+```promql
+# P95 latency for authentication endpoints
+histogram_quantile(0.95, 
+  sum(rate(af_auth_http_request_duration_seconds_bucket{route=~"/auth/.*"}[5m])) by (le, route)
+)
+
+# P99 latency for all requests
+histogram_quantile(0.99, 
+  sum(rate(af_auth_http_request_duration_seconds_bucket[5m])) by (le)
+)
+
+# Average request duration
+rate(af_auth_http_request_duration_seconds_sum[5m]) 
+  / rate(af_auth_http_request_duration_seconds_count[5m])
+```
+
+#### Redis Connection Status
+
+Gauge indicating Redis connectivity:
+
+```
+af_auth_redis_connection_status
+```
+
+**Values:**
+- `1`: Connected
+- `0`: Disconnected
+
+**Example Queries:**
+```promql
+# Redis connection status
+af_auth_redis_connection_status
+
+# Alert when Redis is down
+af_auth_redis_connection_status == 0
+```
+
+#### Default Node.js Metrics
+
+When `METRICS_COLLECT_DEFAULT=true`, the following standard metrics are collected:
+
+- `process_cpu_user_seconds_total`: User CPU time
+- `process_cpu_system_seconds_total`: System CPU time
+- `process_resident_memory_bytes`: Resident memory size
+- `process_heap_bytes`: Process heap size
+- `nodejs_eventloop_lag_seconds`: Event loop lag
+- `nodejs_active_handles_total`: Active handles
+- `nodejs_active_requests_total`: Active requests
+- `nodejs_gc_duration_seconds`: Garbage collection duration
+
+### Alert Rules
+
+Example Prometheus alert rules:
+
+```yaml
+groups:
+  - name: af-auth-alerts
+    interval: 30s
+    rules:
+      # High authentication failure rate
+      - alert: HighAuthFailureRate
+        expr: |
+          rate(af_auth_auth_failures_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Auth failure rate is {{ $value }} failures/sec"
+
+      # OAuth token exchange failures
+      - alert: OAuthTokenExchangeFailures
+        expr: |
+          rate(af_auth_github_oauth_operations_total{operation="token_exchange", status="failure"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OAuth token exchange failures detected"
+          description: "Token exchange failure rate: {{ $value }}/sec"
+
+      # High rate limiting
+      - alert: HighRateLimitBlocks
+        expr: |
+          (
+            sum(rate(af_auth_rate_limit_hits_total{action="blocked"}[5m]))
+            / sum(rate(af_auth_rate_limit_hits_total[5m]))
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High percentage of requests being rate limited"
+          description: "{{ $value | humanizePercentage }} of requests blocked"
+
+      # Redis connection down
+      - alert: RedisDisconnected
+        expr: |
+          af_auth_redis_connection_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection lost"
+          description: "Service cannot connect to Redis"
+
+      # High P95 latency
+      - alert: HighRequestLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(af_auth_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency detected"
+          description: "P95 latency is {{ $value }}s"
+
+      # JWT validation failures
+      - alert: HighJWTValidationFailureRate
+        expr: |
+          (
+            sum(rate(af_auth_jwt_operations_total{operation="validate", status="failure"}[5m]))
+            / sum(rate(af_auth_jwt_operations_total{operation="validate"}[5m]))
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High JWT validation failure rate"
+          description: "{{ $value | humanizePercentage }} of JWT validations failing"
+```
+
+### Grafana Dashboard
+
+Example Grafana dashboard JSON for visualizing metrics:
+
+```json
+{
+  "dashboard": {
+    "title": "AF Auth - Prometheus Metrics",
+    "panels": [
+      {
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(af_auth_http_request_duration_seconds_count[5m])) by (route)"
+          }
+        ]
+      },
+      {
+        "title": "P95 Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(af_auth_http_request_duration_seconds_bucket[5m])) by (le, route))"
+          }
+        ]
+      },
+      {
+        "title": "Auth Failures",
+        "targets": [
+          {
+            "expr": "sum(rate(af_auth_auth_failures_total[5m])) by (type, reason)"
+          }
+        ]
+      },
+      {
+        "title": "OAuth Operations",
+        "targets": [
+          {
+            "expr": "sum(rate(af_auth_github_oauth_operations_total[5m])) by (operation, status)"
+          }
+        ]
+      },
+      {
+        "title": "JWT Operations",
+        "targets": [
+          {
+            "expr": "sum(rate(af_auth_jwt_operations_total[5m])) by (operation, status)"
+          }
+        ]
+      },
+      {
+        "title": "Rate Limit Hits",
+        "targets": [
+          {
+            "expr": "sum(rate(af_auth_rate_limit_hits_total[5m])) by (endpoint, action)"
+          }
+        ]
+      },
+      {
+        "title": "Redis Status",
+        "targets": [
+          {
+            "expr": "af_auth_redis_connection_status"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Disabling Metrics
+
+To completely disable metrics collection:
+
+```bash
+# In .env
+METRICS_ENABLED=false
+```
+
+When disabled:
+- No metrics collectors are initialized
+- No metrics are recorded
+- The `/metrics` endpoint returns 404
+- No runtime overhead from metrics collection
+
+### Avoiding High Cardinality
+
+**DO NOT** add high-cardinality labels such as:
+- User IDs
+- GitHub user IDs
+- IP addresses
+- JWT IDs (JTI)
+- Specific error messages
+
+These can cause memory exhaustion and performance degradation in Prometheus.
+
+**Safe labels** (low cardinality):
+- Operation types (limited set)
+- Status codes
+- Endpoint categories
+- Result types
+
+### Troubleshooting
+
+#### Metrics endpoint returns 404
+
+Check that metrics are enabled:
+```bash
+curl http://localhost:3000/metrics
+# If returns 404, check METRICS_ENABLED=true in .env
+```
+
+#### Metrics endpoint returns 401/403
+
+Verify authentication token:
+```bash
+# Check token is configured
+echo $METRICS_AUTH_TOKEN
+
+# Test with token
+curl -H "Authorization: Bearer ${METRICS_AUTH_TOKEN}" \
+  http://localhost:3000/metrics
+```
+
+#### Metrics not updating
+
+Verify metrics are being recorded:
+```bash
+# Check logs for metric initialization
+grep -i "metrics" /var/log/app.log
+
+# Verify operations are happening
+# Make test requests and check metrics
+curl http://localhost:3000/health
+curl http://localhost:3000/metrics | grep af_auth_http
+```
+
+#### High memory usage
+
+Check for high cardinality:
+```bash
+# Count unique label combinations
+curl http://localhost:3000/metrics | grep af_auth_ | wc -l
+
+# Should be < 1000 label combinations per metric type
+# If higher, review labels being used
 ```
 
 ## Whitelist Management
