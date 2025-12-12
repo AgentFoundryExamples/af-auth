@@ -7,6 +7,7 @@ This guide provides operational runbooks for managing the AF Auth service, inclu
 - [Daily Operations](#daily-operations)
 - [Logging and Monitoring](#logging-and-monitoring)
 - [Whitelist Management](#whitelist-management)
+- [JWT Token Revocation](#jwt-token-revocation)
 - [Service Registry Operations](#service-registry-operations)
 - [Backup and Recovery](#backup-and-recovery)
 - [Performance Tuning](#performance-tuning)
@@ -416,6 +417,252 @@ FROM users
 WHERE is_whitelisted = true
   AND updated_at > NOW() - INTERVAL '7 days'
 ORDER BY updated_at DESC;
+EOFSQL
+```
+
+## JWT Token Revocation
+
+### Overview
+
+AF Auth supports immediate JWT token revocation without waiting for token expiration. This is critical for security incidents, account compromises, or immediate access removal.
+
+### Key Concepts
+
+- **JWT ID (JTI)**: Each token has a unique identifier for tracking
+- **Revocation Store**: Database table tracking revoked tokens
+- **Immediate Enforcement**: Revoked tokens rejected within milliseconds
+- **No Embedded Status**: Whitelist status is NOT in JWT, checked from database on each request
+
+### Revoking Individual Tokens
+
+#### Via API
+
+```bash
+# Revoke a specific token
+curl -X POST https://${SERVICE_URL}/api/token/revoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "reason": "Security incident - account compromise",
+    "revokedBy": "admin-user"
+  }'
+
+# Response
+# {
+#   "success": true,
+#   "jti": "user-123-1702345678-abc123",
+#   "message": "Token revoked successfully"
+# }
+```
+
+#### Via Database
+
+```sql
+-- Find tokens by user
+SELECT id, jti, user_id, token_expires_at
+FROM revoked_tokens
+WHERE user_id = 'user-uuid-here'
+ORDER BY revoked_at DESC;
+
+-- Manually add revoked token (emergency)
+INSERT INTO revoked_tokens (
+  jti,
+  user_id,
+  token_issued_at,
+  token_expires_at,
+  revoked_by,
+  reason
+) VALUES (
+  'token-jti-from-decoded-jwt',
+  'user-uuid',
+  '2024-12-01 10:00:00',
+  '2024-12-31 10:00:00',
+  'emergency-admin',
+  'Security breach'
+);
+```
+
+### Checking Revocation Status
+
+```bash
+# Check if a token is revoked
+curl "https://${SERVICE_URL}/api/token/revocation-status?jti=token-jti-123"
+
+# Response for revoked token:
+# {
+#   "revoked": true,
+#   "details": {
+#     "jti": "token-jti-123",
+#     "userId": "user-uuid",
+#     "revokedAt": "2024-12-11T10:30:00.000Z",
+#     "revokedBy": "admin-user",
+#     "reason": "Security incident",
+#     "tokenExpiresAt": "2024-12-31T10:30:00.000Z"
+#   }
+# }
+
+# Response for valid token:
+# {
+#   "revoked": false,
+#   "jti": "token-jti-123"
+# }
+```
+
+### Revoking All User Tokens
+
+To immediately revoke access for a user:
+
+```bash
+# Option 1: Remove from whitelist (affects all future requests)
+npm run whitelist -- revoke 12345678
+
+# Option 2: Via database
+psql -h localhost -U postgres -d af_auth << 'EOFSQL'
+UPDATE users
+SET is_whitelisted = false
+WHERE github_user_id = 12345678;
+EOFSQL
+```
+
+**Important**: Changing whitelist status doesn't revoke existing tokens in the revocation table, but the middleware will reject them on next use by checking the database whitelist status.
+
+### Cleanup Expired Revoked Tokens
+
+Revoked tokens remain in the database even after expiry for audit purposes. Clean them up periodically:
+
+```bash
+# Clean up tokens expired more than 7 days ago (default)
+npm run cleanup:revoked-tokens
+
+# Custom retention period (30 days)
+npm run cleanup:revoked-tokens -- --retention=30
+
+# Dry run to preview what would be deleted
+npm run cleanup:revoked-tokens -- --dry-run
+
+# Output:
+# ✅ Cleanup complete
+#    Deleted 42 expired revoked token(s)
+#    Retention period: 7 days
+```
+
+#### Automated Cleanup via Cron
+
+Add to crontab for daily cleanup:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add daily cleanup at 2 AM
+0 2 * * * cd /app && npm run cleanup:revoked-tokens >> /var/log/token-cleanup.log 2>&1
+
+# Or with Cloud Run Jobs
+gcloud run jobs create token-cleanup \
+  --region=us-central1 \
+  --image=gcr.io/PROJECT_ID/af-auth:latest \
+  --command="npm" \
+  --args="run,cleanup:revoked-tokens" \
+  --schedule="0 2 * * *" \
+  --service-account=af-auth-sa@PROJECT_ID.iam.gserviceaccount.com
+```
+
+### Monitoring Revocations
+
+```bash
+# View recent revocations
+gcloud logging read 'jsonPayload.msg="Token revoked successfully"' \
+  --limit=50 \
+  --format=json
+
+# Count revocations by reason
+gcloud logging read 'jsonPayload.action="token_revoked"' \
+  --format='value(jsonPayload.reason)' \
+  --limit=1000 | sort | uniq -c | sort -rn
+
+# Revocations by user
+psql -h localhost -U postgres -d af_auth << 'EOFSQL'
+SELECT 
+  u.github_user_id,
+  COUNT(rt.id) as revoked_count,
+  MAX(rt.revoked_at) as last_revocation
+FROM revoked_tokens rt
+JOIN users u ON rt.user_id = u.id
+WHERE rt.revoked_at > NOW() - INTERVAL '30 days'
+GROUP BY u.github_user_id
+ORDER BY revoked_count DESC
+LIMIT 20;
+EOFSQL
+```
+
+### Revocation Performance
+
+- **Lookup Time**: < 5ms for revocation check (indexed JTI lookup)
+- **Cache Recommended**: Consider caching revocation status for high-traffic services
+- **Database Impact**: Minimal - single indexed query per request
+- **Cleanup Frequency**: Daily cleanup recommended for tables > 100K rows
+
+### Emergency Revocation Procedures
+
+#### Compromise Detected
+
+```bash
+# 1. Identify affected user(s)
+AFFECTED_USER_ID="user-uuid"
+
+# 2. Immediately revoke whitelist access
+psql -h localhost -U postgres -d af_auth << EOFSQL
+UPDATE users 
+SET is_whitelisted = false 
+WHERE id = '${AFFECTED_USER_ID}';
+EOFSQL
+
+# 3. Log the incident
+gcloud logging write af-auth-security \
+  "Emergency revocation for user ${AFFECTED_USER_ID}" \
+  --severity=CRITICAL \
+  --resource=cloud_run_revision
+
+# 4. Notify security team
+# Send alert via your incident management system
+
+# 5. Audit actions
+psql -h localhost -U postgres -d af_auth << EOFSQL
+SELECT 
+  sal.action,
+  sal.success,
+  sal.created_at,
+  sal.ip_address
+FROM service_audit_logs sal
+WHERE sal.user_id = '${AFFECTED_USER_ID}'
+  AND sal.created_at > NOW() - INTERVAL '7 days'
+ORDER BY sal.created_at DESC;
+EOFSQL
+```
+
+#### Mass Revocation
+
+```bash
+# Create SQL script for bulk revocation
+cat > /tmp/mass-revoke.sql << 'EOFSQL'
+UPDATE users
+SET is_whitelisted = false
+WHERE github_user_id IN (
+  12345678,
+  87654321,
+  11223344
+  -- Add more user IDs as needed
+);
+EOFSQL
+
+# Execute
+psql -h localhost -U postgres -d af_auth < /tmp/mass-revoke.sql
+
+# Verify
+psql -h localhost -U postgres -d af_auth << 'EOFSQL'
+SELECT github_user_id, is_whitelisted, updated_at
+FROM users
+WHERE github_user_id IN (12345678, 87654321, 11223344);
 EOFSQL
 ```
 

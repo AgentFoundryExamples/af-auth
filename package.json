@@ -17,7 +17,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "service-registry": "tsx scripts/manage-services.ts",
-    "migrate:encrypt-tokens": "tsx scripts/migrate-encrypt-tokens.ts"
+    "migrate:encrypt-tokens": "tsx scripts/migrate-encrypt-tokens.ts",
+    "cleanup:revoked-tokens": "tsx scripts/cleanup-revoked-tokens.ts"
   },
   "keywords": [
     "auth",
