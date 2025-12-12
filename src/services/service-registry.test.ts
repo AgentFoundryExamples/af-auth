@@ -77,6 +77,8 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.create as jest.Mock).mockResolvedValue(mockService);
@@ -113,6 +115,7 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.create as jest.Mock).mockResolvedValue(mockService);
@@ -137,6 +140,7 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.findUnique as jest.Mock).mockResolvedValue(mockService);
@@ -174,6 +178,7 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.findUnique as jest.Mock).mockResolvedValue(mockService);
@@ -196,6 +201,7 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.findUnique as jest.Mock).mockResolvedValue(mockService);
@@ -232,6 +238,7 @@ describe('Service Registry', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
       };
 
       (prisma.serviceRegistry.findUnique as jest.Mock).mockResolvedValue(mockService);
@@ -253,7 +260,7 @@ describe('Service Registry', () => {
   });
 
   describe('rotateServiceApiKey', () => {
-    it('should update service with new hashed API key', async () => {
+    it('should update service with new hashed API key and record rotation timestamp', async () => {
       const mockHashedKey = 'new-hashed-key';
       mockBcrypt.hash.mockResolvedValue(mockHashedKey as never);
       (prisma.serviceRegistry.update as jest.Mock).mockResolvedValue({});
@@ -263,7 +270,10 @@ describe('Service Registry', () => {
       expect(mockBcrypt.hash).toHaveBeenCalledWith('new-api-key', 12);
       expect(prisma.serviceRegistry.update).toHaveBeenCalledWith({
         where: { serviceIdentifier: 'test-service' },
-        data: { hashedApiKey: mockHashedKey },
+        data: expect.objectContaining({
+          hashedApiKey: mockHashedKey,
+          lastApiKeyRotatedAt: expect.any(Date),
+        }),
       });
     });
   });
@@ -319,6 +329,7 @@ describe('Service Registry', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
           lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
         },
         {
           id: '2',
@@ -330,6 +341,7 @@ describe('Service Registry', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
           lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
         },
       ];
 
@@ -356,6 +368,7 @@ describe('Service Registry', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
           lastUsedAt: null,
+        lastApiKeyRotatedAt: null,
         },
       ];
 
