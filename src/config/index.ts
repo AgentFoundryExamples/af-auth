@@ -218,15 +218,21 @@ function parseJWTExpiresInToSeconds(expiresIn: string): number {
   const value = parseInt(match[1], 10);
   const unit = match[2];
   
+  let seconds: number;
   switch (unit) {
-    case 's': return value;
-    case 'm': return value * 60;
-    case 'h': return value * 60 * 60;
-    case 'd': return value * 24 * 60 * 60;
+    case 's': seconds = value; break;
+    case 'm': seconds = value * 60; break;
+    case 'h': seconds = value * 60 * 60; break;
+    case 'd': seconds = value * 24 * 60 * 60; break;
     default:
-      // This should never happen due to regex constraint
       throw new Error(`Unexpected time unit: ${unit}`);
   }
+  
+  if (seconds > Number.MAX_SAFE_INTEGER) {
+    throw new Error(`JWT expiration value too large: ${expiresIn} exceeds maximum safe integer`);
+  }
+  
+  return seconds;
 }
 
 /**
@@ -459,7 +465,13 @@ export function getJWTExpirationSeconds(): number {
  */
 export function calculateJWTExpiration(): Date {
   const seconds = getJWTExpirationSeconds();
-  return new Date(Date.now() + seconds * 1000);
+  const milliseconds = seconds * 1000;
+  
+  if (milliseconds > Number.MAX_SAFE_INTEGER - Date.now()) {
+    throw new Error('JWT expiration calculation would overflow');
+  }
+  
+  return new Date(Date.now() + milliseconds);
 }
 
 /**

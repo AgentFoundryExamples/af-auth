@@ -471,6 +471,70 @@ AQAB
         console.warn = originalWarn;
       });
     });
+
+    it('should reject extremely large expiration values that would overflow', () => {
+      jest.resetModules();
+      
+      // Use a value that would overflow Number.MAX_SAFE_INTEGER when converted
+      // Number.MAX_SAFE_INTEGER is 9007199254740991
+      // For days: 9007199254740991 / (24 * 60 * 60) = ~104249991 days
+      const hugeValue = '999999999999999d'; // Much larger than max safe integer
+      
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: hugeValue,
+      };
+      
+      expect(() => {
+        require('../config');
+      }).toThrow('JWT expiration value too large');
+    });
+
+    it('should prevent overflow in calculateJWTExpiration', () => {
+      jest.resetModules();
+      
+      // Set up an expiration that when multiplied by 1000 would overflow
+      const largeButValidSeconds = Math.floor(Number.MAX_SAFE_INTEGER / 1000) - 1000;
+      const largeDays = Math.floor(largeButValidSeconds / (24 * 60 * 60));
+      
+      process.env = {
+        ...originalEnv,
+        DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+        GITHUB_APP_ID: '123456',
+        GITHUB_INSTALLATION_ID: '12345678',
+        GITHUB_APP_PRIVATE_KEY: testPrivateKeyB64,
+        GITHUB_CLIENT_ID: 'test_client_id',
+        GITHUB_CLIENT_SECRET: 'test_client_secret',
+        SESSION_SECRET: 'test_session_secret_at_least_32_chars',
+        JWT_PRIVATE_KEY: testPrivateKeyB64,
+        JWT_PUBLIC_KEY: testPublicKeyB64,
+        GITHUB_TOKEN_ENCRYPTION_KEY: 'test_encryption_key_at_least_32_chars_long',
+        JWT_EXPIRES_IN: `${largeDays}d`,
+      };
+      
+      // Suppress warning for extremely long expiration
+      const originalWarn = console.warn;
+      console.warn = jest.fn();
+      
+      const { calculateJWTExpiration } = require('../config');
+      
+      // This should throw because milliseconds + Date.now() would overflow
+      expect(() => {
+        calculateJWTExpiration();
+      }).toThrow('JWT expiration calculation would overflow');
+      
+      console.warn = originalWarn;
+    });
   });
 });
 
