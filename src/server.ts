@@ -21,12 +21,16 @@ import { sanitizeRequestBody } from './middleware/validation';
 import { performHealthCheck, performReadinessCheck, HealthStatus } from './services/health-check';
 import { initializeMetrics } from './services/metrics';
 import { metricsMiddleware } from './middleware/metrics';
+import { securityHeadersMiddleware } from './middleware/security-headers';
 
 const app = express();
 const server = http.createServer(app);
 
 // Initialize Prometheus metrics
 initializeMetrics();
+
+// Security headers middleware (applied first to cover all responses)
+app.use(securityHeadersMiddleware);
 
 // Middleware
 app.use(express.json());
