@@ -17,6 +17,7 @@ import logger from '../utils/logger';
 import { prisma } from '../db';
 import type { StringValue } from 'ms';
 import { randomUUID } from 'crypto';
+import { recordJWTOperation } from './metrics';
 
 /**
  * JWT Claims structure
@@ -86,6 +87,8 @@ export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>):
     'JWT signed successfully'
   );
   
+  recordJWTOperation('issue', 'success');
+  
   return token;
 }
 
@@ -105,12 +108,14 @@ export function verifyJWT(token: string): JWTVerifyResult {
     }) as JWTClaims;
     
     logger.debug({ sub: decoded.sub }, 'JWT verified successfully');
+    recordJWTOperation('validate', 'success');
     
     return {
       valid: true,
       claims: decoded,
     };
   } catch (error) {
+    recordJWTOperation('validate', 'failure');
     if (error instanceof jwt.TokenExpiredError) {
       logger.debug('JWT verification failed: token expired');
       return {

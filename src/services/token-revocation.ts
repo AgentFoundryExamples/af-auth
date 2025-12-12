@@ -15,6 +15,7 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { verifyJWT } from './jwt';
 import { config } from '../config';
+import { recordTokenRevocationCheck, recordJWTOperation } from './metrics';
 
 /**
  * Parse time string to milliseconds
@@ -108,6 +109,8 @@ export async function revokeToken(
       'Token revoked successfully'
     );
     
+    recordJWTOperation('revoke', 'success');
+    
     return {
       success: true,
       jti: claims.jti,
@@ -115,6 +118,7 @@ export async function revokeToken(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error({ errorMessage }, 'Error revoking token');
+    recordJWTOperation('revoke', 'failure');
     return {
       success: false,
       error: errorMessage,
@@ -168,13 +172,24 @@ export async function revokeAllUserTokens(
  * Check if a token is revoked
  * @param jti - JWT ID to check
  * @returns True if revoked, false otherwise
+ * @throws Never throws - fails closed by returning true on error
  */
 export async function isTokenRevoked(jti: string): Promise<boolean> {
-  const revokedToken = await prisma.revokedToken.findUnique({
-    where: { jti },
-  });
-  
-  return revokedToken !== null;
+  try {
+    const revokedToken = await prisma.revokedToken.findUnique({
+      where: { jti },
+    });
+    
+    const isRevoked = revokedToken !== null;
+    recordTokenRevocationCheck('success', isRevoked ? 'revoked' : 'valid');
+    
+    return isRevoked;
+  } catch (error) {
+    // Fail-closed: If we can't check revocation status, assume the token is revoked
+    logger.error({ jti, error }, 'Error checking token revocation status; assuming token is revoked for security');
+    recordTokenRevocationCheck('failure', 'error');
+    return true;
+  }
 }
 
 /**

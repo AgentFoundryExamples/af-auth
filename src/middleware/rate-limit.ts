@@ -16,13 +16,14 @@ import RedisStore from 'rate-limit-redis';
 import { getRedisClient, isRedisConnected, getRedisStatus } from '../services/redis-client';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { recordRateLimitHit } from '../services/metrics';
 
 /**
  * Creates a rate limiting middleware with Redis store for distributed rate limiting.
  * Falls back to in-memory store if Redis is unavailable.
  * 
  * @param options - Rate limiting configuration
- * @returns Express rate limiting middleware
+ * @returns Express rate limiting middleware wrapped with metrics tracking
  */
 function createRateLimiter(options: {
   windowMs: number;
@@ -49,6 +50,7 @@ function createRateLimiter(options: {
         },
         'Rate limit exceeded'
       );
+      recordRateLimitHit(keyPrefix, 'blocked');
       res.status(429).json({
         error: 'RATE_LIMIT_EXCEEDED',
         message,
@@ -80,7 +82,23 @@ function createRateLimiter(options: {
     );
   }
 
-  return rateLimit(baseConfig);
+  const limiter = rateLimit(baseConfig);
+  
+  // Wrap the limiter to track allowed requests
+  // Note: We record 'allowed' for all requests that pass through the rate limiter
+  // The 'blocked' metric is recorded in the handler above when rate limit is exceeded
+  return (req: any, res: any, next: any) => {
+    const originalNext = next;
+    const wrappedNext = (err?: any) => {
+      // Only record 'allowed' if the response wasn't already sent by the handler (status 429)
+      if (res.statusCode !== 429) {
+        recordRateLimitHit(keyPrefix, 'allowed');
+      }
+      originalNext(err);
+    };
+    
+    limiter(req, res, wrappedNext);
+  };
 }
 
 /**

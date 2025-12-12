@@ -32,6 +32,7 @@ import { UnauthorizedPage } from '../pages/unauthorized';
 import { TokenReadyPage } from '../pages/token-ready';
 import { ErrorPage } from '../pages/error';
 import { authRateLimiter } from '../middleware/rate-limit';
+import { recordAuthFailure, recordGitHubOAuthOperation } from '../services/metrics';
 
 const router = Router();
 
@@ -56,6 +57,8 @@ router.get('/github', authRateLimiter, async (_req: Request, res: Response) => {
     // Get GitHub authorization URL
     const authUrl = getAuthorizationUrl(state);
     
+    recordGitHubOAuthOperation('authorize', 'success');
+    
     // Render login page with auth URL
     const html = renderPage(
       React.createElement(LoginPage, {
@@ -68,6 +71,7 @@ router.get('/github', authRateLimiter, async (_req: Request, res: Response) => {
     res.send(html);
   } catch (error) {
     logger.error({ error }, 'Failed to initiate OAuth flow');
+    recordGitHubOAuthOperation('authorize', 'failure');
     
     const html = renderPage(
       React.createElement(ErrorPage, {
@@ -92,6 +96,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
     // Check for OAuth errors from GitHub
     if (error) {
       logger.warn({ error, error_description }, 'GitHub OAuth error');
+      recordAuthFailure('oauth', 'github_oauth_error');
       
       const html = renderPage(
         React.createElement(ErrorPage, {
@@ -107,6 +112,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
     // Validate required parameters
     if (!code || typeof code !== 'string') {
       logger.warn('Missing authorization code in callback');
+      recordAuthFailure('oauth', 'missing_code');
       
       const html = renderPage(
         React.createElement(ErrorPage, {
@@ -121,6 +127,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
     
     if (!state || typeof state !== 'string') {
       logger.warn('Missing state parameter in callback');
+      recordAuthFailure('oauth', 'missing_state');
       
       const html = renderPage(
         React.createElement(ErrorPage, {
@@ -137,6 +144,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
     const stateData = await validateState(state);
     if (!stateData) {
       logger.warn({ state }, 'Invalid or expired OAuth state');
+      recordAuthFailure('oauth', 'invalid_state');
       
       const html = renderPage(
         React.createElement(ErrorPage, {
@@ -230,6 +238,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
         .send(html);
     } else {
       logger.info({ userId: user.id }, 'User is not whitelisted, rendering unauthorized page');
+      recordAuthFailure('whitelist', 'not_whitelisted');
       
       const html = renderPage(
         React.createElement(UnauthorizedPage, {
@@ -243,6 +252,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
     }
   } catch (error) {
     logger.error({ error }, 'Failed to process OAuth callback');
+    recordAuthFailure('oauth', 'callback_processing_error');
     
     const html = renderPage(
       React.createElement(ErrorPage, {

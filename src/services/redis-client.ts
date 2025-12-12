@@ -14,6 +14,7 @@
 import Redis, { RedisOptions } from 'ioredis';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { updateRedisConnectionStatus } from './metrics';
 
 /**
  * Redis client instance for distributed state storage
@@ -81,6 +82,7 @@ export function getRedisClient(): Redis {
 
   redisClient.on('ready', () => {
     logger.info('Redis client ready for commands');
+    updateRedisConnectionStatus(true);
   });
 
   redisClient.on('error', (error: Error) => {
@@ -88,18 +90,22 @@ export function getRedisClient(): Redis {
       { error: error.message },
       'Redis client error'
     );
+    updateRedisConnectionStatus(false);
   });
 
   redisClient.on('close', () => {
     logger.warn('Redis connection closed');
+    updateRedisConnectionStatus(false);
   });
 
   redisClient.on('reconnecting', (delay: number) => {
     logger.info({ delayMs: delay }, 'Redis client reconnecting');
+    updateRedisConnectionStatus(false);
   });
 
   redisClient.on('end', () => {
     logger.warn('Redis connection ended');
+    updateRedisConnectionStatus(false);
   });
 
   return redisClient;
