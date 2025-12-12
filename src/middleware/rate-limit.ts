@@ -23,7 +23,7 @@ import { recordRateLimitHit } from '../services/metrics';
  * Falls back to in-memory store if Redis is unavailable.
  * 
  * @param options - Rate limiting configuration
- * @returns Express rate limiting middleware
+ * @returns Express rate limiting middleware wrapped with metrics tracking
  */
 function createRateLimiter(options: {
   windowMs: number;
@@ -56,11 +56,6 @@ function createRateLimiter(options: {
         message,
       });
     },
-    skip: (_req: any) => {
-      // Record allowed requests
-      recordRateLimitHit(keyPrefix, 'allowed');
-      return false; // Don't actually skip
-    },
   };
 
   // Use Redis store if connected, otherwise fall back to in-memory store
@@ -87,7 +82,21 @@ function createRateLimiter(options: {
     );
   }
 
-  return rateLimit(baseConfig);
+  const limiter = rateLimit(baseConfig);
+  
+  // Wrap the limiter to track allowed requests
+  return (req: any, res: any, next: any) => {
+    limiter(req, res, (err?: any) => {
+      // If no error and status code is not 429, request was allowed
+      if (!err && res.statusCode !== 429) {
+        recordRateLimitHit(keyPrefix, 'allowed');
+      }
+      if (err) {
+        return next(err);
+      }
+      next();
+    });
+  };
 }
 
 /**

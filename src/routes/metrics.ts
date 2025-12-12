@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { config } from '../config';
 import logger from '../utils/logger';
 import { getMetrics, areMetricsEnabled } from '../services/metrics';
@@ -52,7 +53,6 @@ function authenticateMetrics(req: Request, res: Response, next: Function): void 
   }
 
   // Use crypto.timingSafeEqual for constant-time comparison
-  const crypto = require('crypto');
   const tokenBuffer = Buffer.from(token);
   const expectedBuffer = Buffer.from(expectedToken);
   
