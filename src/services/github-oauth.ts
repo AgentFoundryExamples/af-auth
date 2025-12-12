@@ -15,6 +15,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { getRedisClient, executeRedisOperation } from './redis-client';
 
 /**
  * GitHub OAuth token response
@@ -40,114 +41,143 @@ export interface GitHubUser {
 }
 
 /**
- * OAuth state with CSRF protection
+ * OAuth state with CSRF protection stored in Redis
  */
 export interface OAuthState {
   state: string;
   timestamp: number;
+  requestId: string;
 }
-
-/**
- * In-memory storage for OAuth states with expiration
- * 
- * PRODUCTION WARNING: This in-memory Map will NOT work correctly in multi-instance
- * deployments (e.g., Cloud Run auto-scaling, Kubernetes replicas). State tokens 
- * generated on one instance will not be accessible on another instance, causing
- * OAuth callback validation failures.
- * 
- * For production deployments with multiple instances, replace this with a distributed
- * cache such as:
- * - Redis with TTL support
- * - Memcached
- * - Cloud Memorystore (GCP)
- * - ElastiCache (AWS)
- * 
- * The distributed cache should:
- * 1. Store state tokens with automatic expiration (SESSION_MAX_AGE_MS)
- * 2. Support atomic delete operations for one-time use tokens
- * 3. Be accessible from all service instances
- * 
- * Example Redis implementation:
- * ```typescript
- * await redisClient.setex(`oauth:state:${state}`, SESSION_MAX_AGE_MS / 1000, Date.now().toString());
- * const timestamp = await redisClient.getdel(`oauth:state:${state}`); // Atomic get-and-delete
- * ```
- */
-const oauthStates = new Map<string, number>();
-
-/**
- * Clean up expired OAuth states (older than session max age)
- */
-function cleanupExpiredStates(): void {
-  const now = Date.now();
-  const maxAge = config.session.maxAge;
-  
-  for (const [state, timestamp] of oauthStates.entries()) {
-    if (now - timestamp > maxAge) {
-      oauthStates.delete(state);
-    }
-  }
-}
-
-// Run cleanup every minute
-// Use unref() to prevent this timer from keeping the process alive during tests
-setInterval(cleanupExpiredStates, 60000).unref();
 
 /**
  * Generate a cryptographically secure random state token for CSRF protection
+ * Stores state in Redis with TTL for multi-instance support
  */
-export function generateState(): string {
+export async function generateState(requestId?: string): Promise<string> {
   const state = crypto.randomBytes(32).toString('hex');
-  oauthStates.set(state, Date.now());
-  
-  logger.debug({ stateLength: state.length }, 'Generated OAuth state token');
-  
+  const generatedRequestId = requestId || crypto.randomBytes(16).toString('hex');
+  const timestamp = Date.now();
+
+  const stateData: OAuthState = {
+    state,
+    timestamp,
+    requestId: generatedRequestId,
+  };
+
+  await executeRedisOperation(
+    async () => {
+      const redis = getRedisClient();
+      const key = `oauth:state:${state}`;
+      const ttl = config.redis.stateTtlSeconds;
+
+      await redis.setex(key, ttl, JSON.stringify(stateData));
+
+      logger.debug(
+        {
+          stateLength: state.length,
+          requestId: generatedRequestId,
+          ttlSeconds: ttl,
+        },
+        'Generated OAuth state token and stored in Redis'
+      );
+    },
+    'generateState',
+    generatedRequestId
+  );
+
   return state;
 }
 
 /**
  * Validate OAuth state token
- * Returns true if valid, false otherwise
+ * Returns the OAuth state data if valid, null otherwise
+ * Uses atomic get-and-delete to ensure one-time use
  */
-export function validateState(state: string): boolean {
-  const timestamp = oauthStates.get(state);
-  
-  if (!timestamp) {
-    logger.warn({ state }, 'OAuth state not found');
-    return false;
+export async function validateState(
+  state: string,
+  requestId?: string
+): Promise<OAuthState | null> {
+  try {
+    const stateData = await executeRedisOperation(
+      async () => {
+        const redis = getRedisClient();
+        const key = `oauth:state:${state}`;
+
+        // Atomic get and delete (one-time use token)
+        const pipeline = redis.pipeline();
+        pipeline.get(key);
+        pipeline.del(key);
+
+        const results = await pipeline.exec();
+
+        if (!results || results.length < 2) {
+          logger.warn({ state, requestId }, 'OAuth state not found in Redis');
+          return null;
+        }
+
+        const [getError, getValue] = results[0];
+        if (getError || !getValue) {
+          logger.warn(
+            { state, requestId, error: getError },
+            'OAuth state not found or expired'
+          );
+          return null;
+        }
+
+        const data = JSON.parse(getValue as string) as OAuthState;
+
+        // Verify state hasn't expired
+        const age = Date.now() - data.timestamp;
+        const maxAge = config.redis.stateTtlSeconds * 1000;
+
+        if (age > maxAge) {
+          logger.warn(
+            {
+              state,
+              requestId: data.requestId,
+              age,
+              maxAge,
+            },
+            'OAuth state expired'
+          );
+          return null;
+        }
+
+        logger.debug(
+          { state, requestId: data.requestId },
+          'OAuth state validated successfully'
+        );
+
+        return data;
+      },
+      'validateState',
+      requestId
+    );
+
+    return stateData;
+  } catch (error) {
+    logger.error(
+      { state, requestId, error },
+      'Error validating OAuth state from Redis'
+    );
+    return null;
   }
-  
-  const age = Date.now() - timestamp;
-  const maxAge = config.session.maxAge;
-  
-  if (age > maxAge) {
-    logger.warn({ state, age, maxAge }, 'OAuth state expired');
-    oauthStates.delete(state);
-    return false;
-  }
-  
-  // Remove state after successful validation (one-time use)
-  oauthStates.delete(state);
-  
-  logger.debug({ state }, 'OAuth state validated successfully');
-  return true;
 }
 
 /**
- * Get GitHub OAuth authorization URL
+ * Get GitHub OAuth authorization URL for GitHub App installation
  */
 export function getAuthorizationUrl(state: string): string {
   const params = new URLSearchParams({
     client_id: config.github.clientId,
     redirect_uri: config.github.callbackUrl,
     state,
-    scope: 'user:email',
   });
-  
+
   const url = `https://github.com/login/oauth/authorize?${params.toString()}`;
-  
-  logger.info({ state }, 'Generated GitHub OAuth authorization URL');
-  
+
+  logger.info({ state }, 'Generated GitHub App authorization URL');
+
   return url;
 }
 
@@ -157,7 +187,7 @@ export function getAuthorizationUrl(state: string): string {
 export async function exchangeCodeForToken(code: string): Promise<GitHubTokenResponse> {
   try {
     logger.info('Exchanging authorization code for access token');
-    
+
     const response = await axios.post<GitHubTokenResponse>(
       'https://github.com/login/oauth/access_token',
       {
@@ -171,13 +201,13 @@ export async function exchangeCodeForToken(code: string): Promise<GitHubTokenRes
         },
       }
     );
-    
+
     if (!response.data.access_token) {
       throw new Error('No access token in GitHub response');
     }
-    
+
     logger.info('Successfully exchanged code for token');
-    
+
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to exchange code for token');
@@ -191,7 +221,7 @@ export async function exchangeCodeForToken(code: string): Promise<GitHubTokenRes
 export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
   try {
     logger.info('Fetching GitHub user information');
-    
+
     const response = await axios.get<GitHubUser>(
       'https://api.github.com/user',
       {
@@ -201,9 +231,9 @@ export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
         },
       }
     );
-    
+
     logger.info({ githubUserId: response.data.id }, 'Successfully fetched GitHub user');
-    
+
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to fetch GitHub user information');
@@ -217,7 +247,7 @@ export async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
 export async function refreshAccessToken(refreshToken: string): Promise<GitHubTokenResponse> {
   try {
     logger.info('Refreshing GitHub access token');
-    
+
     const response = await axios.post<GitHubTokenResponse>(
       'https://github.com/login/oauth/access_token',
       {
@@ -232,13 +262,13 @@ export async function refreshAccessToken(refreshToken: string): Promise<GitHubTo
         },
       }
     );
-    
+
     if (!response.data.access_token) {
       throw new Error('No access token in GitHub refresh response');
     }
-    
+
     logger.info('Successfully refreshed access token');
-    
+
     return response.data;
   } catch (error) {
     logger.error({ error }, 'Failed to refresh access token');
@@ -260,11 +290,11 @@ export function isTokenExpiringSoon(
     // If no expiration date, consider it as not expiring (legacy tokens)
     return false;
   }
-  
+
   const now = Date.now();
   const expiryTime = expiresAt.getTime();
   const thresholdMs = thresholdSeconds * 1000;
-  
+
   // Token is expiring soon if it expires within the threshold
   return (expiryTime - now) <= thresholdMs;
 }
@@ -276,6 +306,6 @@ export function calculateTokenExpiration(expiresIn?: number): Date | null {
   if (!expiresIn) {
     return null;
   }
-  
+
   return new Date(Date.now() + expiresIn * 1000);
 }

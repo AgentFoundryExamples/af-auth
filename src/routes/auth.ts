@@ -45,12 +45,12 @@ function renderPage(component: React.ReactElement): string {
  * GET /auth/github
  * Initiates OAuth flow by redirecting to GitHub authorization page
  */
-router.get('/github', (_req: Request, res: Response) => {
+router.get('/github', async (_req: Request, res: Response) => {
   try {
     logger.info('Initiating GitHub OAuth flow');
     
     // Generate CSRF protection state token
-    const state = generateState();
+    const state = await generateState();
     
     // Get GitHub authorization URL
     const authUrl = getAuthorizationUrl(state);
@@ -133,7 +133,8 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     }
     
     // Validate state token (CSRF protection)
-    if (!validateState(state)) {
+    const stateData = await validateState(state);
+    if (!stateData) {
       logger.warn({ state }, 'Invalid or expired OAuth state');
       
       const html = renderPage(

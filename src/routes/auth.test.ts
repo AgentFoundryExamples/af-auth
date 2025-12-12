@@ -15,20 +15,30 @@ import request from 'supertest';
 import { app } from '../server';
 import { prisma } from '../db';
 import * as githubOAuth from '../services/github-oauth';
+import * as redisClient from '../services/redis-client';
+
+// Mock the Redis client service
+jest.mock('../services/redis-client');
 
 // Mock the GitHub OAuth service
 jest.mock('../services/github-oauth');
 
 const mockGitHubOAuth = githubOAuth as jest.Mocked<typeof githubOAuth>;
+const mockRedisClient = redisClient as jest.Mocked<typeof redisClient>;
 
 describe('Auth Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Mock Redis client by default to prevent connection attempts
+    mockRedisClient.getRedisClient.mockReturnValue({} as any);
+    mockRedisClient.isRedisConnected.mockReturnValue(true);
+    mockRedisClient.getRedisStatus.mockReturnValue('ready');
   });
 
   describe('GET /auth/github', () => {
     it('should render login page with auth URL', async () => {
-      mockGitHubOAuth.generateState.mockReturnValue('test-state-token');
+      mockGitHubOAuth.generateState.mockResolvedValue('test-state-token');
       mockGitHubOAuth.getAuthorizationUrl.mockReturnValue('https://github.com/login/oauth/authorize?test');
 
       const response = await request(app)
@@ -42,9 +52,7 @@ describe('Auth Routes', () => {
     });
 
     it('should handle errors gracefully', async () => {
-      mockGitHubOAuth.generateState.mockImplementation(() => {
-        throw new Error('State generation failed');
-      });
+      mockGitHubOAuth.generateState.mockRejectedValue(new Error('State generation failed'));
 
       const response = await request(app)
         .get('/auth/github')
@@ -79,7 +87,7 @@ describe('Auth Routes', () => {
     });
 
     it('should reject callback with invalid state', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(false);
+      mockGitHubOAuth.validateState.mockResolvedValue(null);
 
       const response = await request(app)
         .get('/auth/github/callback')
@@ -107,7 +115,11 @@ describe('Auth Routes', () => {
     });
 
     it('should show unauthorized page for non-whitelisted user', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(true);
+      mockGitHubOAuth.validateState.mockResolvedValue({
+        state: 'test-state',
+        timestamp: Date.now(),
+        requestId: 'test-request-id',
+      });
       mockGitHubOAuth.exchangeCodeForToken.mockResolvedValue({
         access_token: 'test-token',
         token_type: 'bearer',
@@ -147,7 +159,11 @@ describe('Auth Routes', () => {
     });
 
     it('should show token-ready page for whitelisted user', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(true);
+      mockGitHubOAuth.validateState.mockResolvedValue({
+        state: 'test-state',
+        timestamp: Date.now(),
+        requestId: 'test-request-id',
+      });
       mockGitHubOAuth.exchangeCodeForToken.mockResolvedValue({
         access_token: 'test-token',
         token_type: 'bearer',
@@ -188,7 +204,11 @@ describe('Auth Routes', () => {
     });
 
     it('should handle token exchange errors', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(true);
+      mockGitHubOAuth.validateState.mockResolvedValue({
+        state: 'test-state',
+        timestamp: Date.now(),
+        requestId: 'test-request-id',
+      });
       mockGitHubOAuth.exchangeCodeForToken.mockRejectedValue(new Error('Token exchange failed'));
 
       const response = await request(app)
@@ -202,7 +222,11 @@ describe('Auth Routes', () => {
     });
 
     it('should create new user with isWhitelisted=false by default', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(true);
+      mockGitHubOAuth.validateState.mockResolvedValue({
+        state: 'test-state',
+        timestamp: Date.now(),
+        requestId: 'test-request-id',
+      });
       mockGitHubOAuth.exchangeCodeForToken.mockResolvedValue({
         access_token: 'test-token',
         token_type: 'bearer',
@@ -246,7 +270,11 @@ describe('Auth Routes', () => {
     });
 
     it('should update existing user tokens on repeat login', async () => {
-      mockGitHubOAuth.validateState.mockReturnValue(true);
+      mockGitHubOAuth.validateState.mockResolvedValue({
+        state: 'test-state',
+        timestamp: Date.now(),
+        requestId: 'test-request-id',
+      });
       mockGitHubOAuth.exchangeCodeForToken.mockResolvedValue({
         access_token: 'new-token',
         token_type: 'bearer',

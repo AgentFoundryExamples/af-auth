@@ -43,11 +43,25 @@ interface Config {
     pretty: boolean;
   };
   github: {
+    appId: string;
+    installationId: string;
+    privateKey: string;
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
     tokenEncryptionKey: string;
     tokenRefreshThresholdSeconds: number;
+  };
+  redis: {
+    host: string;
+    port: number;
+    password: string | null;
+    db: number;
+    connectTimeout: number;
+    maxRetries: number;
+    retryDelay: number;
+    maxRetriesPerRequest: number;
+    stateTtlSeconds: number;
   };
   session: {
     secret: string;
@@ -229,6 +243,12 @@ export const config: Config = {
     pretty: getOptionalBooleanEnv('LOG_PRETTY', process.env.NODE_ENV !== 'production'),
   },
   github: {
+    appId: getRequiredEnv('GITHUB_APP_ID'),
+    installationId: getRequiredEnv('GITHUB_INSTALLATION_ID'),
+    privateKey: (() => {
+      const privateKeyB64 = getRequiredEnv('GITHUB_APP_PRIVATE_KEY');
+      return getBase64DecodedKey(privateKeyB64, 'GITHUB_APP_PRIVATE_KEY');
+    })(),
     clientId: getRequiredEnv('GITHUB_CLIENT_ID'),
     clientSecret: getRequiredEnv('GITHUB_CLIENT_SECRET'),
     callbackUrl: getOptionalEnv(
@@ -245,6 +265,17 @@ export const config: Config = {
       }
       return threshold;
     })(),
+  },
+  redis: {
+    host: getOptionalEnv('REDIS_HOST', 'localhost'),
+    port: getOptionalNumericEnv('REDIS_PORT', 6379),
+    password: process.env.REDIS_PASSWORD || null,
+    db: getOptionalNumericEnv('REDIS_DB', 0),
+    connectTimeout: getOptionalNumericEnv('REDIS_CONNECT_TIMEOUT_MS', 5000),
+    maxRetries: getOptionalNumericEnv('REDIS_MAX_RETRIES', 3),
+    retryDelay: getOptionalNumericEnv('REDIS_RETRY_DELAY_MS', 1000),
+    maxRetriesPerRequest: getOptionalNumericEnv('REDIS_MAX_RETRIES_PER_REQUEST', 3),
+    stateTtlSeconds: getOptionalNumericEnv('REDIS_STATE_TTL_SECONDS', 600), // 10 minutes default
   },
   session: {
     secret: getRequiredEnv('SESSION_SECRET'),
