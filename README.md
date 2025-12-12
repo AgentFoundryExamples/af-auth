@@ -151,6 +151,21 @@ Expected response:
 
 ## Development
 
+### Dependency Management
+
+**ESLint Migration (v1.1.0+)**
+- Migrated from ESLint 8.x to ESLint 9.x with flat config system
+- Configuration now uses `eslint.config.js` instead of `.eslintrc.js`
+- Upgraded to `typescript-eslint` v8 and `@eslint/js` for modern linting
+- No changes required to existing lint rules or developer workflow
+- Run `npm run lint` and `npm run lint:fix` as before
+
+**Dependency Security**
+- All npm audit vulnerabilities resolved (0 high/critical issues)
+- Upgraded deprecated packages: axios 1.13.2, express 4.22.1, tsx 4.21.0, bcrypt 6.0.0
+- Remaining transitive deprecations (glob@7, inflight) from jest 29.x - no security impact
+- Updated TypeScript to 5.6.3 for improved compatibility
+
 ### Available Scripts
 
 - `npm run build` - Compile TypeScript to JavaScript
