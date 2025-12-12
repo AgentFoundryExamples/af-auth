@@ -236,12 +236,7 @@ function parseJWTExpiresInToSeconds(expiresIn: string): number {
  */
 function validateJWTExpiresIn(expiresIn: string): void {
   // Parse to seconds (will throw if invalid format)
-  let seconds: number;
-  try {
-    seconds = parseJWTExpiresInToSeconds(expiresIn);
-  } catch (error) {
-    throw error; // Re-throw parsing errors
-  }
+  const seconds = parseJWTExpiresInToSeconds(expiresIn);
   
   // Validate value is positive
   if (seconds <= 0) {
@@ -439,6 +434,16 @@ export const config: Config = {
     authToken: process.env.METRICS_AUTH_TOKEN || null,
   },
 };
+
+/**
+ * Parse JWT expiration string to seconds (public utility)
+ * Supports formats: '30d', '7d', '24h', '60m', '3600s'
+ * @param expiresIn - The expiration string to parse
+ * @returns Number of seconds
+ */
+export function parseJWTExpiration(expiresIn: string): number {
+  return parseJWTExpiresInToSeconds(expiresIn);
+}
 
 /**
  * Get JWT expiration time in seconds

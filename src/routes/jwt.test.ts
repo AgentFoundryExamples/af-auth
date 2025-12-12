@@ -42,6 +42,7 @@ jest.mock('../services/jwt');
 import request from 'supertest';
 import { app } from '../server';
 import * as jwtService from '../services/jwt';
+import { parseJWTExpiration } from '../config';
 
 const mockJwtService = jwtService as jest.Mocked<typeof jwtService>;
 
@@ -484,20 +485,9 @@ describe('JWT Routes', () => {
 
       const expiresAt = new Date(response.body.expiresAt).getTime();
       
-      // Parse expiresIn to seconds
+      // Parse expiresIn to seconds using shared utility
       const expiresIn = response.body.expiresIn;
-      const match = expiresIn.match(/^(\d+)([smhd])$/);
-      expect(match).toBeTruthy();
-      
-      const value = parseInt(match[1], 10);
-      const unit = match[2];
-      let seconds = 0;
-      switch (unit) {
-        case 's': seconds = value; break;
-        case 'm': seconds = value * 60; break;
-        case 'h': seconds = value * 60 * 60; break;
-        case 'd': seconds = value * 24 * 60 * 60; break;
-      }
+      const seconds = parseJWTExpiration(expiresIn);
       
       // Verify expiresAt is approximately now + expiresIn (with tolerance for request processing)
       const expectedMin = beforeRequest + (seconds * 1000);
