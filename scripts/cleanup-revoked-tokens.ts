@@ -35,13 +35,15 @@ async function main() {
     
     if (dryRun) {
       console.log(`\n[DRY RUN MODE]`);
-      console.log(`Would delete tokens that expired more than ${retentionDays} days ago\n`);
-      // In dry run mode, we would normally query and show what would be deleted
-      // For now, we just log the parameters
-      logger.info('Dry run mode - no changes made');
+      console.log(`Checking for tokens that expired more than ${retentionDays} days ago...\n`);
+      // In dry run mode, query and show what would be deleted
+      const count = await cleanupExpiredRevokedTokens(retentionDays, true);
+      console.log(`   Would delete ${count} expired revoked token(s)`);
+      console.log(`   Retention period: ${retentionDays} days\n`);
+      logger.info({ count, retentionDays }, 'Dry run complete - no changes made');
     } else {
       // Perform cleanup
-      const deletedCount = await cleanupExpiredRevokedTokens(retentionDays);
+      const deletedCount = await cleanupExpiredRevokedTokens(retentionDays, false);
       
       console.log(`\n✅ Cleanup complete`);
       console.log(`   Deleted ${deletedCount} expired revoked token(s)`);

@@ -1,6 +1,30 @@
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { verifyJWT } from './jwt';
+import { config } from '../config';
+
+/**
+ * Parse time string to milliseconds
+ * Supports formats like '30d', '7d', '24h', '60m', '3600s'
+ */
+function parseTimeToMs(timeStr: string): number {
+  const match = timeStr.match(/^(\d+)([smhd])$/);
+  if (!match) {
+    // Default to 30 days if invalid format
+    return 30 * 24 * 60 * 60 * 1000;
+  }
+  
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  
+  switch (unit) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    default: return 30 * 24 * 60 * 60 * 1000;
+  }
+}
 
 /**
  * Revoke a JWT token
@@ -48,7 +72,10 @@ export async function revokeToken(
     }
     
     // Calculate token expiry from claims
-    const tokenExpiresAt = claims.exp ? new Date(claims.exp * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Use configured JWT expiration as fallback instead of hardcoded value
+    const tokenExpiresAt = claims.exp 
+      ? new Date(claims.exp * 1000) 
+      : new Date(Date.now() + parseTimeToMs(config.jwt.expiresIn));
     const tokenIssuedAt = claims.iat ? new Date(claims.iat * 1000) : new Date();
     
     // Add to revoked tokens table
@@ -141,19 +168,29 @@ export async function isTokenRevoked(jti: string): Promise<boolean> {
  * Clean up expired revoked tokens
  * Should be run periodically to prevent table bloat
  * @param olderThanDays - Remove tokens that expired more than this many days ago
- * @returns Number of records deleted
+ * @param dryRun - If true, count records instead of deleting them
+ * @returns Number of records deleted or that would be deleted
  */
-export async function cleanupExpiredRevokedTokens(olderThanDays = 7): Promise<number> {
+export async function cleanupExpiredRevokedTokens(olderThanDays = 7, dryRun = false): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
   
-  const result = await prisma.revokedToken.deleteMany({
-    where: {
-      tokenExpiresAt: {
-        lt: cutoffDate,
-      },
+  const where = {
+    tokenExpiresAt: {
+      lt: cutoffDate,
     },
-  });
+  };
+  
+  if (dryRun) {
+    const count = await prisma.revokedToken.count({ where });
+    logger.info(
+      { count, olderThanDays },
+      'Dry run: Found expired revoked tokens to clean up'
+    );
+    return count;
+  }
+  
+  const result = await prisma.revokedToken.deleteMany({ where });
   
   logger.info(
     { count: result.count, olderThanDays },

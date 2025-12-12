@@ -19,6 +19,7 @@ jest.mock('../db', () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
       deleteMany: jest.fn(),
+      count: jest.fn(),
     },
     user: {
       update: jest.fn(),
@@ -238,7 +239,7 @@ describe('Token Revocation Service', () => {
         count: 42,
       });
 
-      const result = await cleanupExpiredRevokedTokens(7);
+      const result = await cleanupExpiredRevokedTokens(7, false);
 
       expect(result).toBe(42);
       expect(mockPrisma.revokedToken.deleteMany).toHaveBeenCalledWith({
@@ -258,6 +259,22 @@ describe('Token Revocation Service', () => {
       const result = await cleanupExpiredRevokedTokens();
 
       expect(result).toBe(10);
+    });
+
+    it('should count tokens in dry run mode', async () => {
+      (mockPrisma.revokedToken.count as jest.Mock).mockResolvedValue(25);
+
+      const result = await cleanupExpiredRevokedTokens(7, true);
+
+      expect(result).toBe(25);
+      expect(mockPrisma.revokedToken.count).toHaveBeenCalledWith({
+        where: {
+          tokenExpiresAt: {
+            lt: expect.any(Date),
+          },
+        },
+      });
+      expect(mockPrisma.revokedToken.deleteMany).not.toHaveBeenCalled();
     });
   });
 
