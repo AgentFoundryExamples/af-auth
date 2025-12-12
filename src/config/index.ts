@@ -106,6 +106,11 @@ interface Config {
     endpoint: string;
     authToken: string | null;
   };
+  rotation: {
+    jwtKeyRotationIntervalDays: number;
+    githubTokenEncryptionKeyRotationIntervalDays: number;
+    serviceApiKeyRotationIntervalDays: number;
+  };
 }
 
 /**
@@ -438,6 +443,11 @@ export const config: Config = {
     collectDefaultMetrics: getOptionalBooleanEnv('METRICS_COLLECT_DEFAULT', true),
     endpoint: getOptionalEnv('METRICS_ENDPOINT', '/metrics'),
     authToken: process.env.METRICS_AUTH_TOKEN || null,
+  },
+  rotation: {
+    jwtKeyRotationIntervalDays: getOptionalNumericEnv('JWT_KEY_ROTATION_INTERVAL_DAYS', 180),
+    githubTokenEncryptionKeyRotationIntervalDays: getOptionalNumericEnv('GITHUB_TOKEN_ENCRYPTION_KEY_ROTATION_INTERVAL_DAYS', 90),
+    serviceApiKeyRotationIntervalDays: getOptionalNumericEnv('SERVICE_API_KEY_ROTATION_INTERVAL_DAYS', 365),
   },
 };
 

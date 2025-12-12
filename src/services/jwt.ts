@@ -18,6 +18,7 @@ import { prisma } from '../db';
 import type { StringValue } from 'ms';
 import { randomUUID } from 'crypto';
 import { recordJWTOperation } from './metrics';
+import { checkAndLogOverdueRotations } from './key-rotation';
 
 /**
  * JWT Claims structure
@@ -50,6 +51,14 @@ function getPrivateKey(): string {
   if (!cachedPrivateKey) {
     cachedPrivateKey = config.jwt.privateKey;
     logger.debug('JWT private key loaded from configuration');
+    
+    // Check for overdue key rotations on first load (async, non-blocking)
+    // This is fire-and-forget by design: startup should not be blocked by rotation checks
+    // as they are informational only and do not affect key functionality.
+    // Database unavailability is logged but does not prevent service operation.
+    checkAndLogOverdueRotations().catch((error) => {
+      logger.error({ error }, 'Failed to check key rotation status');
+    });
   }
   return cachedPrivateKey;
 }

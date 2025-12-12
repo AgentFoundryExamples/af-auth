@@ -5,6 +5,7 @@ This guide provides operational runbooks for managing the AF Auth service, inclu
 ## Table of Contents
 
 - [Daily Operations](#daily-operations)
+- [Key Rotation Monitoring](#key-rotation-monitoring)
 - [Logging and Monitoring](#logging-and-monitoring)
 - [Prometheus Metrics](#prometheus-metrics)
 - [Whitelist Management](#whitelist-management)
@@ -349,6 +350,175 @@ gcloud sql instances describe af-auth-db \
 
 # View recent operations
 gcloud sql operations list --instance=af-auth-db --limit=10
+```
+
+## Key Rotation Monitoring
+
+AF Auth includes automated tracking of cryptographic key rotations to ensure compliance with security policies and prevent incidents from stale credentials.
+
+### Overview
+
+The key rotation system tracks:
+
+- **JWT signing and verification keys**: Used for issuing and validating JWTs
+- **GitHub token encryption keys**: Used for encrypting GitHub access/refresh tokens in the database
+- **Service API keys**: Used for service-to-service authentication
+
+### Daily Rotation Checks
+
+Run the rotation status checker as part of daily operational procedures:
+
+```bash
+# Check all key rotation statuses
+npm run check-key-rotation
+
+# Example output shows:
+# - Last rotation date
+# - Next rotation due date
+# - Days until due (or overdue)
+# - Warnings for overdue keys
+```
+
+**Recommended Schedule**: Run this check daily or weekly as part of operational reviews.
+
+### Interpreting Status
+
+The checker uses visual indicators to highlight urgency:
+
+| Indicator | Meaning | Action Required |
+|-----------|---------|----------------|
+| `⚠️ X days OVERDUE` | Key rotation is past due | **Immediate action required** - rotate key now |
+| `⚠️ X days (urgent)` | Less than 7 days until due | **Plan rotation this week** |
+| `⚡ X days (soon)` | 8-30 days until due | **Schedule rotation** |
+| `✓ X days` | More than 30 days until due | No immediate action needed |
+
+### Rotation Intervals
+
+Default rotation intervals (configurable via environment variables):
+
+- **JWT Keys**: 180 days (`JWT_KEY_ROTATION_INTERVAL_DAYS`)
+- **GitHub Encryption Key**: 90 days (`GITHUB_TOKEN_ENCRYPTION_KEY_ROTATION_INTERVAL_DAYS`)
+- **Service API Keys**: 365 days (`SERVICE_API_KEY_ROTATION_INTERVAL_DAYS`)
+
+Set any interval to `0` to disable rotation warnings for that key type.
+
+### Automated Warnings
+
+The service automatically checks rotation status on startup and logs warnings for overdue keys:
+
+```json
+{
+  "level": "warn",
+  "msg": "Key rotation is OVERDUE - rotation required",
+  "keyIdentifier": "jwt_signing_key",
+  "keyType": "jwt_signing",
+  "daysSinceRotation": 183,
+  "daysOverdue": 3
+}
+```
+
+**Alert Integration**: Configure alerts on these log messages to notify operations teams of overdue rotations.
+
+### Service API Key Rotation
+
+Service API keys are tracked automatically when using the service registry CLI:
+
+```bash
+# Rotate a service API key
+npm run service-registry -- rotate my-service
+
+# Check rotation status
+npm run check-key-rotation
+```
+
+The rotation timestamp is automatically recorded and included in status checks.
+
+### Compliance and Audit
+
+For compliance audits, query the rotation tracking database directly:
+
+```sql
+-- View all key rotation records
+SELECT 
+  key_identifier,
+  key_type,
+  last_rotated_at,
+  next_rotation_due,
+  rotation_interval_days,
+  is_active
+FROM jwt_key_rotation
+WHERE is_active = true
+ORDER BY next_rotation_due ASC;
+
+-- Find overdue keys
+SELECT 
+  key_identifier,
+  key_type,
+  last_rotated_at,
+  next_rotation_due,
+  EXTRACT(day FROM (NOW() - next_rotation_due)) as days_overdue
+FROM jwt_key_rotation
+WHERE is_active = true 
+  AND next_rotation_due < NOW()
+ORDER BY days_overdue DESC;
+
+-- Service API key rotation history
+SELECT 
+  service_identifier,
+  last_api_key_rotated_at,
+  last_used_at,
+  created_at
+FROM service_registry
+WHERE is_active = true
+ORDER BY last_api_key_rotated_at ASC NULLS FIRST;
+```
+
+### Emergency Rotation
+
+If a key compromise is detected:
+
+1. **Immediately** rotate the affected key (see docs/security.md)
+2. **Record** the emergency rotation:
+   - For JWT/encryption keys: Update database record with new timestamp
+   - For service API keys: Use `npm run service-registry -- rotate <service>`
+3. **Verify** rotation recorded: `npm run check-key-rotation`
+4. **Document** incident in security log
+
+### Integration with CI/CD
+
+Add rotation checks to your CI/CD pipeline:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Check key rotation status
+  run: |
+    npm run check-key-rotation
+    # Parse output and fail if keys are overdue
+    # (Implementation depends on CI/CD platform)
+```
+
+### Prometheus Metrics (Optional)
+
+If metrics are enabled, rotation status can be exposed as Prometheus metrics:
+
+```
+# Days until next rotation (negative if overdue)
+af_auth_key_rotation_days_until_due{key_identifier="jwt_signing_key",key_type="jwt_signing"} -3
+
+# Days since last rotation
+af_auth_key_rotation_days_since_rotation{key_identifier="jwt_signing_key",key_type="jwt_signing"} 183
+```
+
+Configure alerts in your monitoring system:
+
+```yaml
+# Example Prometheus alert
+- alert: KeyRotationOverdue
+  expr: af_auth_key_rotation_days_until_due < 0
+  for: 1h
+  annotations:
+    summary: "Key rotation overdue for {{ $labels.key_identifier }}"
+    description: "Key has been overdue for {{ abs($value) }} days"
 ```
 
 ## Logging and Monitoring
