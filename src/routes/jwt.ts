@@ -14,6 +14,8 @@
 import { Router, Request, Response } from 'express';
 import { generateJWT, refreshJWT, getPublicKeyForVerification } from '../services/jwt';
 import logger from '../utils/logger';
+import { jwtRateLimiter } from '../middleware/rate-limit';
+import { validateBody, validateQuery, schemas } from '../middleware/validation';
 
 const router = Router();
 
@@ -24,7 +26,7 @@ const router = Router();
  * Request body: { token: string }
  * Response: { token: string, expiresIn: string } or error
  */
-router.post('/token', async (req: Request, res: Response) => {
+router.post('/token', jwtRateLimiter, validateBody(schemas.tokenRefresh), async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
     
@@ -99,7 +101,7 @@ router.post('/token', async (req: Request, res: Response) => {
  * Query params: userId (string)
  * Response: { token: string, expiresIn: string } or error
  */
-router.get('/token', async (req: Request, res: Response) => {
+router.get('/token', jwtRateLimiter, validateQuery(schemas.tokenIssuanceQuery), async (req: Request, res: Response) => {
   try {
     const { userId } = req.query;
     
@@ -155,7 +157,7 @@ router.get('/token', async (req: Request, res: Response) => {
  * 
  * Response: Public key in PEM format (text/plain)
  */
-router.get('/jwks', (_req: Request, res: Response) => {
+router.get('/jwks', jwtRateLimiter, (_req: Request, res: Response) => {
   try {
     const publicKey = getPublicKeyForVerification();
     
@@ -181,7 +183,7 @@ router.get('/jwks', (_req: Request, res: Response) => {
  * Note: This is not a fully compliant JWKS. For standard JWKS with n/e parameters,
  * convert the PEM key using a library like pem-jwk or node-jose.
  */
-router.get('/jwks.json', (_req: Request, res: Response) => {
+router.get('/jwks.json', jwtRateLimiter, (_req: Request, res: Response) => {
   try {
     const publicKey = getPublicKeyForVerification();
     

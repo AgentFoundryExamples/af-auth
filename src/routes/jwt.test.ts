@@ -75,8 +75,9 @@ describe('JWT Routes', () => {
         .expect(400)
         .expect('Content-Type', /json/);
 
-      expect(response.body).toHaveProperty('error', 'MISSING_TOKEN');
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
       expect(response.body).toHaveProperty('message');
+      expect(response.body).toHaveProperty('requestId');
     });
 
     it('should reject expired token', async () => {
@@ -187,11 +188,12 @@ describe('JWT Routes', () => {
         .expect(400)
         .expect('Content-Type', /json/);
 
-      expect(response.body).toHaveProperty('error', 'MISSING_USER_ID');
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
+      expect(response.body).toHaveProperty('requestId');
     });
 
     it('should handle non-existent user', async () => {
-      const userId = 'non-existent-user';
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
 
       mockJwtService.generateJWT.mockRejectedValue(new Error('User not found'));
 
@@ -205,7 +207,7 @@ describe('JWT Routes', () => {
     });
 
     it('should handle unexpected errors', async () => {
-      const userId = 'test-user-id';
+      const userId = '123e4567-e89b-12d3-a456-426614174000';
 
       mockJwtService.generateJWT.mockRejectedValue(new Error('Database connection failed'));
 
@@ -218,16 +220,15 @@ describe('JWT Routes', () => {
       expect(response.body).toHaveProperty('error', 'INTERNAL_ERROR');
     });
 
-    it('should reject non-string userId', async () => {
-      // When userId is a number, it's converted to string in query params
-      // so we need to test with something that truly won't work
+    it('should reject non-uuid userId', async () => {
       const response = await request(app)
         .get('/api/token')
-        .query({ userId: '' }) // Empty string
+        .query({ userId: 'not-a-uuid' })
         .expect(400)
         .expect('Content-Type', /json/);
 
-      expect(response.body).toHaveProperty('error', 'MISSING_USER_ID');
+      expect(response.body).toHaveProperty('error', 'VALIDATION_ERROR');
+      expect(response.body).toHaveProperty('requestId');
     });
   });
 

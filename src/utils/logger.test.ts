@@ -24,9 +24,9 @@ describe('Logger Redaction', () => {
 
       const result = redactSensitiveData(input);
 
-      expect(result.username).toBe('testuser');
+      expect(result.username).toBe('[REDACTED]'); // Now redacted as PII
       expect(result.password).toBe('[REDACTED]');
-      expect(result.email).toBe('test@example.com');
+      expect(result.email).toBe('[REDACTED]'); // Now redacted as PII
     });
 
     it('should redact access tokens', () => {
@@ -76,7 +76,7 @@ describe('Logger Redaction', () => {
       const result = redactSensitiveData(input);
 
       expect(result.user.id).toBe(123);
-      expect(result.user.username).toBe('testuser');
+      expect(result.user.username).toBe('[REDACTED]'); // Now redacted as PII
       expect(result.user.credentials.password).toBe('[REDACTED]');
       expect(result.user.credentials.apiKey).toBe('[REDACTED]');
     });
@@ -201,13 +201,115 @@ describe('Logger Redaction', () => {
       expect(result.userId).toBe('user123');
       expect(result.githubAccessToken).toBe('[REDACTED]');
       expect(result.githubRefreshToken).toBe('[REDACTED]');
-      expect(result.profile.name).toBe('Test User');
+      expect(result.profile.name).toBe('[REDACTED]'); // Now redacted as PII
       expect(result.profile.apiKey).toBe('[REDACTED]');
       expect(result.profile.settings.secret).toBe('[REDACTED]');
       expect(result.profile.settings.theme).toBe('dark');
       expect(result.sessions[0].id).toBe('sess1');
       expect(result.sessions[0].sessionId).toBe('[REDACTED]');
       expect(result.sessions[0].active).toBe(true);
+    });
+
+    it('should redact PII fields', () => {
+      const input = {
+        email: 'user@example.com',
+        name: 'John Doe',
+        login: 'johndoe',
+        username: 'johndoe123',
+        firstName: 'John',
+        first_name: 'John',
+        lastName: 'Doe',
+        last_name: 'Doe',
+        fullName: 'John Doe',
+        full_name: 'John Doe',
+        phoneNumber: '555-1234',
+        phone_number: '555-1234',
+        userId: 'user123', // Should NOT be redacted
+      };
+
+      const result = redactSensitiveData(input);
+
+      expect(result.email).toBe('[REDACTED]');
+      expect(result.name).toBe('[REDACTED]');
+      expect(result.login).toBe('[REDACTED]');
+      expect(result.username).toBe('[REDACTED]');
+      expect(result.firstName).toBe('[REDACTED]');
+      expect(result.first_name).toBe('[REDACTED]');
+      expect(result.lastName).toBe('[REDACTED]');
+      expect(result.last_name).toBe('[REDACTED]');
+      expect(result.fullName).toBe('[REDACTED]');
+      expect(result.full_name).toBe('[REDACTED]');
+      expect(result.phoneNumber).toBe('[REDACTED]');
+      expect(result.phone_number).toBe('[REDACTED]');
+      expect(result.userId).toBe('user123'); // Preserved
+    });
+
+    it('should redact address fields', () => {
+      const input = {
+        address: '123 Main St',
+        street: 'Main St',
+        city: 'Springfield',
+        zipCode: '12345',
+        zip_code: '12345',
+        postalCode: '12345',
+        postal_code: '12345',
+      };
+
+      const result = redactSensitiveData(input);
+
+      expect(result.address).toBe('[REDACTED]');
+      expect(result.street).toBe('[REDACTED]');
+      expect(result.city).toBe('[REDACTED]');
+      expect(result.zipCode).toBe('[REDACTED]');
+      expect(result.zip_code).toBe('[REDACTED]');
+      expect(result.postalCode).toBe('[REDACTED]');
+      expect(result.postal_code).toBe('[REDACTED]');
+    });
+
+    it('should redact encryption and key fields', () => {
+      const input = {
+        privateKey: 'private-key-data',
+        private_key: 'private-key-data',
+        publicKey: 'public-key-data',
+        public_key: 'public-key-data',
+        encryptionKey: 'encryption-key',
+        encryption_key: 'encryption-key',
+        clientSecret: 'client-secret',
+        client_secret: 'client-secret',
+      };
+
+      const result = redactSensitiveData(input);
+
+      expect(result.privateKey).toBe('[REDACTED]');
+      expect(result.private_key).toBe('[REDACTED]');
+      expect(result.publicKey).toBe('[REDACTED]');
+      expect(result.public_key).toBe('[REDACTED]');
+      expect(result.encryptionKey).toBe('[REDACTED]');
+      expect(result.encryption_key).toBe('[REDACTED]');
+      expect(result.clientSecret).toBe('[REDACTED]');
+      expect(result.client_secret).toBe('[REDACTED]');
+    });
+
+    it('should handle nested PII in GitHub user objects', () => {
+      const input = {
+        githubUser: {
+          id: 12345,
+          login: 'johndoe',
+          name: 'John Doe',
+          email: 'john@example.com',
+          avatarUrl: 'https://avatar.url',
+        },
+        token: 'secret-token',
+      };
+
+      const result = redactSensitiveData(input);
+
+      expect(result.githubUser.id).toBe(12345);
+      expect(result.githubUser.login).toBe('[REDACTED]');
+      expect(result.githubUser.name).toBe('[REDACTED]');
+      expect(result.githubUser.email).toBe('[REDACTED]');
+      expect(result.githubUser.avatarUrl).toBe('https://avatar.url');
+      expect(result.token).toBe('[REDACTED]');
     });
   });
 });

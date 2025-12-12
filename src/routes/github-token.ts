@@ -18,6 +18,8 @@ import { authenticateService, logServiceAccess } from '../services/service-regis
 import { decryptGitHubToken, encryptGitHubToken } from '../utils/encryption';
 import { refreshAccessToken, isTokenExpiringSoon, calculateTokenExpiration } from '../services/github-oauth';
 import { config } from '../config';
+import { githubTokenRateLimiter } from '../middleware/rate-limit';
+import { validateBody, schemas } from '../middleware/validation';
 
 const router = Router();
 
@@ -62,10 +64,6 @@ function extractServiceCredentials(req: Request): {
  * POST /api/github-token
  * Retrieve a user's GitHub access token for authorized services
  * 
- * NOTE: This endpoint does not implement rate limiting. For production deployments,
- * consider implementing rate limiting per service (e.g., 1000 requests/hour) to prevent
- * abuse. See docs/service-registry.md for recommendations.
- * 
  * Request headers:
  * - Authorization: Bearer <serviceIdentifier>:<apiKey> or Basic <base64(serviceIdentifier:apiKey)>
  * 
@@ -78,7 +76,7 @@ function extractServiceCredentials(req: Request): {
  * - expiresAt: Token expiration timestamp (ISO 8601)
  * - user: User information (id, githubUserId, isWhitelisted)
  */
-router.post('/github-token', async (req: Request, res: Response) => {
+router.post('/github-token', githubTokenRateLimiter, validateBody(schemas.githubTokenRequest), async (req: Request, res: Response) => {
   const startTime = Date.now();
   
   try {
