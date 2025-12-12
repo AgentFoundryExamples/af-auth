@@ -258,11 +258,83 @@ gcloud sql instances describe ${SERVICE_NAME}-db \
   --format='value(connectionName)'
 ```
 
+## Redis Setup (Cloud Memorystore)
+
+Redis is **required** for production multi-instance deployments to store OAuth state tokens across instances.
+
+### 1. Create Redis Instance
+
+```bash
+# Create a basic Redis instance (production should use higher tier)
+gcloud redis instances create ${SERVICE_NAME}-redis \
+  --size=1 \
+  --region=${REGION} \
+  --redis-version=redis_7_0 \
+  --tier=basic
+
+# For production, use standard tier with high availability
+gcloud redis instances create ${SERVICE_NAME}-redis \
+  --size=1 \
+  --region=${REGION} \
+  --redis-version=redis_7_0 \
+  --tier=standard \
+  --replica-count=1
+
+# Get Redis instance details
+gcloud redis instances describe ${SERVICE_NAME}-redis \
+  --region=${REGION}
+
+# Note the host IP and port (default 6379)
+export REDIS_HOST=$(gcloud redis instances describe ${SERVICE_NAME}-redis \
+  --region=${REGION} \
+  --format='value(host)')
+export REDIS_PORT=$(gcloud redis instances describe ${SERVICE_NAME}-redis \
+  --region=${REGION} \
+  --format='value(port)')
+
+echo "Redis Host: ${REDIS_HOST}"
+echo "Redis Port: ${REDIS_PORT}"
+```
+
+### 2. Create VPC Connector
+
+Cloud Run needs a VPC connector to access Memorystore (Redis):
+
+```bash
+# Create VPC connector
+gcloud compute networks vpc-access connectors create ${SERVICE_NAME}-connector \
+  --region=${REGION} \
+  --network=default \
+  --range=10.8.0.0/28
+
+# Verify connector is ready
+gcloud compute networks vpc-access connectors describe ${SERVICE_NAME}-connector \
+  --region=${REGION}
+```
+
+### 3. Configure Redis Auth (Optional but Recommended)
+
+```bash
+# Enable AUTH for Redis instance
+gcloud redis instances update ${SERVICE_NAME}-redis \
+  --region=${REGION} \
+  --auth-enabled
+
+# Get AUTH string
+export REDIS_PASSWORD=$(gcloud redis instances get-auth-string ${SERVICE_NAME}-redis \
+  --region=${REGION} \
+  --format='value(authString)')
+
+# Store in Secret Manager
+echo -n "${REDIS_PASSWORD}" | \
+  gcloud secrets create redis-password --data-file=-
+```
+
 ## Secret Manager Configuration
 
 ### 1. Create Required Secrets
 
-AF Auth requires the following secrets. **Note**: JWT keys and GitHub token encryption key must be base64-encoded.
+AF Auth requires the following secrets. **Note**: JWT keys, GitHub App private key, and GitHub token encryption key must be base64-encoded.
 
 ```bash
 # Database URL with SSL enabled for production
@@ -271,6 +343,18 @@ AF Auth requires the following secrets. **Note**: JWT keys and GitHub token encr
 # Example for password auth: postgresql://USER:PASSWORD@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=require
 echo -n "postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=require" | \
   gcloud secrets create database-url --data-file=-
+
+# GitHub App ID
+echo -n "123456" | \
+  gcloud secrets create github-app-id --data-file=-
+
+# GitHub Installation ID
+echo -n "12345678" | \
+  gcloud secrets create github-installation-id --data-file=-
+
+# GitHub App Private Key (base64-encoded)
+base64 -w 0 < /path/to/your-app.private-key.pem | \
+  gcloud secrets create github-app-private-key --data-file=-
 
 # GitHub OAuth Client ID
 echo -n "your_github_client_id" | \
@@ -395,7 +479,7 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
 
 ### 1. Initial Deployment
 
-Deploy the service with all configuration:
+Deploy the service with all configuration including Redis:
 
 ```bash
 gcloud run deploy ${SERVICE_NAME} \
@@ -408,14 +492,22 @@ gcloud run deploy ${SERVICE_NAME} \
   --set-env-vars="BASE_URL=https://${SERVICE_NAME}-PROJECT_HASH-${REGION}.a.run.app" \
   --set-env-vars="GITHUB_CALLBACK_URL=https://${SERVICE_NAME}-PROJECT_HASH-${REGION}.a.run.app/auth/github/callback" \
   --set-env-vars="JWT_EXPIRES_IN=30d,JWT_ISSUER=https://${SERVICE_NAME}-PROJECT_HASH-${REGION}.a.run.app" \
+  --set-env-vars="REDIS_HOST=${REDIS_HOST},REDIS_PORT=${REDIS_PORT},REDIS_DB=0" \
+  --set-env-vars="REDIS_STATE_TTL_SECONDS=600" \
   --set-secrets="DATABASE_URL=database-url:latest" \
+  --set-secrets="GITHUB_APP_ID=github-app-id:latest" \
+  --set-secrets="GITHUB_INSTALLATION_ID=github-installation-id:latest" \
+  --set-secrets="GITHUB_APP_PRIVATE_KEY=github-app-private-key:latest" \
   --set-secrets="GITHUB_CLIENT_ID=github-client-id:latest" \
   --set-secrets="GITHUB_CLIENT_SECRET=github-client-secret:latest" \
+  --set-secrets="GITHUB_TOKEN_ENCRYPTION_KEY=github-token-encryption-key:latest" \
   --set-secrets="SESSION_SECRET=session-secret:latest" \
-  --update-secrets=/app/.keys/jwt-private.pem=jwt-private-key:latest \
-  --update-secrets=/app/.keys/jwt-public.pem=jwt-public-key:latest \
+  --set-secrets="REDIS_PASSWORD=redis-password:latest" \
+  --set-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest" \
+  --set-secrets="JWT_PUBLIC_KEY=jwt-public-key:latest" \
   --add-cloudsql-instances=${PROJECT_ID}:${REGION}:${SERVICE_NAME}-db \
-  --min-instances=0 \
+  --vpc-connector=${SERVICE_NAME}-connector \
+  --min-instances=1 \
   --max-instances=10 \
   --memory=512Mi \
   --cpu=1 \
@@ -424,7 +516,11 @@ gcloud run deploy ${SERVICE_NAME} \
   --port=3000
 ```
 
-**Note**: After first deployment, get the actual service URL and update `BASE_URL` and `GITHUB_CALLBACK_URL` with the correct domain.
+**Important Notes**:
+- `--vpc-connector` is required for Cloud Run to access Memorystore (Redis)
+- `--min-instances=1` is recommended to keep Redis connection warm
+- After first deployment, get the actual service URL and update `BASE_URL` and `GITHUB_CALLBACK_URL`
+- Update GitHub App callback URL in GitHub settings to match the actual Cloud Run URL
 
 ### 2. Get Service URL
 
