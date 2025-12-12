@@ -10,7 +10,7 @@
 ### Core Authentication
 - 🔐 **GitHub OAuth 2.0** - Complete OAuth flow with state-based CSRF protection and one-time use validation
 - 👥 **Whitelist-Based Access** - Default-deny security model with database-backed whitelist
-- 🎟️ **JWT Token System** - RS256-signed tokens with 30-day validity and refresh flow
+- 🎟️ **JWT Token System** - RS256-signed tokens with configurable expiration (default 30 days) and refresh flow
 - 🔄 **Token Refresh** - `POST /api/token` endpoint for refreshing expired JWTs
 - 🔑 **Public Key Distribution** - JWKS endpoint (`GET /api/jwks`) for downstream JWT verification
 
@@ -22,8 +22,10 @@
 
 ### Infrastructure
 - 🗄️ **PostgreSQL Database** - Prisma ORM with idempotent migrations and connection resilience
+- 🔴 **Redis Integration** - Distributed OAuth state storage for multi-instance deployments
 - 📝 **Structured Logging** - Pino logger with automatic sensitive data redaction
-- ✅ **Health Checks** - Kubernetes/Cloud Run compatible endpoints (`/health`, `/ready`, `/live`)
+- 📊 **Prometheus Metrics** - Comprehensive metrics for monitoring OAuth, JWT, rate limits, and performance
+- ✅ **Health Checks** - Kubernetes/Cloud Run compatible endpoints (`/health`, `/ready`, `/live`) with component status
 - 🚀 **Cloud Run Ready** - Complete deployment guide with Secret Manager and VPC networking
 - 🎨 **SSR Pages** - React-based server-side rendered authentication pages
 - 🧪 **Comprehensive Testing** - 104+ tests covering OAuth, JWT, service registry, and more
@@ -31,8 +33,11 @@
 ### Security
 - 🔒 **Secret Management** - Google Secret Manager integration with zero-downtime rotation
 - 🔐 **RS256 JWT Signing** - Asymmetric cryptography with private key protection
+- 🔑 **Key Rotation Tracking** - Automated monitoring and warnings for overdue key rotations (JWT, encryption, service API keys)
+- 🛡️ **Security Headers** - Comprehensive HTTP security headers (CSP, HSTS, X-Frame-Options, etc.)
 - 📋 **Security Documentation** - Complete guides for secret rotation, JWT verification, and incident response
-- 🛡️ **Encryption** - TLS in transit, AES-256 at rest, bcrypt for API keys
+- 🛡️ **Encryption** - TLS in transit, AES-256-GCM for GitHub tokens, bcrypt for API keys
+- 🚦 **Rate Limiting** - Redis-backed rate limiting for authentication and API endpoints
 
 ## Quick Start
 
@@ -282,9 +287,10 @@ sequenceDiagram
 - `POST /api/github-token` - Get user GitHub token (authenticated services only)
 
 ### Health & Monitoring
-- `GET /health` - Health check with database status
-- `GET /ready` - Readiness probe for orchestrators
+- `GET /health` - Health check with database, Redis, encryption, and metrics status
+- `GET /ready` - Readiness probe for orchestrators (includes metrics validation when enabled)
 - `GET /live` - Liveness probe for orchestrators
+- `GET /metrics` - Prometheus metrics endpoint (protected by bearer token)
 
 **Complete API Reference**: See [docs/api.md](./docs/api.md)
 
@@ -310,6 +316,11 @@ See [.env.example](./.env.example) for all available configuration options.
 | `BASE_URL` | `http://localhost:3000` | Base URL of the service |
 | `LOG_LEVEL` | `info` | Logging level |
 | `LOG_PRETTY` | `true` in dev | Pretty print logs |
+| `JWT_EXPIRES_IN` | `30d` | JWT expiration time (format: number+unit, e.g., 30d, 7d, 24h, 60m) |
+| `REDIS_HOST` | - | Redis host for multi-instance deployments |
+| `REDIS_PORT` | `6379` | Redis port |
+| `METRICS_ENABLED` | `true` | Enable Prometheus metrics collection |
+| `METRICS_AUTH_TOKEN` | - | Bearer token for metrics endpoint (recommended for production) |
 | `ADMIN_CONTACT_EMAIL` | `admin@example.com` | Admin email for access requests |
 | `ADMIN_CONTACT_NAME` | `Administrator` | Admin name display |
 
@@ -408,19 +419,25 @@ AF Auth implements comprehensive security controls across multiple layers. See t
 ### Key Security Features
 
 - **Secret Management**: All secrets stored in Google Secret Manager with versioning and rotation support
-- **JWT Authentication**: RS256-signed tokens with 30-day validity and public key distribution
+- **JWT Authentication**: RS256-signed tokens with configurable expiration (default 30 days) and public key distribution
+- **Key Rotation Tracking**: Automated monitoring with warnings for overdue JWT, encryption, and service API key rotations
+- **GitHub Token Encryption**: AES-256-GCM authenticated encryption for GitHub tokens at rest
+- **Security Headers**: Comprehensive HTTP security headers including CSP, HSTS, and X-Frame-Options
+- **Rate Limiting**: Redis-backed distributed rate limiting to prevent brute force and abuse
 - **Audit Logging**: Comprehensive audit trail with automatic sensitive data redaction
 - **IAM Integration**: Cloud IAM for database and secret access
 - **Whitelist-Based Access**: Default-deny access model with explicit user approval
-- **Encryption**: Data encrypted in transit (TLS) and at rest (AES-256)
+- **Encryption**: Data encrypted in transit (TLS) and at rest (AES-256-GCM)
 
 ### Security Best Practices
 
-1. **Secret Rotation**: Rotate secrets regularly (GitHub OAuth: 90 days, Session: 60 days, JWT keys: 180 days)
-2. **Least Privilege**: Grant minimal required IAM permissions
-3. **Network Isolation**: Use VPC connectors for private database access
-4. **Monitoring**: Enable alerts for failed authentication attempts and unauthorized access
-5. **Incident Response**: Follow documented playbooks for security incidents
+1. **Secret Rotation**: Rotate secrets regularly (GitHub OAuth: 90 days, Session: 60 days, JWT keys: 180 days, GitHub token encryption: 90 days)
+2. **Key Rotation Monitoring**: Use `npm run check-key-rotation` to monitor rotation status and receive automated warnings
+3. **Least Privilege**: Grant minimal required IAM permissions
+4. **Network Isolation**: Use VPC connectors for private database access
+5. **Monitoring**: Enable alerts for failed authentication attempts and unauthorized access
+6. **Rate Limiting**: Configure appropriate rate limits for your traffic patterns
+7. **Incident Response**: Follow documented playbooks for security incidents
 
 ### Verifying JWTs in Downstream Services
 
@@ -457,19 +474,23 @@ See [Security Guide](./docs/security.md) for verification examples in Python, Go
 - **Backups**: Encrypted with same keys as primary instance
 - **Audit Logs**: Retained for 90 days with queryable structured format
 
-### Known Security Limitations
+### Production Deployment Considerations
 
-**For Development/Single-Instance Only**:
-- OAuth state storage uses in-memory Map (not multi-instance safe)
-- No rate limiting on authentication endpoints
-- Tokens stored in plaintext in database
+**✅ Production-Ready Features**:
+- ✅ Redis-based OAuth state storage (multi-instance safe)
+- ✅ Rate limiting on authentication and API endpoints
+- ✅ GitHub tokens encrypted at rest with AES-256-GCM
+- ✅ Prometheus metrics for monitoring and alerting
+- ✅ Comprehensive health checks with component status
+- ✅ Key rotation tracking and automated warnings
 
-**Production Requirements**:
-- For `max-instances > 1`: Implement Redis-based OAuth state storage
-- Add rate limiting middleware (express-rate-limit)
-- Consider encrypting GitHub tokens at rest
+**Deployment Requirements**:
+- **Redis**: Required for multi-instance deployments (Cloud Run autoscaling, Kubernetes)
+- **Metrics**: Enable `METRICS_ENABLED=true` and configure `METRICS_AUTH_TOKEN` for production observability
+- **Security Headers**: Verify CSP and HSTS configurations for your OAuth callback URLs
+- **Key Rotation**: Schedule regular checks with `npm run check-key-rotation` and configure rotation intervals
 
-See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#production-deployment-considerations) for detailed solutions.
+See [Security Guide](./docs/security.md) and [Operations Guide](./docs/operations.md) for detailed operational procedures.
 
 ## Roadmap
 
@@ -478,12 +499,19 @@ See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#pr
 - [x] GitHub OAuth 2.0 flow implementation
 - [x] Server-side rendered authentication pages
 - [x] CSRF protection with state validation
+- [x] Redis-based OAuth state storage (multi-instance support)
 - [x] Whitelist-based access control
 - [x] JWT token generation and validation (RS256)
+- [x] Configurable JWT expiration (JWT_EXPIRES_IN)
 - [x] Token refresh flow (`POST /api/token`)
 - [x] Public key distribution (`GET /api/jwks`)
 - [x] Service Registry API for downstream services
 - [x] Service authentication with bcrypt-hashed API keys
+- [x] Rate limiting on authentication and API endpoints (Redis-backed)
+- [x] GitHub token encryption at rest (AES-256-GCM)
+- [x] Prometheus metrics and monitoring
+- [x] Key rotation tracking and automated warnings
+- [x] HTTP security headers (CSP, HSTS, X-Frame-Options)
 - [x] Comprehensive audit logging
 - [x] Cloud Run deployment guide
 - [x] Security documentation (secret rotation, JWT verification)
@@ -491,21 +519,18 @@ See [GitHub App Setup - Production Considerations](./docs/github-app-setup.md#pr
 - [x] Management CLI for service registry
 - [x] Comprehensive testing (104+ tests)
 - [x] Database migrations with Prisma
-- [x] Health check endpoints
+- [x] Health check endpoints with component status
 
 ### 🚧 Planned (v1.2.0 - Q1 2026)
 
-- [ ] Redis-based OAuth state storage (multi-instance support)
-- [ ] Rate limiting on authentication and API endpoints
 - [ ] Admin UI for user and service management
 - [ ] Whitelist management CLI tool
+- [ ] Enhanced monitoring dashboards with Grafana templates
 
 ### 🔮 Future Iterations
 
-- [ ] Token encryption at rest
 - [ ] OpenAPI/Swagger documentation
 - [ ] Multi-factor authentication (MFA)
-- [ ] Prometheus metrics and Grafana dashboards
 - [ ] Additional OAuth providers (Google, Microsoft)
 - [ ] CI/CD pipeline with GitHub Actions
 

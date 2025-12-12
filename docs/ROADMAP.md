@@ -15,13 +15,13 @@ This document outlines the completed features, current capabilities, and planned
 
 **Release Date**: December 12, 2025
 
-AF Auth is a production-ready authentication service suitable for **single-instance deployments** with comprehensive OAuth, JWT, and service registry capabilities. The system provides enterprise-grade security features including secret rotation, audit logging, and deployment automation.
+AF Auth is a production-ready authentication service suitable for **multi-instance deployments** with comprehensive OAuth, JWT, and service registry capabilities. The system provides enterprise-grade security features including secret rotation, audit logging, key rotation tracking, and deployment automation.
 
 ### Deployment Readiness
 
+- ✅ **Multi-Instance Production**: Ready for Cloud Run deployments with autoscaling (Redis-based state storage)
 - ✅ **Single-Instance Production**: Ready for Cloud Run deployments with `max-instances=1`
 - ✅ **Development & Testing**: Full local development support with Docker Compose
-- ⚠️ **Multi-Instance Production**: Requires Redis-based state storage upgrade (see [Planned Features](#planned-features))
 
 ### Documentation Status
 
@@ -57,12 +57,13 @@ AF Auth is a production-ready authentication service suitable for **single-insta
 
 #### Token Generation & Validation
 - [x] RS256-signed JWT tokens (asymmetric cryptography)
-- [x] 30-day token validity period
-- [x] Standard claims: `sub`, `iss`, `aud`, `iat`, `exp`
-- [x] Custom claims: `githubId`, `isWhitelisted`
+- [x] Configurable token validity period (JWT_EXPIRES_IN: 30d default, supports s/m/h/d units)
+- [x] Standard claims: `sub`, `iss`, `aud`, `iat`, `exp`, `jti`
+- [x] Custom claims: `githubId`
 - [x] RSA key pair generation and management
 - [x] Private key security (excluded from version control)
 - [x] Token generation on successful authentication
+- [x] Token revocation support via JTI tracking
 
 #### Token Refresh
 - [x] `POST /api/token` refresh endpoint
@@ -94,8 +95,10 @@ AF Auth is a production-ready authentication service suitable for **single-insta
 - [x] `POST /api/github-token` endpoint for authenticated services
 - [x] User lookup by UUID or GitHub ID
 - [x] Whitelist validation before token access
+- [x] GitHub token encryption at rest with AES-256-GCM
+- [x] Automatic token refresh when expiring soon
 - [x] Comprehensive error responses
-- [x] Rate limiting per service (planned for v1.2)
+- [x] Rate limiting per service (Redis-backed)
 
 #### Audit Logging
 - [x] Complete access logging without exposing tokens
@@ -169,23 +172,41 @@ AF Auth is a production-ready authentication service suitable for **single-insta
 #### Secret Management
 - [x] Google Secret Manager integration
 - [x] Zero-downtime secret rotation procedures
-- [x] Rotation schedules documented (GitHub: 90d, Session: 60d, JWT: 180d, DB: 90d)
+- [x] Rotation schedules documented (GitHub: 90d, Session: 60d, JWT: 180d, DB: 90d, GitHub token encryption: 90d)
+- [x] Key rotation tracking system with automated warnings
+- [x] Rotation status checker CLI (`npm run check-key-rotation`)
+- [x] Service API key rotation tracking
 - [x] Version control for secrets
 - [x] No secrets in code or configuration files
 - [x] Environment variable injection
 
 #### Encryption & Hashing
 - [x] TLS for data in transit
+- [x] AES-256-GCM for GitHub tokens at rest (authenticated encryption)
 - [x] AES-256 for data at rest (Cloud SQL)
 - [x] Bcrypt for API key hashing (12 rounds)
 - [x] RS256 for JWT signing
 - [x] Encrypted database backups
 
+#### Security Headers & Protection
+- [x] Comprehensive HTTP security headers via Helmet
+- [x] Content-Security-Policy (CSP) with configurable directives
+- [x] HTTP Strict Transport Security (HSTS) for production
+- [x] X-Frame-Options to prevent clickjacking
+- [x] X-Content-Type-Options to prevent MIME sniffing
+- [x] Referrer-Policy control
+- [x] Permissions-Policy for browser features
+- [x] Rate limiting on authentication and API endpoints (Redis-backed)
+- [x] Prototype pollution protection
+- [x] Input validation with Zod schemas
+
 #### Security Documentation
 - [x] Security guide with best practices
 - [x] JWT verification examples for downstream services
+- [x] Key rotation tracking and monitoring procedures
+- [x] GitHub token encryption and migration guide
+- [x] Token revocation procedures
 - [x] Incident response playbooks
-- [x] Known security limitations documented
 - [x] Production security considerations
 - [x] Compliance guidance
 
@@ -211,32 +232,11 @@ AF Auth is a production-ready authentication service suitable for **single-insta
 
 ## In Progress
 
-Currently, there are no features actively in development. The v1.1.0 release represents a stable, feature-complete authentication service for single-instance deployments.
+Currently, there are no features actively in development. The v1.1.0 release represents a stable, feature-complete authentication service for both single-instance and multi-instance deployments.
 
 ## Planned Features
 
 ### High Priority (v1.2.0 - Q1 2026)
-
-#### Multi-Instance Support
-- [ ] **Redis-based OAuth State Storage**: Replace in-memory Map with Redis for horizontal scaling
-  - Shared state across Cloud Run instances
-  - Automatic state expiration via Redis TTL
-  - Connection pooling and retry logic
-  - Migration guide from single-instance
-- [ ] **Distributed Session Management**: Redis-backed sessions for load-balanced deployments
-- [ ] **Deployment Guide Updates**: Multi-instance deployment instructions
-- [ ] **Testing**: Multi-instance integration tests
-
-#### Rate Limiting
-- [ ] **Authentication Endpoint Rate Limiting**: Prevent brute force attacks
-  - Per-IP rate limiting on `/auth/github/callback`
-  - Configurable limits (e.g., 5 attempts per minute)
-  - Rate limit headers in responses
-- [ ] **API Rate Limiting**: Service registry and token access throttling
-  - Per-service rate limits
-  - Configurable limits per service type
-  - Rate limit tracking in audit logs
-- [ ] **Rate Limit Documentation**: Configuration and monitoring guide
 
 #### Admin UI
 - [ ] **Web-Based Admin Dashboard**: Manage users and services without SQL/CLI
@@ -262,15 +262,6 @@ Currently, there are no features actively in development. The v1.1.0 release rep
   - Email domain matching
   - GitHub team membership
 
-#### Token Encryption at Rest
-- [ ] **Application-Layer Encryption**: Encrypt GitHub tokens before database storage
-  - AES-256-GCM encryption
-  - Key management via Secret Manager
-  - Automatic encryption/decryption in ORM layer
-  - Key rotation procedures
-- [ ] **Migration Script**: Encrypt existing plaintext tokens
-- [ ] **Documentation**: Encryption architecture and key management
-
 #### OpenAPI/Swagger Documentation
 - [ ] **OpenAPI 3.0 Specification**: Complete API definition
   - Endpoint documentation with schemas
@@ -294,16 +285,12 @@ Currently, there are no features actively in development. The v1.1.0 release rep
 - [ ] **Recovery Workflows**: Account recovery with MFA
 
 #### Enhanced Monitoring & Metrics
-- [ ] **Prometheus Metrics**: Expose service metrics for monitoring
-  - Authentication attempts (success/failure)
-  - Token generation and refresh rates
-  - Database connection pool metrics
-  - API endpoint latency histograms
-- [ ] **Grafana Dashboards**: Pre-built dashboards for visualization
-- [ ] **Alerting**: Configurable alerts for anomalies
+- [ ] **Grafana Dashboards**: Pre-built dashboard templates for visualization
+- [ ] **Enhanced Alerting**: Additional alert rule examples
   - Failed authentication spikes
   - Database connection failures
   - API error rate increases
+  - Key rotation overdue alerts
 
 #### Additional OAuth Providers
 - [ ] **Google OAuth**: Support for Google account authentication
