@@ -16,6 +16,7 @@ import { getRedisClient, isRedisConnected } from './redis-client';
 import { config } from '../config';
 import logger from '../utils/logger';
 import jwt from 'jsonwebtoken';
+import { areMetricsEnabled, getRegistry } from './metrics';
 
 /**
  * Health status for individual components
@@ -48,6 +49,7 @@ export interface HealthCheckResult {
     redis: ComponentHealth;
     encryption: ComponentHealth;
     githubApp: ComponentHealth;
+    metrics?: ComponentHealth;
   };
 }
 
@@ -224,6 +226,86 @@ export async function checkEncryptionHealth(): Promise<ComponentHealth> {
 }
 
 /**
+ * Check Prometheus metrics system health
+ * Verifies registry initialization and ability to collect/export metrics
+ */
+export async function checkMetricsHealth(): Promise<ComponentHealth> {
+  try {
+    // If metrics are disabled, this is an expected state
+    if (!config.metrics.enabled) {
+      logger.debug('Metrics are disabled via configuration');
+      return {
+        status: HealthStatus.HEALTHY,
+        message: 'Metrics disabled',
+        details: {
+          enabled: false,
+        },
+      };
+    }
+
+    // Check if metrics are initialized and registry exists
+    const registry = getRegistry();
+    if (!registry || !areMetricsEnabled()) {
+      logger.error('Metrics registry not initialized despite being enabled');
+      return {
+        status: HealthStatus.UNHEALTHY,
+        message: 'Metrics registry not initialized',
+        details: {
+          enabled: config.metrics.enabled,
+          registryInitialized: false,
+        },
+      };
+    }
+
+    // Test ability to collect metrics by getting current metrics output
+    try {
+      const metricsOutput = await registry.metrics();
+      
+      // Verify we got some output (should at least have default metrics if enabled)
+      if (!metricsOutput || metricsOutput.length === 0) {
+        logger.warn('Metrics registry returned empty output');
+        return {
+          status: HealthStatus.DEGRADED,
+          message: 'Metrics registry returned no data',
+          details: {
+            enabled: true,
+            registryInitialized: true,
+            metricsOutputEmpty: true,
+          },
+        };
+      }
+
+      logger.debug({ metricsSize: metricsOutput.length }, 'Metrics health check successful');
+      return {
+        status: HealthStatus.HEALTHY,
+        details: {
+          enabled: true,
+          registryInitialized: true,
+          metricsSize: metricsOutput.length,
+        },
+      };
+    } catch (error) {
+      logger.error({ error }, 'Failed to retrieve metrics from registry');
+      return {
+        status: HealthStatus.UNHEALTHY,
+        message: 'Failed to retrieve metrics',
+        details: {
+          enabled: true,
+          registryInitialized: true,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+    }
+  } catch (error) {
+    logger.error({ error }, 'Metrics health check error');
+    return {
+      status: HealthStatus.UNHEALTHY,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * Check GitHub App token minting capability
  * Uses caching to avoid hammering GitHub API
  * 
@@ -333,15 +415,16 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   logger.debug('Starting comprehensive health check');
 
   // Run all health checks in parallel for efficiency
-  const [databaseHealth, redisHealth, encryptionHealth, githubAppHealth] = await Promise.all([
+  const [databaseHealth, redisHealth, encryptionHealth, githubAppHealth, metricsHealth] = await Promise.all([
     checkDatabaseHealth(),
     checkRedisHealth(),
     checkEncryptionHealth(),
     checkGithubAppHealth(),
+    checkMetricsHealth(),
   ]);
 
   // Determine overall status based on component health
-  const componentHealths = [databaseHealth, redisHealth, encryptionHealth, githubAppHealth];
+  const componentHealths = [databaseHealth, redisHealth, encryptionHealth, githubAppHealth, metricsHealth];
   const criticalHealths = [databaseHealth, redisHealth, encryptionHealth];
 
   let overallStatus = HealthStatus.HEALTHY;
@@ -350,9 +433,10 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   if (criticalHealths.some(h => h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.UNHEALTHY;
   }
-  // Otherwise, if any component is degraded or the non-critical GitHub App is unhealthy, the service is degraded
+  // Otherwise, if any component is degraded or the non-critical components (GitHub App, Metrics) are unhealthy, the service is degraded
   // GitHub App is not critical because the service can handle existing authenticated users and issue JWTs
   // even if GitHub App is down. Only new OAuth flows will fail.
+  // Metrics are not critical because the service can operate without observability, though it's not ideal for production.
   else if (componentHealths.some(h => h.status === HealthStatus.DEGRADED || h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.DEGRADED;
   }
@@ -367,6 +451,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
         redis: redisHealth.status,
         encryption: encryptionHealth.status,
         githubApp: githubAppHealth.status,
+        metrics: metricsHealth.status,
       },
     },
     'Health check completed'
@@ -382,6 +467,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
       redis: redisHealth,
       encryption: encryptionHealth,
       githubApp: githubAppHealth,
+      metrics: metricsHealth,
     },
   };
 }
@@ -389,22 +475,36 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 /**
  * Perform readiness check (for Cloud Run readiness probes)
  * Service is ready when critical components are healthy
+ * 
+ * NOTE: Metrics readiness is included when metrics are enabled. If metrics are disabled,
+ * this is logged as a warning but does not fail readiness. This allows deployments
+ * without metrics while ensuring observability in production environments.
  */
 export async function performReadinessCheck(): Promise<{
   ready: boolean;
   reason?: string;
   components: Record<string, HealthStatus>;
 }> {
-  const [databaseHealth, redisHealth, encryptionHealth] = await Promise.all([
+  const [databaseHealth, redisHealth, encryptionHealth, metricsHealth] = await Promise.all([
     checkDatabaseHealth(),
     checkRedisHealth(),
     checkEncryptionHealth(),
+    checkMetricsHealth(),
   ]);
 
-  const ready =
-    databaseHealth.status === HealthStatus.HEALTHY &&
-    redisHealth.status === HealthStatus.HEALTHY &&
-    encryptionHealth.status === HealthStatus.HEALTHY;
+  // Determine readiness based on critical components
+  // Metrics are critical only if enabled; if disabled, we skip the check
+  const criticalHealths = [databaseHealth, redisHealth, encryptionHealth];
+  
+  // Add metrics to critical checks only if enabled
+  if (config.metrics.enabled) {
+    criticalHealths.push(metricsHealth);
+  } else {
+    // Log warning if metrics are disabled to ensure visibility
+    logger.warn('Metrics are disabled - deployment will proceed without observability checks');
+  }
+
+  const ready = criticalHealths.every(h => h.status === HealthStatus.HEALTHY);
 
   let reason: string | undefined;
   if (!ready) {
@@ -412,6 +512,9 @@ export async function performReadinessCheck(): Promise<{
     if (databaseHealth.status !== HealthStatus.HEALTHY) unhealthyComponents.push('database');
     if (redisHealth.status !== HealthStatus.HEALTHY) unhealthyComponents.push('redis');
     if (encryptionHealth.status !== HealthStatus.HEALTHY) unhealthyComponents.push('encryption');
+    if (config.metrics.enabled && metricsHealth.status !== HealthStatus.HEALTHY) {
+      unhealthyComponents.push('metrics');
+    }
     
     reason = `Unhealthy components: ${unhealthyComponents.join(', ')}`;
     
@@ -422,6 +525,7 @@ export async function performReadinessCheck(): Promise<{
           database: databaseHealth.status,
           redis: redisHealth.status,
           encryption: encryptionHealth.status,
+          metrics: metricsHealth.status,
         },
       },
       'Readiness check failed'
@@ -435,6 +539,7 @@ export async function performReadinessCheck(): Promise<{
       database: databaseHealth.status,
       redis: redisHealth.status,
       encryption: encryptionHealth.status,
+      metrics: metricsHealth.status,
     },
   };
 }
