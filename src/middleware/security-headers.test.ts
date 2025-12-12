@@ -220,6 +220,26 @@ describe('Security Headers Middleware', () => {
 
       expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
     });
+
+    it('should default to DENY for invalid X-Frame-Options values', async () => {
+      process.env.X_FRAME_OPTIONS = 'INVALID_VALUE';
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      app = express();
+      app.use(createSecurityHeadersMiddleware());
+      app.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(app).get('/test').expect(200);
+
+      expect(response.headers['x-frame-options']).toBe('DENY');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid X_FRAME_OPTIONS value')
+      );
+      
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('X-Content-Type-Options', () => {

@@ -80,8 +80,10 @@ function getSecurityHeadersConfig(): SecurityHeadersConfig {
       enabled: process.env.CSP_ENABLED !== 'false', // Enabled by default
       directives: {
         defaultSrc: parseDirective('CSP_DEFAULT_SRC', ["'self'"]),
-        scriptSrc: parseDirective('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"]), // unsafe-inline needed for inline page scripts
-        styleSrc: parseDirective('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"]), // unsafe-inline needed for inline page styles
+        // unsafe-inline is required for React SSR pages that include inline scripts and styles
+        // TODO: Consider refactoring to use CSP nonces or external script/style files for better XSS protection
+        scriptSrc: parseDirective('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"]),
+        styleSrc: parseDirective('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"]),
         imgSrc: parseDirective('CSP_IMG_SRC', ["'self'", 'data:', 'https:']),
         connectSrc: parseDirective('CSP_CONNECT_SRC', ["'self'", githubDomain, 'https://github.com']),
         fontSrc: parseDirective('CSP_FONT_SRC', ["'self'", 'data:']),
@@ -100,7 +102,17 @@ function getSecurityHeadersConfig(): SecurityHeadersConfig {
       includeSubDomains: process.env.HSTS_INCLUDE_SUBDOMAINS !== 'false',
       preload: process.env.HSTS_PRELOAD === 'true',
     },
-    xFrameOptions: process.env.X_FRAME_OPTIONS || 'DENY',
+    xFrameOptions: (() => {
+      const value = (process.env.X_FRAME_OPTIONS || 'DENY').toUpperCase();
+      if (value !== 'DENY' && value !== 'SAMEORIGIN') {
+        console.warn(
+          `Invalid X_FRAME_OPTIONS value: "${process.env.X_FRAME_OPTIONS}". ` +
+          `Using default "DENY". Valid values are "DENY" or "SAMEORIGIN".`
+        );
+        return 'DENY';
+      }
+      return value;
+    })(),
     xContentTypeOptions: process.env.X_CONTENT_TYPE_OPTIONS !== 'false', // Enabled by default
     referrerPolicy: process.env.REFERRER_POLICY || 'strict-origin-when-cross-origin',
     permissionsPolicy: {
@@ -123,7 +135,8 @@ function buildPermissionsPolicyHeader(policy: SecurityHeadersConfig['permissions
     if (allowlist.length === 0) {
       directives.push(`${feature}=()`);
     } else {
-      const values = allowlist.map(v => v === 'self' ? 'self' : `"${v}"`).join(' ');
+      // 'self' should not be quoted in Permissions-Policy
+      const values = allowlist.map(v => (v === 'self' ? 'self' : `"${v}"`)).join(' ');
       directives.push(`${feature}=(${values})`);
     }
   });
