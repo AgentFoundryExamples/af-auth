@@ -349,7 +349,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   // If any critical component is unhealthy, the service is unhealthy
   if (criticalHealths.some(h => h.status === HealthStatus.UNHEALTHY)) {
     overallStatus = HealthStatus.UNHEALTHY;
-  } 
+  }
   // Otherwise, if any component is degraded or the non-critical GitHub App is unhealthy, the service is degraded
   // GitHub App is not critical because the service can handle existing authenticated users and issue JWTs
   // even if GitHub App is down. Only new OAuth flows will fail.
