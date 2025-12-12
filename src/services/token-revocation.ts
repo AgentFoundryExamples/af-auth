@@ -83,42 +83,43 @@ export async function revokeToken(
 }
 
 /**
- * Revoke all tokens for a specific user
- * This is useful when a user's access is completely revoked
- * Note: Only revokes tokens that are currently tracked in the system
- * @param userId - User ID whose tokens should be revoked
- * @param revokedBy - Identifier of who revoked the tokens
- * @param reason - Optional reason for revocation
+ * Revoke all tokens for a specific user by removing their whitelist status
+ * This effectively invalidates all current and future tokens for the user
+ * Note: This does NOT track individual tokens in the revoked_tokens table.
+ * Instead, it removes whitelist access, which is checked on every request.
+ * @param userId - User ID whose access should be revoked
+ * @param revokedBy - Identifier of who revoked the access
+ * @param _reason - Optional reason for revocation (not currently stored)
+ * @returns Success status (count is always 0 as individual tokens aren't tracked)
  */
 export async function revokeAllUserTokens(
   userId: string,
   revokedBy?: string,
   _reason?: string
-): Promise<{ success: boolean; count: number }> {
+): Promise<{ success: boolean; message: string }> {
   try {
-    // For future tokens, we rely on whitelist check in middleware
-    // This function is primarily for audit logging
-    logger.info(
-      { userId, revokedBy },
-      'User tokens marked for revocation via whitelist'
-    );
-    
-    // Update user whitelist status
+    // Update user whitelist status to revoke access
+    // All existing tokens will be rejected on next use due to whitelist check
     await prisma.user.update({
       where: { id: userId },
       data: { isWhitelisted: false },
     });
     
+    logger.info(
+      { userId, revokedBy },
+      'User access revoked via whitelist removal'
+    );
+    
     return {
       success: true,
-      count: 0, // Count would be number of active tokens if we tracked them
+      message: 'User access revoked. All tokens will be rejected on next use.',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error({ userId, errorMessage }, 'Error revoking user tokens');
+    logger.error({ userId, errorMessage }, 'Error revoking user access');
     return {
       success: false,
-      count: 0,
+      message: errorMessage,
     };
   }
 }

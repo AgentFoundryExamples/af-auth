@@ -183,6 +183,7 @@ describe('Token Revocation Service', () => {
       const result = await revokeAllUserTokens(userId, 'admin-user', 'Account suspended');
 
       expect(result.success).toBe(true);
+      expect(result.message).toContain('revoked');
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: userId },
         data: { isWhitelisted: false },
@@ -199,7 +200,7 @@ describe('Token Revocation Service', () => {
       const result = await revokeAllUserTokens(userId);
 
       expect(result.success).toBe(false);
-      expect(result.count).toBe(0);
+      expect(result.message).toBe('Database error');
     });
   });
 

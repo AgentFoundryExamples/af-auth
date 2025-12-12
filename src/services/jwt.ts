@@ -16,6 +16,7 @@ import { config } from '../config';
 import logger from '../utils/logger';
 import { prisma } from '../db';
 import type { StringValue } from 'ms';
+import { randomBytes } from 'crypto';
 
 /**
  * JWT Claims structure
@@ -150,8 +151,9 @@ export async function generateJWT(userId: string): Promise<string> {
     throw new Error('User not found');
   }
   
-  // Generate unique JTI for revocation tracking
-  const jti = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  // Generate unique JTI for revocation tracking using cryptographically secure random bytes
+  const randomPart = randomBytes(16).toString('hex');
+  const jti = `${user.id}-${Date.now()}-${randomPart}`;
   
   const claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'> = {
     sub: user.id,
