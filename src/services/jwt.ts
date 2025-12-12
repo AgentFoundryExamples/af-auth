@@ -16,6 +16,7 @@ import fs from 'fs';
 import { config } from '../config';
 import logger from '../utils/logger';
 import { prisma } from '../db';
+import type { StringValue } from 'ms';
 
 /**
  * JWT Claims structure
@@ -85,10 +86,12 @@ export function signJWT(claims: Omit<JWTClaims, 'iat' | 'exp' | 'iss' | 'aud'>):
     aud: config.jwt.audience,
   };
   
-  const token = jwt.sign(payload, privateKey, {
+  const options: jwt.SignOptions = {
     algorithm: 'RS256',
-    expiresIn: config.jwt.expiresIn,
-  });
+    expiresIn: config.jwt.expiresIn as StringValue,
+  };
+  
+  const token = jwt.sign(payload, privateKey, options);
   
   logger.debug(
     { sub: claims.sub, expiresIn: config.jwt.expiresIn },
