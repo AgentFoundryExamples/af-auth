@@ -15,6 +15,7 @@ import { Router, Request, Response } from 'express';
 import logger from '../utils/logger';
 import { prisma } from '../db';
 import { authenticateService, logServiceAccess } from '../services/service-registry';
+import { decryptGitHubToken } from '../utils/encryption';
 
 const router = Router();
 
@@ -237,9 +238,12 @@ router.post('/github-token', async (req: Request, res: Response) => {
       'GitHub token retrieved successfully'
     );
     
+    // Decrypt token before returning
+    const decryptedToken = await decryptGitHubToken(user.githubAccessToken);
+    
     // Return token and metadata
     return res.json({
-      token: user.githubAccessToken,
+      token: decryptedToken,
       expiresAt: user.githubTokenExpiresAt?.toISOString() || null,
       user: {
         id: user.id,

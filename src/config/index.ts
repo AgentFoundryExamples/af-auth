@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import dotenv from 'dotenv';
-import path from 'path';
 
 // Load environment variables from .env file
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: require('path').resolve(process.cwd(), '.env') });
 
 interface Config {
   env: string;
@@ -31,6 +30,13 @@ interface Config {
     connectionTimeout: number;
     maxRetries: number;
     retryDelay: number;
+    ssl: {
+      enabled: boolean;
+      rejectUnauthorized: boolean;
+      ca?: string;
+      cert?: string;
+      key?: string;
+    };
   };
   logging: {
     level: string;
@@ -40,14 +46,15 @@ interface Config {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
+    tokenEncryptionKey: string;
   };
   session: {
     secret: string;
     maxAge: number;
   };
   jwt: {
-    privateKeyPath: string;
-    publicKeyPath: string;
+    privateKey: string;
+    publicKey: string;
     expiresIn: string;
     issuer: string;
     audience: string;
@@ -105,6 +112,49 @@ function getOptionalBooleanEnv(key: string, defaultValue: boolean): boolean {
 }
 
 /**
+ * Validates that a string is a valid base64-encoded value
+ */
+function validateBase64(value: string, name: string): void {
+  try {
+    const decoded = Buffer.from(value, 'base64').toString('utf8');
+    if (!decoded || decoded.length === 0) {
+      throw new Error(`${name} appears to be empty after base64 decoding`);
+    }
+  } catch (error) {
+    throw new Error(`${name} must be a valid base64-encoded value`);
+  }
+}
+
+/**
+ * Validates that a string has minimum length
+ */
+function validateMinLength(value: string, name: string, minLength: number): void {
+  if (value.length < minLength) {
+    throw new Error(
+      `${name} must be at least ${minLength} characters long (current: ${value.length})`
+    );
+  }
+}
+
+/**
+ * Decodes a base64-encoded PEM key from environment variable
+ */
+function getBase64DecodedKey(key: string, name: string): string {
+  validateBase64(key, name);
+  const decoded = Buffer.from(key, 'base64').toString('utf8');
+  
+  // Validate it looks like a PEM key
+  if (!decoded.includes('-----BEGIN') || !decoded.includes('-----END')) {
+    throw new Error(
+      `${name} does not appear to be a valid PEM key after base64 decoding. ` +
+      `Expected PEM format with BEGIN and END markers.`
+    );
+  }
+  
+  return decoded;
+}
+
+/**
  * Centralized application configuration.
  * All configuration is loaded from environment variables with appropriate defaults.
  */
@@ -114,13 +164,50 @@ const port = getOptionalNumericEnv('PORT', 3000);
 const defaultBaseUrl = `http://localhost:${port}`;
 const baseUrl = getOptionalEnv('BASE_URL', defaultBaseUrl);
 
+// Validate and load JWT keys from environment variables
+// Keys must be base64-encoded PEM format for secure transmission via env vars
+const jwtPrivateKeyB64 = getRequiredEnv('JWT_PRIVATE_KEY');
+const jwtPublicKeyB64 = getRequiredEnv('JWT_PUBLIC_KEY');
+const jwtPrivateKey = getBase64DecodedKey(jwtPrivateKeyB64, 'JWT_PRIVATE_KEY');
+const jwtPublicKey = getBase64DecodedKey(jwtPublicKeyB64, 'JWT_PUBLIC_KEY');
+
+// Validate and load GitHub token encryption key
+const githubTokenEncryptionKey = getRequiredEnv('GITHUB_TOKEN_ENCRYPTION_KEY');
+validateMinLength(githubTokenEncryptionKey, 'GITHUB_TOKEN_ENCRYPTION_KEY', 32);
+
+// Database SSL configuration
+const dbSslEnabled = getOptionalBooleanEnv('DB_SSL_ENABLED', process.env.NODE_ENV === 'production');
+const dbSslRejectUnauthorized = getOptionalBooleanEnv('DB_SSL_REJECT_UNAUTHORIZED', true);
+const dbSslCa = process.env.DB_SSL_CA; // Optional CA certificate (base64-encoded)
+const dbSslCert = process.env.DB_SSL_CERT; // Optional client certificate (base64-encoded)
+const dbSslKey = process.env.DB_SSL_KEY; // Optional client key (base64-encoded)
+
+// Build database URL with SSL parameters if enabled
+let databaseUrl = getRequiredEnv('DATABASE_URL');
+if (dbSslEnabled) {
+  const url = new URL(databaseUrl);
+  
+  // Add SSL mode parameter
+  url.searchParams.set('sslmode', 'require');
+  
+  // Note: Prisma/PostgreSQL connection strings don't have a direct equivalent to 
+  // Node's rejectUnauthorized option. SSL certificate validation is controlled by:
+  // - sslmode=require: Requires SSL but doesn't verify certificates
+  // - sslmode=verify-ca: Requires SSL and verifies the CA
+  // - sslmode=verify-full: Requires SSL, verifies CA and hostname
+  // The rejectUnauthorized config is stored for potential future use with custom
+  // connection handlers or middleware.
+  
+  databaseUrl = url.toString();
+}
+
 export const config: Config = {
   env: getOptionalEnv('NODE_ENV', 'development'),
   port,
   host: getOptionalEnv('HOST', '0.0.0.0'),
   baseUrl,
   database: {
-    url: getRequiredEnv('DATABASE_URL'),
+    url: databaseUrl,
     pool: {
       min: getOptionalNumericEnv('DB_POOL_MIN', 2),
       max: getOptionalNumericEnv('DB_POOL_MAX', 10),
@@ -128,6 +215,13 @@ export const config: Config = {
     connectionTimeout: getOptionalNumericEnv('DB_CONNECTION_TIMEOUT_MS', 5000),
     maxRetries: getOptionalNumericEnv('DB_MAX_RETRIES', 3),
     retryDelay: getOptionalNumericEnv('DB_RETRY_DELAY_MS', 1000),
+    ssl: {
+      enabled: dbSslEnabled,
+      rejectUnauthorized: dbSslRejectUnauthorized,
+      ca: dbSslCa ? Buffer.from(dbSslCa, 'base64').toString('utf8') : undefined,
+      cert: dbSslCert ? Buffer.from(dbSslCert, 'base64').toString('utf8') : undefined,
+      key: dbSslKey ? Buffer.from(dbSslKey, 'base64').toString('utf8') : undefined,
+    },
   },
   logging: {
     level: getOptionalEnv('LOG_LEVEL', 'info'),
@@ -140,20 +234,15 @@ export const config: Config = {
       'GITHUB_CALLBACK_URL',
       `${baseUrl}/auth/github/callback`
     ),
+    tokenEncryptionKey: githubTokenEncryptionKey,
   },
   session: {
     secret: getRequiredEnv('SESSION_SECRET'),
     maxAge: getOptionalNumericEnv('SESSION_MAX_AGE_MS', 600000), // 10 minutes default
   },
   jwt: {
-    privateKeyPath: getOptionalEnv(
-      'JWT_PRIVATE_KEY_PATH',
-      path.resolve(__dirname, 'keys/jwt-private.pem')
-    ),
-    publicKeyPath: getOptionalEnv(
-      'JWT_PUBLIC_KEY_PATH',
-      path.resolve(__dirname, 'keys/jwt-public.pem')
-    ),
+    privateKey: jwtPrivateKey,
+    publicKey: jwtPublicKey,
     expiresIn: getOptionalEnv('JWT_EXPIRES_IN', '30d'), // 30 days as per requirements
     issuer: getOptionalEnv('JWT_ISSUER', baseUrl),
     audience: getOptionalEnv('JWT_AUDIENCE', baseUrl),

@@ -262,14 +262,14 @@ gcloud sql instances describe ${SERVICE_NAME}-db \
 
 ### 1. Create Required Secrets
 
-AF Auth requires the following secrets:
+AF Auth requires the following secrets. **Note**: JWT keys and GitHub token encryption key must be base64-encoded.
 
 ```bash
-# Database URL
-# Recommended: Use IAM database authentication. The user should be the service account email.
-# Example for IAM auth: postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable
-# Example for password auth: postgresql://USER:PASSWORD@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable
-echo -n "postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=disable" | \
+# Database URL with SSL enabled for production
+# Recommended: Use IAM database authentication with SSL
+# Example for IAM auth: postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=require
+# Example for password auth: postgresql://USER:PASSWORD@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=require
+echo -n "postgresql://af-auth-sa@project-id.iam.gserviceaccount.com@/af_auth?host=/cloudsql/PROJECT:REGION:INSTANCE&sslmode=require" | \
   gcloud secrets create database-url --data-file=-
 
 # GitHub OAuth Client ID
@@ -280,24 +280,50 @@ echo -n "your_github_client_id" | \
 echo -n "your_github_client_secret" | \
   gcloud secrets create github-client-secret --data-file=-
 
+# GitHub Token Encryption Key (NEW - for encrypting tokens in database)
+# Generate a strong 256-bit key
+openssl rand -hex 32 | \
+  gcloud secrets create github-token-encryption-key --data-file=-
+
 # Session Secret (for CSRF protection)
 openssl rand -hex 32 | \
   gcloud secrets create session-secret --data-file=-
 
-# JWT Private Key (if using file-based keys)
-cat src/config/keys/jwt-private.pem | \
+# JWT Keys - MUST be base64-encoded PEM format
+# Step 1: Generate RSA key pair if you don't have one
+openssl genpkey -algorithm RSA -out /tmp/jwt-private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -pubout -in /tmp/jwt-private.pem -out /tmp/jwt-public.pem
+
+# Step 2: Base64 encode and store in Secret Manager
+base64 -w 0 /tmp/jwt-private.pem | \
   gcloud secrets create jwt-private-key --data-file=-
 
-# JWT Public Key
-cat src/config/keys/jwt-public.pem | \
+base64 -w 0 /tmp/jwt-public.pem | \
   gcloud secrets create jwt-public-key --data-file=-
+
+# Step 3: Clean up temporary files
+rm /tmp/jwt-private.pem /tmp/jwt-public.pem
 ```
+
+**Security Note**: 
+- JWT private key is base64-encoded for environment variable transmission
+- GitHub tokens are encrypted at rest in the database using AES-256-GCM
+- Database connections use SSL/TLS by default in production
 
 ### 2. Verify Secrets
 
 ```bash
 gcloud secrets list
 ```
+
+Expected output should include:
+- database-url
+- github-client-id
+- github-client-secret
+- github-token-encryption-key (NEW)
+- session-secret
+- jwt-private-key
+- jwt-public-key
 
 ### 3. Secret Versioning
 
@@ -339,8 +365,8 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member="serviceAccount:${SA_EMAIL}" \
   --role="roles/secretmanager.secretAccessor"
 
-# OR grant per-secret permissions (more secure)
-for secret in database-url github-client-id github-client-secret session-secret jwt-private-key jwt-public-key; do
+# OR grant per-secret permissions (more secure - RECOMMENDED)
+for secret in database-url github-client-id github-client-secret github-token-encryption-key session-secret jwt-private-key jwt-public-key; do
   gcloud secrets add-iam-policy-binding ${secret} \
     --member="serviceAccount:${SA_EMAIL}" \
     --role="roles/secretmanager.secretAccessor"
@@ -467,7 +493,7 @@ curl ${SERVICE_URL}/health
 ### Environment Variables vs Secrets
 
 - **Environment Variables**: Non-sensitive configuration (NODE_ENV, LOG_LEVEL, etc.)
-- **Secrets**: Sensitive data (passwords, API keys, etc.)
+- **Secrets**: Sensitive data (passwords, API keys, encryption keys, etc.)
 
 ### Required Environment Variables
 
@@ -480,10 +506,19 @@ curl ${SERVICE_URL}/health
 | `GITHUB_CALLBACK_URL` | Env | `https://auth.example.com/auth/github/callback` | OAuth callback URL |
 | `JWT_ISSUER` | Env | `https://auth.example.com` | JWT issuer claim |
 | `JWT_AUDIENCE` | Env | `https://auth.example.com` | JWT audience claim |
-| `DATABASE_URL` | Secret | `postgresql://...` | Database connection string |
+| `JWT_EXPIRES_IN` | Env | `30d` | JWT token validity period |
+| `DATABASE_URL` | Secret | `postgresql://...?sslmode=require` | Database connection string (with SSL) |
 | `GITHUB_CLIENT_ID` | Secret | `Iv1.abc123...` | GitHub OAuth client ID |
 | `GITHUB_CLIENT_SECRET` | Secret | `secret123...` | GitHub OAuth client secret |
-| `SESSION_SECRET` | Secret | `hex_string` | CSRF token secret (32+ chars) |
+| `GITHUB_TOKEN_ENCRYPTION_KEY` | Secret | `hex_string` | Token encryption key (64 hex chars) |
+| `SESSION_SECRET` | Secret | `hex_string` | CSRF token secret (64 hex chars) |
+| `JWT_PRIVATE_KEY` | Secret | `base64_pem` | JWT signing key (base64-encoded RSA PEM) |
+| `JWT_PUBLIC_KEY` | Secret | `base64_pem` | JWT verification key (base64-encoded RSA PEM) |
+
+**New in v1.2**:
+- `GITHUB_TOKEN_ENCRYPTION_KEY`: Required for encrypting GitHub tokens at rest
+- `JWT_PRIVATE_KEY` and `JWT_PUBLIC_KEY`: Now require base64-encoded PEM format
+- Database SSL enabled by default in production
 
 ### Optional Environment Variables
 
@@ -493,10 +528,30 @@ curl ${SERVICE_URL}/health
 | `HOST` | `0.0.0.0` | Server host |
 | `DB_POOL_MIN` | `2` | Min database connections |
 | `DB_POOL_MAX` | `10` | Max database connections |
-| `JWT_EXPIRES_IN` | `30d` | JWT token validity period |
+| `DB_SSL_ENABLED` | `true` (prod) | Enable database SSL/TLS |
+| `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Reject invalid SSL certificates |
+| `DB_SSL_CA` | - | CA certificate (base64-encoded) |
+| `DB_SSL_CERT` | - | Client certificate (base64-encoded) |
+| `DB_SSL_KEY` | - | Client key (base64-encoded) |
 | `JWT_CLOCK_TOLERANCE_SECONDS` | `60` | Clock skew tolerance |
 | `ADMIN_CONTACT_EMAIL` | `admin@example.com` | Admin contact email |
 | `ADMIN_CONTACT_NAME` | `Administrator` | Admin contact name |
+
+### Multi-Instance Deployment Considerations
+
+When deploying to Cloud Run with auto-scaling (multiple instances):
+
+1. **Session State**: OAuth state tokens are stored in-memory per instance. For production, consider:
+   - Using Redis/Memcached for distributed session storage
+   - Or accepting that OAuth flows must complete on the same instance (generally not an issue with Cloud Run's session affinity)
+
+2. **Secret Rotation**: All instances receive new secrets simultaneously via Secret Manager
+   - Zero downtime for most secret rotations
+   - JWT key rotation requires coordination (see docs/security.md)
+
+3. **Database Connections**: Each instance maintains its own connection pool
+   - Configure `DB_POOL_MAX` appropriately (e.g., 10 connections/instance)
+   - Monitor total connections: max_instances × DB_POOL_MAX
 
 ### Updating Environment Variables
 
@@ -504,12 +559,19 @@ curl ${SERVICE_URL}/health
 # Update environment variable
 gcloud run services update ${SERVICE_NAME} \
   --region=${REGION} \
-  --set-env-vars="LOG_LEVEL=debug"
+  --set-env-vars="LOG_LEVEL=debug,DB_SSL_ENABLED=true"
 
 # Update secret reference
 gcloud run services update ${SERVICE_NAME} \
   --region=${REGION} \
-  --update-secrets="GITHUB_CLIENT_SECRET=github-client-secret:latest"
+  --update-secrets="GITHUB_CLIENT_SECRET=github-client-secret:latest,GITHUB_TOKEN_ENCRYPTION_KEY=github-token-encryption-key:latest"
+
+# Update multiple secrets at once
+gcloud run services update ${SERVICE_NAME} \
+  --region=${REGION} \
+  --update-secrets="DATABASE_URL=database-url:latest" \
+  --update-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest" \
+  --update-secrets="JWT_PUBLIC_KEY=jwt-public-key:latest"
 ```
 
 ## Networking and VPC

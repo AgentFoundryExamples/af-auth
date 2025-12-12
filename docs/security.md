@@ -50,22 +50,31 @@ AF Auth requires these secrets for production operation:
 
 | Secret Name | Purpose | Rotation Frequency | Notes |
 |-------------|---------|-------------------|-------|
-| `database-url` | PostgreSQL connection string | 90 days | Includes credentials |
+| `database-url` | PostgreSQL connection string | 90 days | Includes credentials, should use SSL |
 | `github-client-id` | GitHub OAuth App ID | When compromised | Public, but stored centrally |
 | `github-client-secret` | GitHub OAuth secret | 90 days | Must match GitHub App |
+| `github-token-encryption-key` | Encrypts GitHub tokens in DB | 90 days | Min 32 chars, 64+ recommended |
 | `session-secret` | CSRF token generation | 60 days | 32+ character hex string |
-| `jwt-private-key` | JWT signing key | 180 days | RSA private key (2048+ bits) |
-| `jwt-public-key` | JWT verification key | When private key rotates | RSA public key |
+| `jwt-private-key` | JWT signing key | 180 days | RSA private key (2048+ bits, base64-encoded) |
+| `jwt-public-key` | JWT verification key | When private key rotates | RSA public key (base64-encoded) |
+
+**New in v1.2**: GitHub access and refresh tokens are now encrypted at rest using AES-256-GCM with the `github-token-encryption-key`. This protects tokens even if the database is compromised.
 
 ### Creating Secrets
+
+#### Local Development
+
+See `docs/setup.md` for detailed instructions on generating secrets for local development.
+
+#### Cloud Production (GCP Secret Manager)
 
 ```bash
 # Set project and region
 export PROJECT_ID="your-project-id"
 export SERVICE_NAME="af-auth"
 
-# Database credentials
-echo -n "postgresql://user:password@/dbname?host=/cloudsql/connection-name" | \
+# Database credentials (with SSL enabled)
+echo -n "postgresql://user:password@/dbname?host=/cloudsql/connection-name&sslmode=require" | \
   gcloud secrets create database-url \
     --replication-policy=automatic \
     --data-file=-
@@ -81,20 +90,27 @@ echo -n "your_github_client_secret" | \
     --replication-policy=automatic \
     --data-file=-
 
+# GitHub token encryption key (NEW)
+openssl rand -hex 32 | \
+  gcloud secrets create github-token-encryption-key \
+    --replication-policy=automatic \
+    --data-file=-
+
 # Session secret (generate securely)
 openssl rand -hex 32 | \
   gcloud secrets create session-secret \
     --replication-policy=automatic \
     --data-file=-
 
-# JWT keys (RSA 2048-bit)
+# JWT keys (RSA 2048-bit, base64-encoded)
 # Generate keys first (see JWT Security section)
-cat jwt-private.pem | \
+# Base64 encode before storing
+base64 -w 0 jwt-private.pem | \
   gcloud secrets create jwt-private-key \
     --replication-policy=automatic \
     --data-file=-
 
-cat jwt-public.pem | \
+base64 -w 0 jwt-public.pem | \
   gcloud secrets create jwt-public-key \
     --replication-policy=automatic \
     --data-file=-
@@ -108,8 +124,8 @@ Grant service account access to secrets:
 # Get service account email
 export SA_EMAIL="${SERVICE_NAME}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
 
-# Grant access to each secret
-for secret in database-url github-client-id github-client-secret session-secret jwt-private-key jwt-public-key; do
+# Grant access to each secret (including new github-token-encryption-key)
+for secret in database-url github-client-id github-client-secret github-token-encryption-key session-secret jwt-private-key jwt-public-key; do
   gcloud secrets add-iam-policy-binding ${secret} \
     --member="serviceAccount:${SA_EMAIL}" \
     --role="roles/secretmanager.secretAccessor"
@@ -221,7 +237,50 @@ curl https://${SERVICE_URL}/api/jwks > jwt-public-new.pem
 # Step 7: After grace period, existing tokens expire naturally (30 days)
 ```
 
-#### 4. Database Credentials
+#### 4. GitHub Token Encryption Key
+
+**Frequency**: Every 90 days
+
+**Process** (requires re-encryption of all stored tokens):
+
+```bash
+# IMPORTANT: This rotation requires re-encrypting all GitHub tokens in the database
+# Plan for maintenance window or use blue-green deployment
+
+# Step 1: Generate new encryption key
+NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Step 2: Add new secret version
+echo -n "$NEW_ENCRYPTION_KEY" | \
+  gcloud secrets versions add github-token-encryption-key --data-file=-
+
+# Step 3: BEFORE deploying, create a migration script to re-encrypt tokens
+# See scripts/rotate-encryption-key.ts (to be created)
+
+# Step 4: Deploy with new key
+gcloud run services update ${SERVICE_NAME} \
+  --region=${REGION} \
+  --update-secrets="GITHUB_TOKEN_ENCRYPTION_KEY=github-token-encryption-key:latest"
+
+# Step 5: Run migration to re-encrypt all tokens
+# This should be done immediately after deployment
+# npm run migrate:re-encrypt-tokens --old-key="<old_key>" --new-key="<new_key>"
+
+# Step 6: Verify all tokens are accessible
+curl -H "Authorization: Bearer <service-credentials>" \
+  https://${SERVICE_URL}/api/github-token \
+  -d '{"userId":"<test-user-id>"}'
+
+# Step 7: After verification (24 hours), disable old secret version
+gcloud secrets versions disable VERSION_NUMBER --secret=github-token-encryption-key
+
+# Note: Currently, this rotation requires manual re-encryption of all tokens
+# Future enhancement: Support dual-key decryption during rotation period
+```
+
+**Warning**: Rotating the encryption key without re-encrypting existing tokens will make all stored GitHub tokens inaccessible. Always test the rotation procedure in a non-production environment first.
+
+#### 5. Database Credentials
 
 **Frequency**: Every 90 days
 
@@ -237,8 +296,8 @@ gcloud sql users create newuser \
 # Connect via Cloud SQL Proxy and run:
 # GRANT ALL PRIVILEGES ON DATABASE af_auth TO newuser;
 
-# Step 3: Update DATABASE_URL secret
-echo -n "postgresql://newuser:newpassword@/af_auth?host=/cloudsql/..." | \
+# Step 3: Update DATABASE_URL secret (ensure SSL is enabled)
+echo -n "postgresql://newuser:newpassword@/af_auth?host=/cloudsql/...&sslmode=require" | \
   gcloud secrets versions add database-url --data-file=-
 
 # Step 4: Deploy with new credentials

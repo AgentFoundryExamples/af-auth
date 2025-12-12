@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
 import { config } from '../config';
 import logger from '../utils/logger';
 import { prisma } from '../db';
@@ -41,34 +40,22 @@ export interface JWTVerifyResult {
   expired?: boolean;
 }
 
-/**
- * Load RSA key from file
- */
-function loadKey(path: string, type: 'private' | 'public'): string {
-  try {
-    return fs.readFileSync(path, 'utf8');
-  } catch (error) {
-    logger.error({ error, path }, `Failed to load JWT ${type} key`);
-    throw new Error(
-      `JWT ${type} key not found or unreadable. Please check the path and permissions.`
-    );
-  }
-}
-
-// Cache keys in memory for performance (loaded lazily on first use)
+// Cache keys in memory for performance (loaded from config on initialization)
 let cachedPrivateKey: string | null = null;
 let cachedPublicKey: string | null = null;
 
 function getPrivateKey(): string {
   if (!cachedPrivateKey) {
-    cachedPrivateKey = loadKey(config.jwt.privateKeyPath, 'private');
+    cachedPrivateKey = config.jwt.privateKey;
+    logger.debug('JWT private key loaded from configuration');
   }
   return cachedPrivateKey;
 }
 
 function getPublicKey(): string {
   if (!cachedPublicKey) {
-    cachedPublicKey = loadKey(config.jwt.publicKeyPath, 'public');
+    cachedPublicKey = config.jwt.publicKey;
+    logger.debug('JWT public key loaded from configuration');
   }
   return cachedPublicKey;
 }
