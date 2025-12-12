@@ -4,19 +4,20 @@ This guide walks you through creating and configuring a GitHub App for OAuth aut
 
 ## Overview
 
-AF Auth uses GitHub OAuth 2.0 to authenticate users. You'll need to create a GitHub App (or OAuth App) and configure it with the appropriate permissions and callback URLs.
+AF Auth uses GitHub App OAuth flow to authenticate users with multi-instance support via Redis-backed state storage. This setup is compatible with Cloud Run autoscaling and Kubernetes deployments.
 
 ## Prerequisites
 
 - GitHub account with permission to create apps (organization or personal)
 - AF Auth service deployed or running locally
+- Redis instance (for production multi-instance deployments)
 - Access to configure environment variables
 
 ## Creating a GitHub App
 
-### Option 1: GitHub App (Recommended)
+### GitHub App (Required for Production)
 
-GitHub Apps provide more granular permissions and better security than OAuth Apps.
+GitHub Apps provide granular permissions, better security, and support for OAuth flows.
 
 1. **Navigate to GitHub App Settings**
    - For personal account: Go to [Settings > Developer settings > GitHub Apps](https://github.com/settings/apps)
@@ -52,31 +53,26 @@ GitHub Apps provide more granular permissions and better security than OAuth App
    - Click **Generate a new client secret**
    - **Important**: Copy this secret immediately - you won't be able to see it again!
 
-8. **Note Your Credentials**
-   - **Client ID**: Found at the top of the app settings page
-   - **Client Secret**: The secret you just generated
+8. **Generate Private Key**
+   - Scroll to **Private keys** section
+   - Click **Generate a private key**
+   - A `.pem` file will be downloaded automatically
+   - **Important**: Store this file securely - it's needed for authentication
 
-### Option 2: OAuth App (Alternative)
+9. **Note Your Credentials**
+   - **App ID**: Found at the top of the app settings page (e.g., `123456`)
+   - **Client ID**: Found in the app settings page (e.g., `Iv1.a1b2c3d4e5f6g7h8`)
+   - **Client Secret**: The secret you generated in step 7
+   - **Private Key**: The `.pem` file you downloaded in step 8
 
-If you prefer a simpler setup, you can use an OAuth App instead.
-
-1. **Navigate to OAuth App Settings**
-   - Go to [Settings > Developer settings > OAuth Apps](https://github.com/settings/developers)
-   - Click **New OAuth App**
-
-2. **Configure the OAuth App**
-   - **Application name**: `AF Auth`
-   - **Homepage URL**: Your service URL
-   - **Authorization callback URL**: `https://auth.example.com/auth/github/callback`
-   - Click **Register application**
-
-3. **Generate Client Secret**
-   - Click **Generate a new client secret**
-   - Copy the secret immediately
-
-4. **Note Your Credentials**
-   - **Client ID**: Displayed on the app page
-   - **Client Secret**: The secret you just generated
+10. **Install the App**
+    - Click **Install App** in the left sidebar
+    - Select the account where you want to install the app
+    - Choose **All repositories** or **Only select repositories**
+    - Click **Install**
+    - After installation, note the **Installation ID** from the URL:
+      - URL format: `https://github.com/settings/installations/12345678`
+      - The number at the end is your Installation ID
 
 ## Configuring AF Auth
 
@@ -85,12 +81,22 @@ If you prefer a simpler setup, you can use an OAuth App instead.
 Add the following environment variables to your `.env` file or deployment configuration:
 
 ```bash
-# GitHub OAuth Configuration
-GITHUB_CLIENT_ID=your_client_id_here
+# GitHub App Configuration
+GITHUB_APP_ID=123456
+GITHUB_INSTALLATION_ID=12345678
+GITHUB_APP_PRIVATE_KEY=base64_encoded_private_key_here
+GITHUB_CLIENT_ID=Iv1.a1b2c3d4e5f6g7h8
 GITHUB_CLIENT_SECRET=your_client_secret_here
 GITHUB_CALLBACK_URL=https://auth.example.com/auth/github/callback
 
-# Session Configuration (for CSRF protection)
+# Redis Configuration (Required for multi-instance deployments)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password_here
+REDIS_DB=0
+REDIS_STATE_TTL_SECONDS=600
+
+# Session Configuration
 SESSION_SECRET=generate_a_random_32_character_string_here
 SESSION_MAX_AGE_MS=600000
 
@@ -103,11 +109,34 @@ ADMIN_CONTACT_NAME=System Administrator
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `GITHUB_CLIENT_ID` | GitHub App/OAuth App Client ID | `Iv1.a1b2c3d4e5f6g7h8` |
-| `GITHUB_CLIENT_SECRET` | GitHub App/OAuth App Client Secret | `1234567890abcdef...` |
+| `GITHUB_APP_ID` | GitHub App ID | `123456` |
+| `GITHUB_INSTALLATION_ID` | Installation ID after installing the app | `12345678` |
+| `GITHUB_APP_PRIVATE_KEY` | Base64-encoded private key (PEM format) | See encoding instructions below |
+| `GITHUB_CLIENT_ID` | GitHub App Client ID | `Iv1.a1b2c3d4e5f6g7h8` |
+| `GITHUB_CLIENT_SECRET` | GitHub App Client Secret | `1234567890abcdef...` |
 | `GITHUB_CALLBACK_URL` | OAuth callback URL (must match GitHub App config) | `https://auth.example.com/auth/github/callback` |
-| `SESSION_SECRET` | Secret for CSRF token generation (min 32 chars) | Use `openssl rand -hex 32` to generate |
+| `REDIS_HOST` | Redis server hostname | `localhost` or Cloud Memorystore IP |
+| `REDIS_PORT` | Redis server port | `6379` |
+| `REDIS_PASSWORD` | Redis authentication password | Optional for local dev |
+| `SESSION_SECRET` | Secret for CSRF token generation (min 32 chars) | Use `openssl rand -hex 32` |
 | `SESSION_MAX_AGE_MS` | Session state validity in milliseconds | `600000` (10 minutes) |
+
+### Encoding the Private Key
+
+The GitHub App private key must be base64-encoded for secure transmission via environment variables:
+
+```bash
+# Linux
+base64 -w 0 < your-app-name.2024-12-12.private-key.pem
+
+# macOS
+base64 -i your-app-name.2024-12-12.private-key.pem -o -
+
+# Windows PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("your-app-name.2024-12-12.private-key.pem"))
+```
+
+Copy the output and set it as the `GITHUB_APP_PRIVATE_KEY` environment variable.
 
 ### Generating Strong Secrets
 
@@ -165,70 +194,56 @@ You can configure multiple callback URLs in your GitHub App settings to support 
 
 ```bash
 # Store secrets in Secret Manager
-echo -n "your_client_id" | gcloud secrets create github-client-id --data-file=-
+echo -n "123456" | gcloud secrets create github-app-id --data-file=-
+echo -n "12345678" | gcloud secrets create github-installation-id --data-file=-
+base64 -w 0 < private-key.pem | gcloud secrets create github-app-private-key --data-file=-
+echo -n "Iv1.a1b2c3d4e5f6g7h8" | gcloud secrets create github-client-id --data-file=-
 echo -n "your_client_secret" | gcloud secrets create github-client-secret --data-file=-
 echo -n "your_session_secret" | gcloud secrets create session-secret --data-file=-
+echo -n "your_redis_password" | gcloud secrets create redis-password --data-file=-
 
 # Grant Cloud Run access to secrets
-gcloud secrets add-iam-policy-binding github-client-id \
-  --member="serviceAccount:your-project@appspot.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
+for secret in github-app-id github-installation-id github-app-private-key github-client-id github-client-secret session-secret redis-password; do
+  gcloud secrets add-iam-policy-binding $secret \
+    --member="serviceAccount:your-project@appspot.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
 
 # Deploy with secrets
 gcloud run deploy af-auth \
   --image gcr.io/your-project/af-auth \
+  --update-secrets GITHUB_APP_ID=github-app-id:latest \
+  --update-secrets GITHUB_INSTALLATION_ID=github-installation-id:latest \
+  --update-secrets GITHUB_APP_PRIVATE_KEY=github-app-private-key:latest \
   --update-secrets GITHUB_CLIENT_ID=github-client-id:latest \
   --update-secrets GITHUB_CLIENT_SECRET=github-client-secret:latest \
-  --update-secrets SESSION_SECRET=session-secret:latest
+  --update-secrets SESSION_SECRET=session-secret:latest \
+  --update-secrets REDIS_PASSWORD=redis-password:latest
 ```
 
 ## Production Deployment Considerations
 
-> **⚠️ IMPORTANT**: The current implementation has known limitations for production multi-instance deployments. Review and address these before deploying to production with auto-scaling or multiple instances.
+### Redis for Multi-Instance Deployments
 
-### 1. OAuth State Storage (Multi-Instance Issue)
+**Required for Production**: AF Auth now uses Redis for distributed OAuth state storage, which is essential for multi-instance deployments.
 
-**Issue**: OAuth state tokens are stored in an in-memory Map, which does NOT work correctly with multiple service instances (Cloud Run auto-scaling, Kubernetes replicas, load-balanced deployments).
+**Benefits**:
+- ✅ Works correctly with Cloud Run auto-scaling
+- ✅ Works with Kubernetes horizontal pod autoscaling
+- ✅ Works with load-balanced deployments
+- ✅ Atomic state validation prevents race conditions
+- ✅ Automatic TTL-based expiration
 
-**Impact**: When a user initiates OAuth on instance A but the callback is handled by instance B, the state token won't be found, causing authentication failures.
+**Setup Required**:
+- Deploy Redis instance (Cloud Memorystore, ElastiCache, or self-hosted)
+- Configure VPC connector for Cloud Run to access Redis
+- Set Redis environment variables in deployment configuration
 
-**Solution Required**: Replace the in-memory Map with a distributed cache:
+See `docs/deployment/cloud-run.md` for detailed Redis setup instructions.
 
-```typescript
-// Example: Redis implementation for state storage
-import { createClient } from 'redis';
+### Rate Limiting (Recommended)
 
-const redis = createClient({ url: process.env.REDIS_URL });
-
-// Store state with TTL
-async function generateState(): Promise<string> {
-  const state = crypto.randomBytes(32).toString('hex');
-  await redis.setex(
-    `oauth:state:${state}`, 
-    config.session.maxAge / 1000, 
-    Date.now().toString()
-  );
-  return state;
-}
-
-// Validate and consume state (atomic operation)
-async function validateState(state: string): Promise<boolean> {
-  const timestamp = await redis.getdel(`oauth:state:${state}`);
-  if (!timestamp) return false;
-  
-  const age = Date.now() - parseInt(timestamp);
-  return age <= config.session.maxAge;
-}
-```
-
-**Alternative Solutions**:
-- Google Cloud Memorystore (Redis-compatible)
-- AWS ElastiCache
-- Memcached with appropriate TTL
-
-### 2. Rate Limiting
-
-**Issue**: OAuth endpoints (`/auth/github` and `/auth/github/callback`) lack rate limiting, making them vulnerable to abuse.
+**Consideration**: OAuth endpoints (`/auth/github` and `/auth/github/callback`) should have rate limiting in production to prevent abuse.
 
 **Impact**: Attackers could:
 - Exhaust OAuth state storage
@@ -256,73 +271,45 @@ const authLimiter = rateLimit({
 app.use('/auth', authLimiter, authRoutes);
 ```
 
-### 3. Token Storage Encryption
+### Token Storage Security
 
-**Issue**: GitHub access tokens and refresh tokens are stored in plaintext in the PostgreSQL database.
+**Current Implementation**: GitHub access tokens and refresh tokens are encrypted at rest using AES-256-GCM before storing in the PostgreSQL database.
 
-**Impact**: If database access is compromised, tokens can be used to access user GitHub accounts.
+**Security Features**:
+- ✅ AES-256-GCM encryption with authentication tags
+- ✅ Unique IV (initialization vector) per encryption
+- ✅ GITHUB_TOKEN_ENCRYPTION_KEY environment variable (min 32 chars)
+- ✅ Token migration script for upgrading plaintext tokens
 
-**Solution Recommended**: Implement encryption at rest:
+**Configuration**:
+```bash
+# Generate encryption key (64 characters recommended)
+openssl rand -hex 32
 
-```typescript
-import crypto from 'crypto';
-
-// Encryption configuration
-const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex'); // 32 bytes
-const ALGORITHM = 'aes-256-gcm';
-
-function encryptToken(token: string): string {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
-  
-  let encrypted = cipher.update(token, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag();
-  
-  // Store: iv:authTag:encrypted
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
-}
-
-function decryptToken(encryptedData: string): string {
-  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
-  const iv = Buffer.from(ivHex, 'hex');
-  const authTag = Buffer.from(authTagHex, 'hex');
-  
-  const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
-  decipher.setAuthTag(authTag);
-  
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
+# Set in environment
+GITHUB_TOKEN_ENCRYPTION_KEY=your_64_character_hex_string_here
 ```
 
-**Database Migration Required**:
-```sql
--- Add encrypted columns
-ALTER TABLE users ADD COLUMN github_access_token_encrypted TEXT;
-ALTER TABLE users ADD COLUMN github_refresh_token_encrypted TEXT;
+See `docs/security.md` for encryption implementation details and key rotation procedures.
 
--- Migrate existing data
--- DROP old columns after migration
-```
+### Development vs Production Configuration
 
-### 4. Development vs Production Configuration
+**Production-Ready Features**:
+- ✅ Multi-instance deployments with auto-scaling (via Redis)
+- ✅ Kubernetes with horizontal pod autoscaling
+- ✅ Load-balanced deployments
+- ✅ High-traffic production applications
+- ✅ OAuth state persistence across instances
+- ✅ Atomic state validation (no race conditions)
 
-For development and single-instance deployments, the current implementation is sufficient. For production:
+**Recommended for Production**:
+- Configure Redis with high availability (replica sets)
+- Enable Redis persistence (AOF or RDB)
+- Set up monitoring for Redis connection health
+- Configure rate limiting on auth endpoints
+- Use separate GitHub Apps for dev, staging, and production
 
-**Minimum Requirements**:
-- ✅ Single instance deployment (e.g., Cloud Run with min/max instances set to 1)
-- ✅ Development/testing environments
-- ✅ Low-traffic applications
-
-**Requires Updates**:
-- ❌ Multi-instance deployments with auto-scaling
-- ❌ Kubernetes with horizontal pod autoscaling
-- ❌ Load-balanced deployments
-- ❌ High-traffic production applications
-
-### Implementation Priority
+### Implementation Checklist
 
 1. **Critical** (required for multi-instance): Distributed state storage
 2. **High** (security): Rate limiting on auth endpoints
@@ -455,43 +442,28 @@ whitelistUser(12345678);
   - Port number mismatch
   - Different domain/subdomain
 
-## OAuth Scopes
+## GitHub App Permissions
 
-AF Auth requests minimal scopes for security:
+AF Auth uses minimal permissions for security. The GitHub App requires:
 
-- `user:email` - Read user email addresses
+- **Email addresses**: Read-only access to retrieve authenticated user's email
 
-### Why These Scopes?
+### Why These Permissions?
 
-- **user:email**: Required to retrieve the authenticated user's email address for identification and communication
+- **Email addresses**: Required to retrieve the authenticated user's email address for identification and communication
 
-### Adding Additional Scopes
-
-If you need additional GitHub data, modify the scope in `src/services/github-oauth.ts`:
-
-```typescript
-export function getAuthorizationUrl(state: string): string {
-  const params = new URLSearchParams({
-    client_id: config.github.clientId,
-    redirect_uri: config.github.callbackUrl,
-    state,
-    scope: 'user:email read:user', // Add additional scopes here
-  });
-  // ...
-}
-```
-
-See [GitHub's OAuth scopes documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps) for available scopes.
+No scope parameter is sent in the OAuth authorization URL as GitHub Apps use installation-based permissions instead of scope-based OAuth.
 
 ## Monitoring and Logging
 
-AF Auth logs all authentication events:
+AF Auth logs all authentication events with structured logging:
 
 - OAuth flow initiation
-- State generation and validation
+- Redis state generation and validation
 - Token exchange
 - User creation/update
 - Whitelist checks
+- Redis connection health
 
 ### Viewing Logs
 
@@ -508,13 +480,28 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 - `githubUserId` - GitHub user ID
 - `userId` - Internal user UUID
 - `isWhitelisted` - Whitelist status
-- `state` - OAuth state token (for debugging)
+- `requestId` - Request correlation ID for tracking OAuth flows
+- `operation` - Redis operation name
+- `durationMs` - Operation duration for performance monitoring
 
-**Note**: Access tokens and secrets are automatically redacted from logs.
+**Note**: Access tokens, secrets, and PII are automatically redacted from logs.
+
+### Redis Monitoring
+
+Monitor Redis health for production deployments:
+
+```bash
+# Check Redis connection status
+GET /health  # Returns Redis status in health check
+
+# Monitor Redis metrics in Cloud Monitoring (GCP)
+gcloud monitoring dashboards create --config-from-file=redis-dashboard.yaml
+```
 
 ## References
 
 - [GitHub Apps Documentation](https://docs.github.com/en/apps)
-- [GitHub OAuth Apps Documentation](https://docs.github.com/en/apps/oauth-apps)
-- [OAuth 2.0 Specification](https://oauth.net/2/)
+- [GitHub App OAuth Flow](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app)
+- [Redis Best Practices](https://redis.io/docs/management/optimization/)
+- [Cloud Memorystore Documentation](https://cloud.google.com/memorystore/docs/redis)
 - [AF Auth Architecture](../README.md)

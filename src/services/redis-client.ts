@@ -205,8 +205,10 @@ export async function executeRedisOperation<T>(
 
 // Initialize Redis client on module load
 // Use a try-catch to prevent startup failures in test environments
-try {
-  getRedisClient();
-} catch (error) {
-  logger.error({ error }, 'Failed to initialize Redis client on startup');
+if (process.env.NODE_ENV !== 'test') {
+  try {
+    getRedisClient();
+  } catch (error) {
+    logger.error({ error }, 'Failed to initialize Redis client on startup');
+  }
 }
