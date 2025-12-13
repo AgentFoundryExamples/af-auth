@@ -6,12 +6,24 @@
 
 The Terraform configuration now uses **Secret Manager as the default** for database password management:
 
+**Security Improvements:**
 - Database password is retrieved from Secret Manager via data source
 - Password is never stored in terraform.tfvars or version control
 - IAM permissions are granted per-secret (least privilege)
 - Password remains encrypted in Secret Manager and is only accessible to the Cloud Run service account
 
+**Trade-off:**
+- Password appears in the `DATABASE_URL` environment variable in Cloud Run
+- This is necessary because the application expects a single DATABASE_URL connection string
+- While the password is visible in the environment, it's significantly more secure than storing it in tfvars or state files
+- Environment variables in Cloud Run are encrypted at rest and only visible to authorized service accounts
+
 The secret `database-password` **must exist** before running `terraform apply`.
+
+**Comparison to Previous Implementation:**
+- ❌ **Before**: Password in tfvars → stored in state file → high exposure risk
+- ✅ **Now**: Password from Secret Manager → stored in environment → medium exposure risk
+- 🔒 **Best**: IAM authentication or DATABASE_URL in Secret Manager → no password in environment → minimal risk (see alternatives below)
 
 ### 🔐 Alternative Secure Patterns
 

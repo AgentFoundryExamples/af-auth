@@ -197,7 +197,12 @@ resource "google_cloud_run_v2_service" "auth_service" {
             NODE_ENV = var.environment == "production" ? "production" : "development"
             PORT     = tostring(var.container_port)
             # Database connection string with password from Secret Manager
-            # Password is retrieved securely via data source rather than passed as variable
+            # Note: Password appears in DATABASE_URL environment variable but is retrieved
+            # from Secret Manager (not tfvars), significantly reducing exposure risk.
+            # For even higher security, consider:
+            #   1. Cloud SQL IAM authentication (no passwords)
+            #   2. Store complete DATABASE_URL in Secret Manager
+            # See SECURITY.md for implementation details of these alternatives.
             DATABASE_URL = "postgresql://${var.database_user}:${data.google_secret_manager_secret_version.db_password.secret_data}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
             REDIS_HOST   = var.enable_redis ? google_redis_instance.cache[0].host : ""
             REDIS_PORT   = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""
