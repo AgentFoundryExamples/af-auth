@@ -44,7 +44,7 @@ describe('Database Client', () => {
     // These tests require a real PostgreSQL database
     // Run with: RUN_INTEGRATION_TESTS=true npm test
     // See README.md Testing section for setup instructions
-    
+
     beforeAll(async () => {
       if (shouldRunIntegrationTests && !db.connected) {
         await db.connect();
