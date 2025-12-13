@@ -322,13 +322,13 @@ The security headers implementation is validated through comprehensive automated
 
 | Test Suite | File | Purpose | Coverage |
 |------------|------|---------|----------|
-| **Unit Tests** | `src/middleware/security-headers.test.ts` | Validates middleware configuration and directive generation | 90.9% statements |
+| **Unit Tests** | `src/middleware/security-headers.test.ts` | Validates middleware configuration and directive generation | High (~90% statements) |
 | **Integration Tests** | `src/middleware/security-headers.integration.test.ts` | Verifies headers applied across real endpoints | Full endpoint coverage |
 | **Edge Case Tests** | `src/middleware/security-headers.edge-cases.test.ts` | Tests malformed configs and failure scenarios | Defensive code paths |
 | **Nonce Tests** | `src/middleware/csp-nonce.test.ts` | Validates cryptographic nonce generation | 100% coverage |
 
 **Total Test Count:** 75 automated tests covering security headers  
-**Overall Coverage:** 92.04% statements, 88.67% branches, 94.44% functions
+**Overall Coverage:** ~92% statements, ~89% branches, ~94% functions
 
 #### Unit Test Coverage
 
@@ -439,7 +439,7 @@ it('should handle empty string CSP directive gracefully', async () => {
 **File:** `src/middleware/csp-nonce.test.ts`
 
 Tests validate cryptographic nonce generation:
-- ✅ Nonces are base64-encoded (16 bytes = 24 characters)
+- ✅ Nonces are base64-encoded (16 bytes → 24 base64 characters due to 4:3 encoding ratio)
 - ✅ Nonces are unique on each call
 - ✅ 100 consecutive nonces are all different (cryptographic randomness)
 - ✅ Nonce generation failures return undefined with error log
