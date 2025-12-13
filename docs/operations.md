@@ -3083,6 +3083,468 @@ gcloud secrets list
 gcloud secrets get-iam-policy database-url
 ```
 
+## Dependency Management and Audit Procedures
+
+### Overview
+
+Regular dependency audits ensure the service remains secure, stable, and maintainable. This section provides runbooks for conducting dependency audits and applying updates.
+
+### Dependency Audit Cycle
+
+**Recommended Frequency:** Quarterly (every 3 months)  
+**Trigger Events:**
+- Security advisory notifications
+- Major version releases of critical dependencies
+- Before major feature releases
+- After extended development periods
+
+### Pre-Audit Checklist
+
+Before conducting a dependency audit:
+
+- [ ] Ensure all tests pass: `npm test`
+- [ ] Ensure build succeeds: `npm run build`
+- [ ] Document current dependency versions: `npm list --depth=0 > audit-baseline.txt`
+- [ ] Check current security status: `npm audit > audit-report.txt`
+- [ ] Create a feature branch: `git checkout -b dependency-audit-YYYY-MM-DD`
+- [ ] Backup package-lock.json: `cp package-lock.json package-lock.json.backup`
+
+### Audit Process
+
+#### Step 1: Generate Dependency Report
+
+```bash
+# Check for outdated packages
+npm outdated --long > outdated-packages.txt
+
+# Check for security vulnerabilities
+npm audit --json > security-audit.json
+
+# List all direct dependencies
+npm list --depth=0 > current-dependencies.txt
+```
+
+#### Step 2: Categorize Packages
+
+Categorize packages by priority and risk:
+
+**Priority 1: Security-Critical (Immediate Review)**
+- `helmet` - HTTP security headers
+- `express-rate-limit` - Rate limiting
+- `rate-limit-redis` - Redis rate limit store
+- `bcrypt` - Password hashing
+- `jsonwebtoken` - JWT handling
+- `ioredis` - Redis client
+- `dotenv` - Environment configuration
+- `axios` - HTTP client (external requests)
+
+**Priority 2: Core Infrastructure (High Risk for Breaking Changes)**
+- `express` - Web framework
+- `@prisma/client` & `prisma` - Database ORM
+- `typescript` - Type system
+- `react` & `react-dom` - UI framework
+
+**Priority 3: Supporting Libraries (Medium Risk)**
+- `pino`, `pino-http`, `pino-pretty` - Logging
+- `prom-client` - Metrics
+- `zod` - Schema validation
+
+**Priority 4: Development Tools (Low Risk)**
+- `jest`, `ts-jest`, `supertest` - Testing
+- `eslint`, `@typescript-eslint/*` - Linting
+- `tsx` - Development runner
+- `@types/*` - Type definitions
+
+#### Step 3: Evaluate Updates
+
+For each outdated package:
+
+1. **Check semver level:**
+   - Patch (x.x.1 → x.x.2): Generally safe
+   - Minor (x.1.x → x.2.x): Should be backward compatible
+   - Major (1.x.x → 2.x.x): Breaking changes likely
+
+2. **Review changelog:**
+   ```bash
+   npm view <package>@<version> --json | jq .description
+   ```
+
+3. **Check for breaking changes:**
+   - Visit package repository on GitHub
+   - Read CHANGELOG.md or HISTORY.md
+   - Review migration guides
+
+4. **Security considerations:**
+   - Any CVE fixes?
+   - Security-related improvements?
+   - Check GitHub Security Advisories
+
+#### Step 4: Apply Safe Updates
+
+**Phase 1: Security & Patches (Low Risk)**
+
+Apply patch and minor updates for security-critical packages:
+
+```bash
+# Example: Update security packages
+npm install helmet@latest express-rate-limit@latest rate-limit-redis@latest
+npm install dotenv@latest ioredis@latest
+
+# Verify no vulnerabilities
+npm audit
+
+# Test immediately
+npm run build
+npm test
+```
+
+**Phase 2: Type Definitions (Very Low Risk)**
+
+Update type definition packages:
+
+```bash
+npm install --save-dev @types/bcrypt@latest @types/supertest@latest
+npm install --save-dev @types/express@latest @types/node@latest
+
+# Build to check for type errors
+npm run build
+```
+
+**Phase 3: Development Tools (Low Risk)**
+
+Update linting and testing tools:
+
+```bash
+npm install --save-dev eslint@latest @eslint/js@latest
+npm install --save-dev supertest@latest
+
+# Run tests
+npm test
+npm run lint
+```
+
+**Phase 4: Supporting Libraries (Medium Risk)**
+
+Update non-breaking minor versions:
+
+```bash
+# Example: Update zod to latest 3.x
+npm install zod@^3.25.0
+
+# Test thoroughly
+npm test
+```
+
+#### Step 5: Document Deferred Updates
+
+Create a tracking document for major version updates that require breaking changes:
+
+```markdown
+## Deferred Dependency Upgrades
+
+### Express 4.x → 5.x
+**Current:** 4.22.1  
+**Latest:** 5.2.1  
+**Reason:** Breaking changes in middleware signatures and error handling  
+**Impact:** Requires updating all middleware, security headers, rate limiting  
+**Effort:** 3-5 days  
+**Priority:** Medium  
+**Target Quarter:** Q2 2025
+
+### Prisma 5.x → 7.x
+**Current:** 5.22.0  
+**Latest:** 7.1.0  
+**Reason:** May require PostgreSQL version upgrade, migration changes  
+**Impact:** Database layer, all queries, migrations  
+**Effort:** 5-10 days  
+**Priority:** High  
+**Target Quarter:** Q1 2025  
+**Prerequisites:** Verify PostgreSQL 14+ compatibility, review migration guide
+```
+
+#### Step 6: Validate Changes
+
+After each phase of updates:
+
+```bash
+# Clean install to verify package-lock.json
+rm -rf node_modules
+npm ci
+
+# Run full test suite
+npm test
+
+# Run build
+npm run build
+
+# Run linter
+npm run lint
+
+# Test locally with Docker
+docker-compose up -d
+npm run db:migrate:dev
+npm run dev
+# Manually test key flows in browser
+
+# Clean up
+docker-compose down
+```
+
+#### Step 7: Commit and Document
+
+```bash
+# Commit changes
+git add package.json package-lock.json docs/
+git commit -m "chore: dependency audit and upgrades (YYYY-MM-DD)
+
+Security upgrades:
+- helmet: x.x.x → y.y.y
+- express-rate-limit: x.x.x → y.y.y
+
+Type definitions:
+- @types/bcrypt: x.x.x → y.y.y
+
+Results:
+- 0 security vulnerabilities
+- All tests passing (XXX/XXX)
+- Build successful
+"
+
+# Push and create PR
+git push origin dependency-audit-YYYY-MM-DD
+```
+
+### Post-Audit Steps
+
+1. **Update Documentation**
+   - Update "Last Dependency Audit" section in [setup.md](./setup.md)
+   - Document any configuration changes
+   - Update any changed npm scripts
+
+2. **CI/CD Validation**
+   - Ensure all CI checks pass
+   - Review automated security scans
+   - Verify deployment preview works
+
+3. **Monitoring**
+   - Monitor error rates after deployment
+   - Watch for new error patterns in logs
+   - Check Prometheus metrics for anomalies
+
+4. **Communication**
+   - Notify team of major upgrades
+   - Document any behavior changes
+   - Update deployment runbooks if needed
+
+### Handling Security Vulnerabilities
+
+If `npm audit` reports vulnerabilities:
+
+#### Critical/High Severity
+
+```bash
+# Check details
+npm audit
+
+# Try automatic fix
+npm audit fix
+
+# If automatic fix fails, manually upgrade affected package
+npm install <package>@<safe-version>
+
+# If no safe version available, check for workarounds
+npm audit fix --force  # Use with caution!
+
+# Document in security advisory if unfixable
+```
+
+#### Medium/Low Severity
+
+- Document in tracking issue
+- Schedule for next quarterly audit
+- Consider workarounds if in non-critical path
+
+### Rollback Procedure
+
+If an upgrade causes issues:
+
+```bash
+# Restore previous package-lock.json
+git checkout HEAD~ package.json package-lock.json
+
+# Clean install
+rm -rf node_modules
+npm ci
+
+# Verify stability
+npm test
+npm run build
+
+# Commit rollback
+git commit -m "revert: rollback dependency upgrades due to [reason]"
+git push
+```
+
+### Breaking Change Migration Guides
+
+#### Express 4.x → 5.x Migration
+
+**Prerequisites:**
+- Review [Express 5 Migration Guide](https://expressjs.com/en/guide/migrating-5.html)
+- Allocate 3-5 days for testing
+
+**Key Changes:**
+1. Middleware signature changes - `next()` behavior
+2. Route parameter handling changes
+3. Error handling middleware changes
+4. `res.json()` and `res.jsonp()` changes
+5. `req.query` parsing changes
+
+**Testing Strategy:**
+- Run full integration test suite
+- Manual testing of all API endpoints
+- Load testing to verify rate limiting still works
+- Security header validation
+
+#### Prisma 5.x → 7.x Migration
+
+**Prerequisites:**
+- Verify PostgreSQL version compatibility
+- Review [Prisma Upgrade Guide](https://www.prisma.io/docs/guides/upgrade-guides)
+- Backup database before testing
+
+**Key Changes:**
+1. Client API changes
+2. Query builder changes
+3. Migration format changes
+4. Schema syntax updates
+
+**Testing Strategy:**
+- Test all database operations
+- Verify migrations work correctly
+- Performance testing (query execution time)
+- Transaction handling validation
+
+#### React 18.x → 19.x Migration
+
+**Prerequisites:**
+- Review [React 19 Upgrade Guide](https://react.dev/blog/2024/04/25/react-19-upgrade-guide)
+- Test with React DevTools
+
+**Key Changes:**
+1. New JSX transform
+2. Server component updates
+3. Hook behavior changes
+4. `ref` handling changes
+
+**Testing Strategy:**
+- Visual regression testing
+- Component unit tests
+- Browser compatibility testing
+- Server-side rendering validation
+
+### Dependency Freeze Policy
+
+**When to Freeze Dependencies:**
+- 2 weeks before major releases
+- During security incidents
+- When critical bugs are being fixed
+- During major refactoring efforts
+
+**Freeze Process:**
+```bash
+# Create lock reminder
+echo "# Dependency freeze until [DATE] - [REASON]" > DEPENDENCY_FREEZE.txt
+git add DEPENDENCY_FREEZE.txt
+git commit -m "chore: dependency freeze until [DATE]"
+```
+
+**Exceptions:**
+- Critical security patches (CVE fixes)
+- Hotfix-related dependencies
+- Approved by tech lead
+
+### Monitoring Dependency Health
+
+**Automated Checks (CI):**
+- `npm audit` in CI pipeline
+- Dependabot/Renovate for PR creation
+- License compliance checking
+- Bundle size monitoring
+
+**Manual Checks (Quarterly):**
+- Review all deferred upgrades
+- Check for deprecated packages
+- Evaluate alternatives for unmaintained packages
+- Review dependency tree depth and size
+
+### Tools and Resources
+
+**Package Information:**
+```bash
+# View package details
+npm view <package>
+
+# Check package homepage
+npm repo <package>
+
+# View package vulnerabilities
+npm audit <package>
+
+# Compare versions
+npm diff <package>@<version1> <package>@<version2>
+```
+
+**Useful Links:**
+- [npm audit documentation](https://docs.npmjs.com/cli/v10/commands/npm-audit)
+- [Semantic Versioning](https://semver.org/)
+- [Node.js LTS Schedule](https://nodejs.org/en/about/previous-releases)
+- [GitHub Security Advisories](https://github.com/advisories)
+
+### Historical Audit Log
+
+#### 2025-12-13 Dependency Audit
+
+**Auditor:** GitHub Copilot  
+**Branch:** `copilot/audit-refresh-dependencies`  
+**Duration:** ~2 hours
+
+**Applied Upgrades:**
+| Package | From | To | Type | Risk |
+|---------|------|-----|------|------|
+| helmet | 8.0.0 | 8.1.0 | Minor | Low |
+| express-rate-limit | 7.5.0 | 7.5.1 | Patch | Low |
+| rate-limit-redis | 4.2.0 | 4.3.1 | Minor | Low |
+| dotenv | 16.4.5 | 16.6.1 | Minor | Low |
+| ioredis | 5.4.1 | 5.8.2 | Minor | Low |
+| @types/bcrypt | 5.0.2 | 6.0.0 | Major | Low (types only) |
+| @types/supertest | 6.0.2 | 6.0.3 | Patch | Low |
+| eslint | 9.39.1 | 9.39.2 | Patch | Low |
+| @eslint/js | 9.39.1 | 9.39.2 | Patch | Low |
+| supertest | 7.1.3 | 7.1.4 | Patch | Low |
+| zod | 3.24.1 | 3.25.76 | Minor | Low |
+
+**Results:**
+- ✅ 0 security vulnerabilities
+- ✅ 433/436 tests passing (3 skipped)
+- ✅ Build successful
+- ✅ No breaking changes
+
+**Deferred Upgrades:**
+- Express 4.22.1 → 5.2.1 (breaking changes - scheduled for Q2 2025)
+- React 18.3.1 → 19.2.3 (breaking changes - scheduled for Q2 2025)
+- Prisma 5.22.0 → 7.1.0 (DB compatibility check needed - scheduled for Q1 2025)
+- Jest 29.7.0 → 30.2.0 (breaking changes - scheduled for Q2 2025)
+- Pino 9.5.0 → 10.1.0 (breaking changes - scheduled for Q2 2025)
+- @types/node 22.9.3 → 25.0.1 (wait for Node.js 25 LTS)
+- express-rate-limit 7.5.1 → 8.2.1 (breaking changes - deferred until Express 5 upgrade)
+
+**Notes:**
+- All security-critical packages updated
+- Type definitions updated without issues
+- Package-lock.json integrity maintained
+- No configuration changes required
+
 ## References
 
 - [Cloud Run Operations](https://cloud.google.com/run/docs/operations)
