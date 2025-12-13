@@ -21,7 +21,8 @@
     "cleanup:revoked-tokens": "tsx scripts/cleanup-revoked-tokens.ts",
     "check-key-rotation": "tsx scripts/check-key-rotation.ts",
     "terraform:fmt": "terraform fmt -recursive infra/terraform",
-    "terraform:validate": "cd infra/terraform/gcp && terraform init -backend=false && terraform validate",
+    "terraform:validate": "bash infra/terraform/validate.sh",
+    "terraform:validate:gcp": "cd infra/terraform/gcp && terraform init -backend=false && terraform validate",
     "terraform:plan": "cd infra/terraform/gcp && terraform plan",
     "terraform:apply": "cd infra/terraform/gcp && terraform apply"
   },

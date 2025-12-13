@@ -234,7 +234,26 @@ terraform {
 
 ## Validation
 
-### Terraform Validation
+### Automated Validation Script
+
+Run the comprehensive validation script to check all modules without cloud credentials:
+
+```bash
+# Validate all modules
+./infra/terraform/validate.sh
+
+# Or using npm
+npm run terraform:validate
+```
+
+This script:
+- ✅ Checks Terraform installation
+- ✅ Validates formatting
+- ✅ Validates all modules (network, database, redis, auth-service, gcp)
+- ✅ Works without cloud provider credentials
+- ✅ Verifies .gitignore configuration
+
+### Manual Terraform Validation
 
 Validate your configuration before applying:
 
@@ -242,7 +261,9 @@ Validate your configuration before applying:
 # Format Terraform files
 terraform fmt -recursive
 
-# Validate configuration
+# Validate specific module
+cd infra/terraform/gcp
+terraform init -backend=false
 terraform validate
 
 # Check for security issues
@@ -251,25 +272,23 @@ terraform plan -out=plan.tfplan
 
 ### npm Scripts
 
-Add these scripts to `package.json` for convenience:
-
-```json
-{
-  "scripts": {
-    "terraform:validate": "cd infra/terraform/gcp && terraform validate",
-    "terraform:fmt": "terraform fmt -recursive infra/terraform",
-    "terraform:plan": "cd infra/terraform/gcp && terraform plan",
-    "terraform:apply": "cd infra/terraform/gcp && terraform apply"
-  }
-}
-```
-
-Usage:
+The following npm scripts are available for convenience:
 
 ```bash
+# Validate all modules
 npm run terraform:validate
+
+# Format all Terraform files
 npm run terraform:fmt
+
+# Validate only GCP module
+npm run terraform:validate:gcp
+
+# Plan GCP deployment
 npm run terraform:plan
+
+# Apply GCP deployment
+npm run terraform:apply
 ```
 
 ## Deployment Workflow
