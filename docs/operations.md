@@ -3536,7 +3536,7 @@ npm diff <package>@<version1> <package>@<version2>
 - Prisma 5.22.0 → 7.1.0 (DB compatibility check needed - scheduled for Q1 2025)
 - Jest 29.7.0 → 30.2.0 (breaking changes - scheduled for Q2 2025)
 - Pino 9.5.0 → 10.1.0 (breaking changes - scheduled for Q2 2025)
-- @types/node 22.9.3 → 25.0.1 (wait for Node.js 25 LTS)
+- @types/node 22.9.3 → 22.x.x (align with current Node.js 22 runtime)
 - express-rate-limit 7.5.1 → 8.2.1 (breaking changes - deferred until Express 5 upgrade)
 
 **Notes:**

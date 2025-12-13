@@ -655,7 +655,7 @@ The project uses a phased approach to dependency updates:
 - ⏸️ Prisma 5.22.0 → 7.1.0 (DB compatibility check needed)
 - ⏸️ Jest 29.7.0 → 30.2.0 (breaking changes)
 - ⏸️ Pino 9.5.0 → 10.1.0 (breaking changes)
-- ⏸️ @types/node 22.9.3 → 25.0.1 (Node.js 25 not LTS)
+- ⏸️ @types/node 22.9.3 → 22.x.x (align with current Node.js 22 runtime)
 - ⏸️ express-rate-limit 7.5.1 → 8.2.1 (breaking changes)
 
 **Results:**
