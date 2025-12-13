@@ -106,6 +106,7 @@
     ├── metrics.ts
     ├── rate-limit.test.ts
     ├── rate-limit.ts
+    ├── security-headers.edge-cases.test.ts
     ├── security-headers.integration.test.ts
     ├── security-headers.test.ts
     ├── security-headers.ts

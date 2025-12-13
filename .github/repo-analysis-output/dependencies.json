@@ -209,6 +209,18 @@
       }
     },
     {
+      "id": "src/middleware/security-headers.edge-cases.test.ts",
+      "path": "src/middleware/security-headers.edge-cases.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [],
+        "third-party": [
+          "express",
+          "supertest"
+        ]
+      }
+    },
+    {
       "id": "src/middleware/security-headers.integration.test.ts",
       "path": "src/middleware/security-headers.integration.test.ts",
       "type": "file",
@@ -742,6 +754,10 @@
     {
       "source": "src/middleware/rate-limit.ts",
       "target": "src/services/metrics.ts"
+    },
+    {
+      "source": "src/middleware/security-headers.edge-cases.test.ts",
+      "target": "src/middleware/security-headers.ts"
     },
     {
       "source": "src/middleware/security-headers.integration.test.ts",

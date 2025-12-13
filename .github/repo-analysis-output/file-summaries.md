@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 55
+Total files: 56
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -177,6 +177,15 @@ Total files: 55
 **LOC:** 106  
 **TODOs/FIXMEs:** 0  
 
+## src/middleware/security-headers.edge-cases.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 8.61 KB  
+**LOC:** 166  
+**TODOs/FIXMEs:** 0  
+
 ## src/middleware/security-headers.integration.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -200,8 +209,8 @@ Total files: 55
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 11.02 KB  
-**LOC:** 231  
+**Size:** 11.81 KB  
+**LOC:** 241  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/validation.test.ts

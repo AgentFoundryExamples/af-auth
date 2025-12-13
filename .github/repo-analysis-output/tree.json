@@ -484,6 +484,10 @@
             },
             {
               "type": "file",
+              "name": "security-headers.edge-cases.test.ts"
+            },
+            {
+              "type": "file",
               "name": "security-headers.integration.test.ts"
             },
             {

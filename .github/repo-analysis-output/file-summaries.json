@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 55,
+  "total_files": 56,
   "files": [
     {
       "schema_version": "2.0",
@@ -270,6 +270,20 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/middleware/security-headers.edge-cases.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 8817,
+        "loc": 166,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/middleware/security-headers.integration.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -305,8 +319,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 11280,
-        "loc": 231,
+        "size_bytes": 12090,
+        "loc": 241,
         "todo_count": 0
       }
     },
