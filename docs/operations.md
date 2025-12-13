@@ -1562,31 +1562,268 @@ While the service doesn't currently implement CSP reporting endpoints, you can m
 2. **External CSP Reporting Services**: Consider integrating services like report-uri.com
 3. **Future Enhancement**: Add `report-uri` or `report-to` directive to CSP configuration
 
-#### Troubleshooting CSP Issues
+#### Troubleshooting CSP Issues in Production
 
-If pages fail to load styles/scripts:
+**Issue: Pages fail to load styles/scripts**
 
 ```bash
 # 1. Verify nonce middleware is active
 curl -s https://your-service-url/health -v 2>&1 | grep "nonce-"
 
+# Expected: script-src 'self' 'nonce-{24-chars}'
+# Problem: script-src 'self' 'unsafe-inline' (nonce missing)
+
 # 2. Check for nonce mismatch in rendered HTML
 curl -s https://your-service-url/auth/github | grep -o 'nonce="[^"]*"'
 
-# 3. Review logs for CSP-related warnings
-gcloud logging read 'severity>=WARNING AND textPayload=~"CSP"' --limit=10
+# Should see: nonce="HkT+21q9qnvdn+GGnmfFGw==" (example)
 
-# 4. Test emergency rollback (disable nonces)
-# Comment out cspNonceMiddleware in server.ts and redeploy
+# 3. Verify nonces are unique per request
+for i in {1..3}; do
+  curl -s -I https://your-service-url/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+done
+# Should output 3 different nonces
+
+# 4. Review logs for CSP-related warnings
+gcloud logging read 'severity>=WARNING AND textPayload=~"CSP"' --limit=10
+```
+
+**Diagnosis Steps:**
+
+1. **Check Helmet version in logs:**
+   ```bash
+   gcloud logging read 'resource.type="cloud_run_revision"
+     AND textPayload=~"helmet"' --limit=5
+   ```
+
+2. **Verify CSP configuration from container:**
+   ```bash
+   # Get running container's environment
+   gcloud run services describe af-auth \
+     --region=us-central1 \
+     --format="value(spec.template.spec.containers[0].env)"
+   
+   # Check for CSP_* variables and ensure keywords are quoted
+   ```
+
+3. **Test with Cloud Run URL:**
+   ```bash
+   # Get service URL
+   SERVICE_URL=$(gcloud run services describe af-auth \
+     --region=us-central1 \
+     --format='value(status.url)')
+   
+   # Full header inspection
+   curl -I ${SERVICE_URL}/health
+   ```
+
+**Issue: Helmet initialization fails on startup**
+
+**Symptoms:**
+- Service fails health checks
+- Logs show "Content-Security-Policy received an invalid directive value"
+- Pods crash or restart loop
+
+**Resolution:**
+
+1. **Check Secret Manager for malformed CSP values:**
+   ```bash
+   # List all secrets
+   gcloud secrets versions access latest --secret=af-auth-csp-default-src
+   
+   # Verify format: "'self'" not "self"
+   ```
+
+2. **Update secret with correctly quoted values:**
+   ```bash
+   # Create new version with correct format
+   echo -n "'self'" | gcloud secrets versions add af-auth-csp-default-src --data-file=-
+   
+   # Redeploy to pick up new version
+   gcloud run services update af-auth --region=us-central1
+   ```
+
+3. **Validate before deployment:**
+   ```bash
+   # Test locally with production-like config
+   NODE_ENV=production \
+   CSP_DEFAULT_SRC="'self'" \
+   npm start
+   
+   # Should start without errors
+   ```
+
+**Issue: CSP violations appearing in browser console**
+
+**Symptoms:**
+- Browser DevTools console shows "Refused to execute inline script"
+- Specific resources blocked by CSP
+
+**Investigation:**
+
+1. **Identify blocked resource:**
+   ```
+   Browser console will show:
+   "Refused to execute inline script because it violates the following 
+   Content Security Policy directive: 'script-src 'self' 'nonce-xyz'..."
+   ```
+
+2. **Check if legitimate or attack:**
+   - Legitimate: Your own inline scripts missing nonce attribute
+   - Attack: Unknown scripts trying to inject code
+
+3. **For legitimate blocks:**
+   ```bash
+   # Verify page templates include nonce
+   # In route handler:
+   const nonce = res.locals.cspNonce;
+   renderPage({ nonce });  // Must pass nonce to template
+   
+   # In React component:
+   <script nonce={nonce}>{inlineCode}</script>
+   ```
+
+4. **For attack attempts:**
+   - Log the violation details
+   - Review recent code changes
+   - Check for compromised dependencies
+   - Review access logs for suspicious patterns
+
+**Issue: OAuth callback fails with CSP error**
+
+**Symptoms:**
+- GitHub OAuth redirect fails
+- CSP blocks GitHub domains
+
+**Fix:**
+```bash
+# Verify GitHub domains in CSP
+curl -s -I https://your-service-url/health | grep "connect-src"
+
+# Should include: connect-src 'self' https://github.com
+
+# If missing, update environment:
+CSP_CONNECT_SRC="'self',https://github.com"
+CSP_FORM_ACTION="'self',https://github.com"
+
+# Redeploy
+gcloud run services update af-auth --region=us-central1
+```
+
+**Emergency Rollback Procedure**
+
+If CSP issues block critical functionality:
+
+1. **Temporary disable CSP (last resort):**
+   ```bash
+   # Update environment variable
+   gcloud run services update af-auth \
+     --region=us-central1 \
+     --update-env-vars CSP_ENABLED=false
+   
+   # Monitor logs
+   gcloud logging tail "resource.type=cloud_run_revision" \
+     --filter='resource.labels.service_name="af-auth"'
+   ```
+
+2. **Revert to previous working revision:**
+   ```bash
+   # List revisions
+   gcloud run revisions list --service=af-auth --region=us-central1
+   
+   # Route traffic to previous revision
+   gcloud run services update-traffic af-auth \
+     --region=us-central1 \
+     --to-revisions=PREVIOUS_REVISION=100
+   ```
+
+3. **After rollback:**
+   - Investigate root cause
+   - Test fix in staging
+   - Re-enable CSP with fix
+   - Never leave CSP disabled permanently
+
+#### Validating Security Headers in Production
+
+**Automated validation script:**
+
+```bash
+#!/bin/bash
+# validate-security-headers.sh
+
+SERVICE_URL="https://your-service-url"
+
+echo "=== Security Headers Validation ==="
+
+# 1. Check CSP is present
+echo "1. Content-Security-Policy:"
+CSP=$(curl -s -I ${SERVICE_URL}/health | grep -i "content-security-policy")
+echo "$CSP"
+
+if [[ $CSP == *"nonce-"* ]]; then
+  echo "✅ CSP with nonce enabled"
+else
+  echo "❌ CSP missing or no nonce"
+fi
+
+# 2. Check HSTS
+echo -e "\n2. HSTS:"
+HSTS=$(curl -s -I ${SERVICE_URL}/health | grep -i "strict-transport-security")
+echo "$HSTS"
+
+if [[ $HSTS == *"max-age="* ]]; then
+  echo "✅ HSTS enabled"
+else
+  echo "❌ HSTS missing"
+fi
+
+# 3. Check X-Frame-Options
+echo -e "\n3. X-Frame-Options:"
+XFO=$(curl -s -I ${SERVICE_URL}/health | grep -i "x-frame-options")
+echo "$XFO"
+
+if [[ $XFO == *"DENY"* ]]; then
+  echo "✅ X-Frame-Options set"
+else
+  echo "⚠️  X-Frame-Options missing or not DENY"
+fi
+
+# 4. Verify nonce uniqueness (test with 2 separate requests)
+echo -e "\n4. CSP Nonce Uniqueness:"
+NONCE1=$(curl -s -I ${SERVICE_URL}/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}" | head -1)
+sleep 0.1  # Brief pause to ensure different request
+NONCE2=$(curl -s -I ${SERVICE_URL}/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}" | head -1)
+
+echo "Nonce 1: $NONCE1"
+echo "Nonce 2: $NONCE2"
+
+if [[ "$NONCE1" != "$NONCE2" ]] && [[ -n "$NONCE1" ]] && [[ -n "$NONCE2" ]]; then
+  echo "✅ Nonces are unique per request"
+else
+  echo "❌ Nonces are not unique or missing"
+fi
+
+echo -e "\n=== Validation Complete ==="
+```
+
+**Run weekly as part of production health checks:**
+```bash
+chmod +x validate-security-headers.sh
+./validate-security-headers.sh
 ```
 
 #### Security Best Practices
 
 1. **Never disable CSP in production** - Critical security control
 2. **Monitor for violations** - May indicate attack attempts
-3. **Test OAuth flows** after CSP changes
+3. **Test OAuth flows** after CSP changes - Ensure GitHub domains allowed
 4. **Keep nonce implementation** - Don't fallback to unsafe-inline permanently
-5. **Regular audits** - Verify CSP headers in production weekly
+5. **Regular audits** - Run validation script weekly
+6. **Quote CSP keywords** - Always use `"'self'"` not `"self"` in configuration
+7. **Helmet 8.x validation** - Stricter than previous versions, test thoroughly
+8. **Emergency procedures** - Document rollback steps before they're needed
+9. **Staging validation** - Test all CSP changes in staging first
+10. **Metrics monitoring** - Track CSP-related errors as separate metric
 
 ## Prometheus Metrics
 

@@ -18,6 +18,8 @@ This guide covers security best practices, secret management, JWT verification, 
 
 AF Auth implements defense-in-depth security across multiple layers:
 
+### Infrastructure Security
+
 ```mermaid
 graph TD
     A[External Request] -->|HTTPS Only| B[Cloud Run]
@@ -34,6 +36,40 @@ graph TD
     style D fill:#bfb,stroke:#333
     style E fill:#fbb,stroke:#333
 ```
+
+### Application Security Flow
+
+```mermaid
+graph LR
+    A[HTTP Request] -->|1| B[Rate Limiter]
+    B -->|2| C[CSP Nonce Generator]
+    C -->|3| D[Helmet Security Headers]
+    D -->|4| E[Request Logger]
+    E -->|5| F[Route Handler]
+    F -->|6| G[Response with Headers]
+    
+    C -.->|res.locals.cspNonce| D
+    D -.->|CSP with nonce| G
+    
+    style A fill:#e1f5ff,stroke:#333
+    style C fill:#fff4e1,stroke:#333
+    style D fill:#ffe1e1,stroke:#333
+    style G fill:#e1ffe1,stroke:#333
+    
+    subgraph "Security Middleware"
+    B
+    C
+    D
+    end
+```
+
+**Key Components:**
+1. **Rate Limiter**: Redis-backed request throttling to prevent abuse
+2. **CSP Nonce Generator**: Creates unique 16-byte cryptographic nonces per request
+3. **Helmet Security Headers**: Applies CSP, HSTS, X-Frame-Options, and other protective headers
+4. **Request Logger**: Pino-based structured logging with sensitive data redaction
+5. **Route Handler**: Application business logic
+6. **Response**: Includes all security headers and nonce-protected inline content
 
 ### Security Principles
 
@@ -90,6 +126,44 @@ The service generates a cryptographically secure nonce for each request using `c
 4. Applied to all inline `<script>` and `<style>` tags in rendered pages
 
 This approach eliminates the need for `'unsafe-inline'`, significantly reducing XSS attack surface while maintaining compatibility with React SSR pages.
+
+**CSP Middleware Flow:**
+
+The following diagram illustrates how CSP nonces are generated and applied throughout the request lifecycle:
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Express
+    participant CSPNonce as cspNonceMiddleware
+    participant Helmet as securityHeadersMiddleware
+    participant Route as Route Handler
+    participant React as React SSR
+    
+    Client->>Express: HTTP Request
+    Express->>CSPNonce: Process Request
+    CSPNonce->>CSPNonce: Generate 16-byte random nonce
+    CSPNonce->>CSPNonce: Base64 encode nonce
+    CSPNonce->>Express: Store in res.locals.cspNonce
+    
+    Express->>Helmet: Apply Security Headers
+    Helmet->>Helmet: Read res.locals.cspNonce
+    Helmet->>Helmet: Build CSP with nonce-{value}
+    Helmet->>Helmet: Replace 'unsafe-inline' with nonce
+    Helmet->>Express: Set CSP header
+    
+    Express->>Route: Process Route
+    Route->>React: Render Page (nonce passed)
+    React->>React: Apply nonce to <script> tags
+    React->>React: Apply nonce to <style> tags
+    React->>Route: Return HTML with nonces
+    
+    Route->>Client: Response with CSP header + HTML
+    
+    Note over Client,React: Nonce is unique per request
+    Note over Helmet: CSP: script-src 'self' 'nonce-{value}'
+    Note over React: <script nonce="{value}">...</script>
+```
 
 **Configuration Notes:**
 
@@ -643,6 +717,186 @@ HSTS_ENABLED=false
 To clear HSTS settings in browser:
 - Chrome: chrome://net-internals/#hsts → Delete domain
 - Firefox: Clear site data for localhost
+
+#### Helmet Configuration Errors
+
+**Issue: "Content-Security-Policy received an invalid directive value"**
+
+**Symptoms:**
+- Server fails to start
+- Error during middleware initialization
+- CSP directive validation failure
+
+**Causes:**
+1. CSP keywords not properly quoted in environment variables
+2. Invalid directive format
+3. Helmet 8.x stricter validation compared to older versions
+
+**Resolution:**
+
+```bash
+# ✅ CORRECT - CSP keywords must be quoted within the value
+CSP_DEFAULT_SRC="'self'"
+CSP_OBJECT_SRC="'none'"
+CSP_SCRIPT_SRC="'self','nonce-{random}'"
+
+# ❌ INCORRECT - Missing quotes around keywords
+CSP_DEFAULT_SRC='self'
+CSP_OBJECT_SRC='none'
+
+# ❌ INCORRECT - Bare values without single quotes
+CSP_DEFAULT_SRC=self
+```
+
+**Verification:**
+```bash
+# Test CSP configuration
+NODE_ENV=development npm run dev
+
+# Check for CSP warnings in logs
+# Should see: "CSP initialized successfully" or similar
+
+# Verify CSP header is present
+curl -I http://localhost:3000/health | grep -i "content-security-policy"
+```
+
+**Issue: Server crashes on startup with Helmet error**
+
+**Symptoms:**
+- Uncaught exception during middleware initialization
+- Error mentions helmet or contentSecurityPolicy
+
+**Diagnosis:**
+```bash
+# Enable debug logging
+LOG_LEVEL=debug npm run dev
+
+# Check environment variable parsing
+node -e "console.log(process.env.CSP_DEFAULT_SRC)"
+```
+
+**Resolution:**
+1. Verify all CSP environment variables are valid comma-separated lists
+2. Check for typos in CSP directive names (e.g., `CSP_DEFAULT_SRC` not `CSP_DEFAULTSRC`)
+3. Ensure no trailing commas in CSP values
+4. Review `.env.example` for correct format
+
+**Issue: Nonce not appearing in rendered pages**
+
+**Symptoms:**
+- CSP header contains `nonce-{value}` but HTML doesn't
+- Inline styles/scripts blocked even with nonce in header
+
+**Diagnosis:**
+```bash
+# Check middleware order
+grep -A 10 "cspNonceMiddleware" src/server.ts
+
+# Verify nonce is generated
+curl -v http://localhost:3000/auth/github 2>&1 | grep -i "nonce"
+
+# Check if res.locals.cspNonce is undefined in routes
+# Add temporary logging in route handler:
+console.log('CSP Nonce:', res.locals.cspNonce);
+```
+
+**Resolution:**
+1. Ensure `cspNonceMiddleware` is applied **before** route handlers:
+   ```typescript
+   // Correct order in server.ts:
+   app.use(cspNonceMiddleware);              // 1. Generate nonce first
+   app.use(createSecurityHeadersMiddleware()); // 2. Apply headers with nonce
+   app.use('/auth', authRoutes);              // 3. Then routes
+   ```
+
+2. Verify page components receive and use the nonce:
+   ```typescript
+   // In route handler:
+   const nonce = res.locals.cspNonce;
+   const html = renderLoginPage({ nonce });
+   
+   // In React component:
+   <style nonce={nonce}>{styles}</style>
+   <script nonce={nonce}>{inlineScript}</script>
+   ```
+
+**Issue: Headers duplicated or conflicting**
+
+**Symptoms:**
+- Multiple CSP headers in response
+- Warnings about conflicting security policies
+
+**Cause:**
+Security middleware applied multiple times
+
+**Resolution:**
+```typescript
+// Only apply security middleware once, high in the middleware chain:
+const securityHeaders = createSecurityHeadersMiddleware();
+app.use(securityHeaders); // Apply once globally
+
+// ❌ Don't apply to individual routes:
+// app.use('/api', securityHeaders); // Wrong - causes duplication
+```
+
+#### Testing Helmet Configuration Locally
+
+**Quick validation commands:**
+
+```bash
+# 1. Start the server
+npm run dev
+
+# 2. Test CSP header presence and nonce
+curl -I http://localhost:3000/health | grep -i "content-security-policy"
+
+# 3. Extract and verify nonce format (16 bytes base64 = 24 chars)
+curl -I http://localhost:3000/health | grep "script-src" | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+
+# 4. Verify nonces are unique per request
+for i in {1..3}; do 
+  curl -s -I http://localhost:3000/health | grep "script-src" | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+done
+# Should output 3 different nonces
+
+# 5. Check all security headers are present
+curl -I http://localhost:3000/health | grep -E "(X-Frame-Options|X-Content-Type-Options|Referrer-Policy|Permissions-Policy)"
+
+# 6. Test HSTS is disabled in development
+curl -I http://localhost:3000/health | grep -i "strict-transport-security"
+# Should be empty in NODE_ENV=development
+
+# 7. Validate OAuth flow with CSP
+curl -L http://localhost:3000/auth/github 2>&1 | grep -i "github.com"
+```
+
+**Comprehensive test suite:**
+
+```bash
+# Run all security header tests (unit + integration + edge cases + nonce)
+npm test -- --testPathPattern="security-headers|csp-nonce"
+
+# Run with coverage
+npm run test:coverage -- --testPathPattern="security-headers|csp-nonce"
+
+# Specific test suites
+npm test -- security-headers.test.ts              # Unit tests
+npm test -- security-headers.integration.test.ts  # Integration tests  
+npm test -- security-headers.edge-cases.test.ts   # Edge case tests
+npm test -- csp-nonce.test.ts                     # Nonce generation tests
+
+# Test specific scenarios
+npm test -- -t "should use nonce-based CSP"
+npm test -- -t "should generate unique nonces"
+npm test -- -t "should handle empty string CSP directive"
+```
+
+**Expected test results:**
+- ✅ 75 tests passing (security headers + CSP nonces)
+- ✅ 0 failures
+- ✅ ~92% statement coverage
+- ✅ No warnings about invalid CSP directives
+- ✅ No Helmet initialization errors
 
 ### Security Monitoring
 

@@ -576,6 +576,265 @@ npm run test:coverage
    - Or configure PostgreSQL to require SSL connections
    - Verify SSL is enabled by checking connection logs
 
+## Testing Security Headers & CSP
+
+AF Auth implements comprehensive HTTP security headers powered by **Helmet 8.1.0** with nonce-based Content Security Policy (CSP). This section covers local testing and troubleshooting.
+
+### Quick Verification
+
+After starting the development server (`npm run dev`), verify security headers are working:
+
+```bash
+# 1. Check all security headers are present
+curl -I http://localhost:3000/health
+
+# Expected headers:
+# Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-...'
+# X-Frame-Options: DENY
+# X-Content-Type-Options: nosniff
+# Referrer-Policy: strict-origin-when-cross-origin
+# Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+```
+
+### CSP Nonce Validation
+
+The service uses cryptographically random nonces (16 bytes, base64-encoded) to allow inline scripts/styles without `'unsafe-inline'`:
+
+```bash
+# 2. Verify CSP includes nonce
+curl -s -I http://localhost:3000/health | grep "Content-Security-Policy"
+
+# Should see: script-src 'self' 'nonce-{24-char-base64}'
+#             style-src 'self' 'nonce-{24-char-base64}'
+
+# 3. Extract nonce value (should be 24 base64 characters)
+curl -s -I http://localhost:3000/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+
+# Example output: nonce-HkT+21q9qnvdn+GGnmfFGw==
+```
+
+### Nonce Uniqueness Test
+
+Each request should generate a unique nonce:
+
+```bash
+# 4. Test nonce uniqueness (should output 3 different nonces)
+for i in {1..3}; do 
+  curl -s -I http://localhost:3000/health | grep "script-src" | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+done
+```
+
+**Expected:** Three different nonce values  
+**If same nonce appears:** Check middleware order in `src/server.ts` - `cspNonceMiddleware` must run before route handlers
+
+### Testing OAuth Flow with CSP
+
+GitHub OAuth requires specific CSP directives:
+
+```bash
+# 5. Verify GitHub domains are allowed in CSP
+curl -s -I http://localhost:3000/auth/github | grep "Content-Security-Policy"
+
+# Should include:
+# connect-src 'self' https://github.com
+# form-action 'self' https://github.com
+
+# 6. Test OAuth login page renders (should see HTML with nonces)
+curl -s http://localhost:3000/auth/github | grep 'nonce='
+
+# Expected: <style nonce="..."> and/or <script nonce="..."> tags
+```
+
+### Running Security Header Tests
+
+The project includes 75 automated tests covering security headers and CSP:
+
+```bash
+# Run all security header tests
+npm test -- --testPathPattern="security-headers|csp-nonce"
+
+# Test suites breakdown:
+# - security-headers.test.ts (35 tests): Unit tests for middleware
+# - security-headers.integration.test.ts (20 tests): Real endpoint validation
+# - security-headers.edge-cases.test.ts (10 tests): Error handling & malformed configs
+# - csp-nonce.test.ts (10 tests): Cryptographic nonce generation
+
+# Run specific test suite
+npm test -- security-headers.test.ts
+
+# Run with coverage
+npm run test:coverage -- --testPathPattern="security-headers|csp-nonce"
+
+# Test specific scenario
+npm test -- -t "should use nonce-based CSP"
+npm test -- -t "should generate unique nonces"
+```
+
+**Expected Results:**
+- ✅ 75 tests passing
+- ✅ 0 failures
+- ✅ ~92% statement coverage
+- ✅ No Helmet configuration errors
+- ✅ No CSP directive warnings
+
+### Troubleshooting CSP Issues
+
+#### Issue: Server won't start with CSP error
+
+**Error:** `Content-Security-Policy received an invalid directive value`
+
+**Cause:** CSP keywords not properly quoted in `.env`
+
+**Fix:**
+```bash
+# ✅ CORRECT - Keywords must be quoted within the value
+CSP_DEFAULT_SRC="'self'"
+CSP_OBJECT_SRC="'none'"
+CSP_SCRIPT_SRC="'self','nonce-{random}'"
+
+# ❌ INCORRECT - Missing quotes around keywords
+CSP_DEFAULT_SRC='self'
+CSP_OBJECT_SRC='none'
+```
+
+**Verification:**
+```bash
+# Test configuration
+NODE_ENV=development npm run dev
+
+# Check logs for CSP initialization
+# Should not see "invalid directive" errors
+```
+
+#### Issue: Pages render without styles
+
+**Symptoms:**
+- Unstyled login/token pages
+- Browser console shows CSP violations
+
+**Diagnosis:**
+```bash
+# Check if nonce is in both header and HTML
+curl -v http://localhost:3000/auth/github 2>&1 | grep -i "nonce"
+
+# Should see nonce in:
+# 1. Content-Security-Policy header
+# 2. HTML <style nonce="..."> tags
+```
+
+**Fix:**
+1. Verify `cspNonceMiddleware` is registered in `src/server.ts`:
+   ```typescript
+   app.use(cspNonceMiddleware);              // Must be first
+   app.use(createSecurityHeadersMiddleware()); // Then security headers
+   app.use('/auth', authRoutes);              // Then routes
+   ```
+
+2. Check page components receive nonce prop:
+   ```typescript
+   // In route handler:
+   const nonce = res.locals.cspNonce;
+   const html = renderLoginPage({ nonce });
+   ```
+
+#### Issue: HSTS causing localhost problems
+
+**Error:** Browser forces HTTPS on localhost
+
+**Cause:** HSTS was enabled in development
+
+**Fix:**
+```bash
+# HSTS is automatically disabled in development
+# Verify NODE_ENV in .env:
+NODE_ENV=development
+
+# Clear HSTS settings in browser:
+# Chrome: chrome://net-internals/#hsts → Delete domain "localhost"
+# Firefox: Settings → Privacy → Clear site data for localhost
+```
+
+#### Issue: CSP blocks resources
+
+**Symptoms:**
+- External scripts/styles blocked
+- Browser console shows CSP violations
+
+**Fix:**
+```bash
+# Add allowed domains to CSP directives in .env
+CSP_SCRIPT_SRC="'self','nonce-{random}',https://trusted-cdn.com"
+CSP_STYLE_SRC="'self','nonce-{random}',https://trusted-cdn.com"
+
+# Restart server after changes
+npm run dev
+```
+
+### HSTS Testing (Production Only)
+
+HSTS is automatically enabled in production (`NODE_ENV=production`) and disabled in development:
+
+```bash
+# 1. Start in production mode
+NODE_ENV=production npm start
+
+# 2. Verify HSTS header is present
+curl -I http://localhost:3000/health | grep -i "strict-transport-security"
+
+# Expected: Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# 3. In development, HSTS should be absent
+NODE_ENV=development npm run dev
+curl -I http://localhost:3000/health | grep -i "strict-transport-security"
+
+# Expected: (no output - header not present)
+```
+
+### CSP Configuration Reference
+
+Common CSP environment variables for local development:
+
+```bash
+# Enable/disable CSP (enabled by default)
+CSP_ENABLED=true
+
+# Customize directives (comma-separated, keywords must be quoted)
+# Note: Nonces are automatically added by middleware - do not specify manually
+CSP_DEFAULT_SRC="'self'"
+CSP_SCRIPT_SRC="'self'"
+CSP_STYLE_SRC="'self'"
+CSP_IMG_SRC="'self',data:,https:"
+CSP_CONNECT_SRC="'self',https://github.com"
+CSP_FORM_ACTION="'self',https://github.com"
+
+# Frame options
+X_FRAME_OPTIONS=DENY  # or SAMEORIGIN
+
+# Referrer policy
+REFERRER_POLICY=strict-origin-when-cross-origin
+```
+
+**Important:** All CSP keywords like `'self'`, `'none'`, `'unsafe-inline'` must be wrapped in single quotes within the environment variable value.
+
+### Browser Testing
+
+After verifying headers with curl, test in a browser:
+
+1. **Open DevTools Console** (F12)
+2. **Navigate to:** `http://localhost:3000/auth/github`
+3. **Check Console tab** for CSP violations
+4. **Check Network tab** → Select any request → Headers → Response Headers
+5. **Verify:** Content-Security-Policy header is present with nonce
+
+**No CSP violations should appear** in the console for the login/token pages.
+
+### Additional Resources
+
+- **Comprehensive Troubleshooting:** See [Security Guide - Helmet Configuration](./security.md#helmet-configuration-errors)
+- **Test Coverage Details:** See [Security Guide - Automated Testing](./security.md#automated-testing-strategy)
+- **CSP Flow Diagram:** See [Security Guide - CSP Middleware Flow](./security.md#csp-middleware-flow)
+- **Production Monitoring:** See [Operations Guide - CSP Monitoring](./operations.md)
+
 ## Next Steps
 
 - Review [Database Documentation](./database.md) for schema details
