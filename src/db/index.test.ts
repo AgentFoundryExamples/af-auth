@@ -44,9 +44,8 @@ describe('Database Client', () => {
     });
 
     it('should call prisma.$disconnect when db.disconnect is invoked', async () => {
-      // Set connected to true to allow disconnect to proceed
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (db as any).isConnected = true;
+      // First connect to set the state, then disconnect
+      await db.connect();
       await db.disconnect();
       expect(disconnectSpy).toHaveBeenCalledTimes(1);
     });
