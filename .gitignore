@@ -48,6 +48,7 @@ temp/
 src/config/keys/jwt-private*.pem
 *.key
 *.private.pem
+*.private-key.pem
 
 # Terraform
 **/.terraform/
