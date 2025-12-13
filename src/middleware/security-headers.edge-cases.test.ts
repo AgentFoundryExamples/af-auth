@@ -47,7 +47,6 @@ describe('Security Headers Edge Cases', () => {
 
     it('should handle whitespace-only CSP directive gracefully', async () => {
       process.env.CSP_DEFAULT_SRC = '   ';
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       
       app = express();
       app.use(createSecurityHeadersMiddleware());
@@ -57,18 +56,14 @@ describe('Security Headers Edge Cases', () => {
 
       const response = await request(app).get('/test').expect(200);
       
-      // Should warn about empty directive but not crash
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('CSP directive "default-src" has empty or invalid value'),
-        expect.any(Object)
-      );
-      
-      consoleWarnSpy.mockRestore();
+      // Should use default values when env var is whitespace only
+      const csp = response.headers['content-security-policy'];
+      expect(csp).toBeDefined();
+      expect(csp).toContain("default-src 'self'");
     });
 
     it('should handle comma-only CSP directive gracefully', async () => {
       process.env.CSP_DEFAULT_SRC = ',,,';
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       
       app = express();
       app.use(createSecurityHeadersMiddleware());
@@ -78,13 +73,10 @@ describe('Security Headers Edge Cases', () => {
 
       const response = await request(app).get('/test').expect(200);
       
-      // Should warn about empty directive
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('CSP directive "default-src" has empty or invalid value'),
-        expect.any(Object)
-      );
-      
-      consoleWarnSpy.mockRestore();
+      // Should use default values when env var has only commas
+      const csp = response.headers['content-security-policy'];
+      expect(csp).toBeDefined();
+      expect(csp).toContain("default-src 'self'");
     });
 
     it('should handle unquoted CSP keywords correctly', async () => {
@@ -233,8 +225,7 @@ describe('Security Headers Edge Cases', () => {
     it('should provide helpful error context for CSP validation failures', async () => {
       // This test documents the Helmet 8.0.0 behavior
       // If CSP directives are invalid, middleware should not crash the app
-      process.env.CSP_DEFAULT_SRC = '   '; // Invalid - will be empty after parsing
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      process.env.CSP_DEFAULT_SRC = '   '; // Will be replaced with defaults after parsing
       
       app = express();
       app.use(createSecurityHeadersMiddleware());
@@ -242,11 +233,9 @@ describe('Security Headers Edge Cases', () => {
         res.status(200).json({ success: true });
       });
 
-      // Should not throw unhandled errors
-      await request(app).get('/test');
-      
-      expect(consoleWarnSpy).toHaveBeenCalled();
-      consoleWarnSpy.mockRestore();
+      // Should not throw unhandled errors, should use defaults
+      const response = await request(app).get('/test').expect(200);
+      expect(response.headers['content-security-policy']).toBeDefined();
     });
   });
 });

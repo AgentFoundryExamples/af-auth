@@ -66,7 +66,9 @@ function getSecurityHeadersConfig(nonce?: string): SecurityHeadersConfig {
   const parseDirective = (envVar: string, defaultValue: string[]): string[] => {
     const value = process.env[envVar];
     if (!value) return defaultValue;
-    return value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    const parsed = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    // If parsing resulted in empty array (e.g., whitespace only), use default
+    return parsed.length > 0 ? parsed : defaultValue;
   };
 
   // Determine if we're in production
