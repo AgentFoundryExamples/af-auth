@@ -71,7 +71,8 @@ describe('Security Headers Middleware', () => {
       // Create app with nonce middleware
       const appWithNonce = express();
       appWithNonce.use((_req: Request, res: Response, next) => {
-        res.locals.cspNonce = 'test-nonce-12345678';
+        // Use valid base64-encoded nonce
+        res.locals.cspNonce = 'dGVzdE5vbmNlMTIzNDU2'; // "testNonce123456" in base64
         next();
       });
       appWithNonce.use(createSecurityHeadersMiddleware());
@@ -82,15 +83,16 @@ describe('Security Headers Middleware', () => {
       const response = await request(appWithNonce).get('/test').expect(200);
 
       const csp = response.headers['content-security-policy'];
-      expect(csp).toContain("script-src 'self' 'nonce-test-nonce-12345678'");
-      expect(csp).toContain("style-src 'self' 'nonce-test-nonce-12345678'");
+      expect(csp).toContain("script-src 'self' 'nonce-dGVzdE5vbmNlMTIzNDU2'");
+      expect(csp).toContain("style-src 'self' 'nonce-dGVzdE5vbmNlMTIzNDU2'");
       expect(csp).not.toContain("'unsafe-inline'");
     });
 
     it('should not include unsafe-inline when nonce is present', async () => {
       const appWithNonce = express();
       appWithNonce.use((_req: Request, res: Response, next) => {
-        res.locals.cspNonce = 'secure-nonce-abc123';
+        // Use valid base64-encoded nonce
+        res.locals.cspNonce = 'c2VjdXJlTm9uY2VhYmMxMjM='; // "secureNonceabc123" in base64
         next();
       });
       appWithNonce.use(createSecurityHeadersMiddleware());
@@ -108,7 +110,9 @@ describe('Security Headers Middleware', () => {
       const appWithNonce = express();
       let requestCount = 0;
       appWithNonce.use((_req: Request, res: Response, next) => {
-        res.locals.cspNonce = `nonce-${++requestCount}`;
+        // Generate valid base64 nonces
+        res.locals.cspNonce = requestCount === 0 ? 'bm9uY2UxMjM0NTY3OA==' : 'bm9uY2U5ODc2NTQzMjE=';
+        requestCount++;
         next();
       });
       appWithNonce.use(createSecurityHeadersMiddleware());
@@ -122,8 +126,37 @@ describe('Security Headers Middleware', () => {
       const csp1 = response1.headers['content-security-policy'];
       const csp2 = response2.headers['content-security-policy'];
       
-      expect(csp1).toContain("'nonce-nonce-1'");
-      expect(csp2).toContain("'nonce-nonce-2'");
+      expect(csp1).toContain("'nonce-bm9uY2UxMjM0NTY3OA=='");
+      expect(csp2).toContain("'nonce-bm9uY2U5ODc2NTQzMjE='");
+    });
+
+    it('should reject invalid nonce format to prevent header injection', async () => {
+      const appWithInvalidNonce = express();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      appWithInvalidNonce.use((_req: Request, res: Response, next) => {
+        // Try to inject malicious content via nonce
+        res.locals.cspNonce = "'; script-src 'unsafe-eval'; '";
+        next();
+      });
+      appWithInvalidNonce.use(createSecurityHeadersMiddleware());
+      appWithInvalidNonce.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(appWithInvalidNonce).get('/test').expect(200);
+
+      const csp = response.headers['content-security-policy'];
+      
+      // Should fall back to unsafe-inline due to invalid nonce
+      expect(csp).toContain("'unsafe-inline'");
+      expect(csp).not.toContain("unsafe-eval");
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Invalid nonce format detected, ignoring',
+        expect.any(Object)
+      );
+      
+      consoleWarnSpy.mockRestore();
     });
 
     it('should allow custom CSP directives from environment', async () => {

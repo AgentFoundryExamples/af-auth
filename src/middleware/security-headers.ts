@@ -179,7 +179,13 @@ export function createSecurityHeadersMiddleware() {
   // Return middleware that applies helmet and custom Permissions-Policy header
   return (req: Request, res: Response, next: NextFunction) => {
     // Get nonce from res.locals if available (set by cspNonceMiddleware)
-    const nonce = res.locals.cspNonce as string | undefined;
+    let nonce = res.locals.cspNonce as string | undefined;
+    
+    // Validate nonce format to prevent header injection attacks
+    if (nonce && !/^[A-Za-z0-9+/]+=*$/.test(nonce)) {
+      console.warn('Invalid nonce format detected, ignoring', { nonce });
+      nonce = undefined;
+    }
     
     // Get security config with nonce
     const securityConfig = getSecurityHeadersConfig(nonce);

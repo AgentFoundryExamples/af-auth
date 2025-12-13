@@ -14,12 +14,8 @@ export function generateNonce(): string {
  * Nonce is generated once per request and reused for all inline scripts/styles
  */
 export function cspNonceMiddleware(_req: Request, res: Response, next: NextFunction): void {
-  // Ensure res.locals exists
-  if (!res.locals) {
-    res.locals = {};
-  }
-  
   // Generate a single nonce for this request
+  // Note: res.locals is always initialized by Express as an empty object
   res.locals.cspNonce = generateNonce();
   next();
 }
