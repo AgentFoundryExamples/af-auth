@@ -1788,9 +1788,10 @@ else
   echo "⚠️  X-Frame-Options missing or not DENY"
 fi
 
-# 4. Verify nonce uniqueness
+# 4. Verify nonce uniqueness (test with 2 separate requests)
 echo -e "\n4. CSP Nonce Uniqueness:"
 NONCE1=$(curl -s -I ${SERVICE_URL}/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}" | head -1)
+sleep 0.1  # Brief pause to ensure different request
 NONCE2=$(curl -s -I ${SERVICE_URL}/health | grep -oE "nonce-[A-Za-z0-9+/=]{24}" | head -1)
 
 echo "Nonce 1: $NONCE1"
