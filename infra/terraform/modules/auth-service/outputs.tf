@@ -5,7 +5,9 @@ output "service_name" {
 
 output "service_url" {
   description = "Public URL of the deployed service"
-  value       = "https://${var.service_name}-${var.environment}.example.com"
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual service URL
+  value = "https://${var.service_name}-${var.environment}.example.com"
 }
 
 output "service_id" {

@@ -59,7 +59,7 @@ variable "database_user" {
 }
 
 variable "database_password" {
-  description = "Database password (should be passed via Secret Manager or .tfvars)"
+  description = "Database password - SECURITY WARNING: For production, create a Secret Manager secret and reference via secret_environment_variables instead of passing directly"
   type        = string
   sensitive   = true
 }

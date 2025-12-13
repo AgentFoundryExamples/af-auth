@@ -1,11 +1,15 @@
 output "network_id" {
   description = "Network/VPC identifier"
-  value       = var.enable_private_networking ? "private-network" : "default-network"
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual resource IDs
+  value = var.enable_private_networking ? "private-network" : "default-network"
 }
 
 output "network_name" {
   description = "Network/VPC name"
-  value       = var.enable_private_networking ? "af-auth-${var.environment}-network" : "default"
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual resource names
+  value = var.enable_private_networking ? "af-auth-${var.environment}-network" : "default"
 }
 
 output "private_subnet_id" {

@@ -126,9 +126,17 @@ openssl rand -hex 32 | \
 openssl rand -hex 32 | \
   gcloud secrets create metrics-auth-token --data-file=-
 
+# Database password (RECOMMENDED for production)
+openssl rand -hex 32 | \
+  gcloud secrets create database-password --data-file=-
+
 # Clean up local key files (NEVER commit these)
 rm jwt-private.pem jwt-public.pem
 ```
+
+**Security Best Practice**: For production deployments, store the database password in Secret Manager instead of terraform.tfvars. You can either:
+1. Use the secret created above and retrieve it via Terraform data source
+2. Pass it via environment variable: `TF_VAR_database_password=$(gcloud secrets versions access latest --secret=database-password)`
 
 ### 3. Create State Bucket
 

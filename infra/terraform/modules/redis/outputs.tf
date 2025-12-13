@@ -10,8 +10,10 @@ output "redis_instance_id" {
 
 output "redis_host" {
   description = "Redis host address"
-  value       = var.enable_redis ? "redis-host" : null
-  sensitive   = true
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual host from resource
+  value     = var.enable_redis ? "redis-host" : null
+  sensitive = true
 }
 
 output "redis_port" {

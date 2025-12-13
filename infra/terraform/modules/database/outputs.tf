@@ -20,14 +20,18 @@ output "connection_name" {
 
 output "private_ip" {
   description = "Private IP address of database instance"
-  value       = var.network_id != null ? "10.0.1.10" : null
-  sensitive   = true
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual IP from resource
+  value     = var.network_id != null ? "10.0.1.10" : null
+  sensitive = true
 }
 
 output "public_ip" {
   description = "Public IP address of database instance (if enabled)"
-  value       = var.network_id == null ? "0.0.0.0" : null
-  sensitive   = true
+  # NOTE: This is a placeholder for provider-agnostic module
+  # Provider-specific implementations should override with actual IP from resource
+  value     = var.network_id == null ? "0.0.0.0" : null
+  sensitive = true
 }
 
 output "port" {

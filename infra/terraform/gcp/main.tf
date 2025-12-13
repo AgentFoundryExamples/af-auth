@@ -95,6 +95,9 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "user" {
   name     = var.database_user
   instance = google_sql_database_instance.postgres.name
+  # SECURITY NOTE: For production, consider using a data source to retrieve
+  # password from Secret Manager instead of var.database_password
+  # Example: password = data.google_secret_manager_secret_version.db_password.secret_data
   password = var.database_password
   project  = var.project_id
 }
@@ -175,8 +178,11 @@ resource "google_cloud_run_v2_service" "auth_service" {
         for_each = merge(
           var.environment_variables,
           {
-            NODE_ENV     = var.environment == "production" ? "production" : "development"
-            PORT         = tostring(var.container_port)
+            NODE_ENV = var.environment == "production" ? "production" : "development"
+            PORT     = tostring(var.container_port)
+            # SECURITY NOTE: Database password is embedded in connection string
+            # For production, consider using Cloud SQL proxy with IAM authentication
+            # or storing full DATABASE_URL in Secret Manager
             DATABASE_URL = "postgresql://${var.database_user}:${var.database_password}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
             REDIS_HOST   = var.enable_redis ? google_redis_instance.cache[0].host : ""
             REDIS_PORT   = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""
