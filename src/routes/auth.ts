@@ -64,6 +64,7 @@ router.get('/github', authRateLimiter, async (_req: Request, res: Response) => {
       React.createElement(LoginPage, {
         authUrl,
         serviceName: 'AF Auth',
+        nonce: res.locals.cspNonce,
       })
     );
     
@@ -78,6 +79,7 @@ router.get('/github', authRateLimiter, async (_req: Request, res: Response) => {
         title: 'Authentication Error',
         message: 'Failed to initiate authentication. Please try again.',
         serviceName: 'AF Auth',
+        nonce: res.locals.cspNonce,
       })
     );
     
@@ -103,6 +105,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           title: 'Authentication Failed',
           message: error_description as string || 'GitHub authentication was unsuccessful. Please try again.',
           serviceName: 'AF Auth',
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -119,6 +122,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           title: 'Invalid Request',
           message: 'Missing authorization code. Please try again.',
           serviceName: 'AF Auth',
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -134,6 +138,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           title: 'Invalid Request',
           message: 'Missing state parameter. Please try again.',
           serviceName: 'AF Auth',
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -151,6 +156,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           title: 'Security Error',
           message: 'Invalid or expired authentication session. Please try again.',
           serviceName: 'AF Auth',
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -226,6 +232,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           githubLogin: githubUser.login,
           serviceName: 'AF Auth',
           token: jwtToken,
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -245,6 +252,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
           adminContactEmail: config.ui.adminContactEmail,
           adminContactName: config.ui.adminContactName,
           serviceName: 'AF Auth',
+          nonce: res.locals.cspNonce,
         })
       );
       
@@ -259,6 +267,7 @@ router.get('/github/callback', authRateLimiter, async (req: Request, res: Respon
         title: 'Authentication Error',
         message: 'An error occurred during authentication. Please try again.',
         serviceName: 'AF Auth',
+        nonce: res.locals.cspNonce,
       })
     );
     

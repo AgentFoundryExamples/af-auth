@@ -59,12 +59,71 @@ describe('Security Headers Middleware', () => {
       expect(csp).toContain('github.com');
     });
 
-    it('should allow inline scripts and styles for pages', async () => {
+    it('should allow inline scripts and styles for pages (without nonce)', async () => {
       const response = await request(app).get('/test').expect(200);
 
       const csp = response.headers['content-security-policy'];
       expect(csp).toContain("script-src 'self' 'unsafe-inline'");
       expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+    });
+
+    it('should use nonce-based CSP when nonce is provided in res.locals', async () => {
+      // Create app with nonce middleware
+      const appWithNonce = express();
+      appWithNonce.use((_req: Request, res: Response, next) => {
+        res.locals.cspNonce = 'test-nonce-12345678';
+        next();
+      });
+      appWithNonce.use(createSecurityHeadersMiddleware());
+      appWithNonce.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(appWithNonce).get('/test').expect(200);
+
+      const csp = response.headers['content-security-policy'];
+      expect(csp).toContain("script-src 'self' 'nonce-test-nonce-12345678'");
+      expect(csp).toContain("style-src 'self' 'nonce-test-nonce-12345678'");
+      expect(csp).not.toContain("'unsafe-inline'");
+    });
+
+    it('should not include unsafe-inline when nonce is present', async () => {
+      const appWithNonce = express();
+      appWithNonce.use((_req: Request, res: Response, next) => {
+        res.locals.cspNonce = 'secure-nonce-abc123';
+        next();
+      });
+      appWithNonce.use(createSecurityHeadersMiddleware());
+      appWithNonce.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(appWithNonce).get('/test').expect(200);
+
+      const csp = response.headers['content-security-policy'];
+      expect(csp).not.toContain("'unsafe-inline'");
+    });
+
+    it('should generate different nonces per request', async () => {
+      const appWithNonce = express();
+      let requestCount = 0;
+      appWithNonce.use((_req: Request, res: Response, next) => {
+        res.locals.cspNonce = `nonce-${++requestCount}`;
+        next();
+      });
+      appWithNonce.use(createSecurityHeadersMiddleware());
+      appWithNonce.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response1 = await request(appWithNonce).get('/test').expect(200);
+      const response2 = await request(appWithNonce).get('/test').expect(200);
+
+      const csp1 = response1.headers['content-security-policy'];
+      const csp2 = response2.headers['content-security-policy'];
+      
+      expect(csp1).toContain("'nonce-nonce-1'");
+      expect(csp2).toContain("'nonce-nonce-2'");
     });
 
     it('should allow custom CSP directives from environment', async () => {

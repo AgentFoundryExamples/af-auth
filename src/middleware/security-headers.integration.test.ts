@@ -130,9 +130,10 @@ describe('Security Headers Integration Tests', () => {
       expect(csp).toContain("frame-ancestors 'none'");
       expect(csp).toContain("base-uri 'self'");
 
-      // Should allow inline scripts/styles for React pages
-      expect(csp).toContain("script-src 'self' 'unsafe-inline'");
-      expect(csp).toContain("style-src 'self' 'unsafe-inline'");
+      // Should use nonce-based CSP instead of unsafe-inline
+      expect(csp).toContain("script-src 'self' 'nonce-");
+      expect(csp).toContain("style-src 'self' 'nonce-");
+      expect(csp).not.toContain("'unsafe-inline'");
 
       // Should allow GitHub for OAuth
       expect(csp).toContain('github.com');
@@ -180,6 +181,74 @@ describe('Security Headers Integration Tests', () => {
       const csp = response.headers['content-security-policy'];
       expect(csp).toContain('form-action');
       expect(csp).toContain('github.com');
+    });
+  });
+
+  describe('Nonce-based CSP', () => {
+    it('should include nonce in CSP directives for all requests', async () => {
+      const response = await request(app).get('/health');
+
+      const csp = response.headers['content-security-policy'];
+      expect(csp).toBeDefined();
+      
+      // Should contain nonce in both script-src and style-src
+      expect(csp).toMatch(/script-src[^;]*'nonce-[A-Za-z0-9+/]+=*'/);
+      expect(csp).toMatch(/style-src[^;]*'nonce-[A-Za-z0-9+/]+=*'/);
+    });
+
+    it('should generate unique nonces per request', async () => {
+      const response1 = await request(app).get('/health');
+      const response2 = await request(app).get('/health');
+
+      const csp1 = response1.headers['content-security-policy'];
+      const csp2 = response2.headers['content-security-policy'];
+
+      // Extract nonces from CSP headers
+      const nonceMatch1 = csp1.match(/'nonce-([A-Za-z0-9+/=]+)'/);
+      const nonceMatch2 = csp2.match(/'nonce-([A-Za-z0-9+/=]+)'/);
+
+      expect(nonceMatch1).not.toBeNull();
+      expect(nonceMatch2).not.toBeNull();
+      
+      // Nonces should be different
+      expect(nonceMatch1![1]).not.toBe(nonceMatch2![1]);
+    });
+
+    it('should use same nonce for both script-src and style-src within a single request', async () => {
+      const response = await request(app).get('/health');
+
+      const csp = response.headers['content-security-policy'];
+
+      // Extract all nonces from the CSP header
+      const nonces = csp.match(/'nonce-([A-Za-z0-9+/=]+)'/g);
+      
+      expect(nonces).not.toBeNull();
+      expect(nonces!.length).toBeGreaterThan(0);
+      
+      // All nonces in the same response should be identical
+      const uniqueNonces = new Set(nonces);
+      expect(uniqueNonces.size).toBe(1);
+    });
+
+    it('should not include unsafe-inline when nonce is present', async () => {
+      const response = await request(app).get('/health');
+
+      const csp = response.headers['content-security-policy'];
+      expect(csp).not.toContain("'unsafe-inline'");
+    });
+
+    it('should generate base64-encoded nonces', async () => {
+      const response = await request(app).get('/health');
+
+      const csp = response.headers['content-security-policy'];
+      const nonceMatch = csp.match(/'nonce-([A-Za-z0-9+/=]+)'/);
+
+      expect(nonceMatch).not.toBeNull();
+      
+      // Verify the nonce is valid base64 (16 bytes = 24 chars in base64)
+      const nonce = nonceMatch![1];
+      expect(nonce.length).toBe(24);
+      expect(nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
     });
   });
 });

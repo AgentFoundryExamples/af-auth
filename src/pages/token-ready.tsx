@@ -5,6 +5,7 @@ export interface TokenReadyPageProps {
   githubLogin: string;
   serviceName?: string;
   token?: string; // JWT token to display
+  nonce?: string;
 }
 
 /**
@@ -15,7 +16,8 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
   userId, 
   githubLogin,
   serviceName = 'AF Auth',
-  token
+  token,
+  nonce
 }) => {
   return (
     <html lang="en">
@@ -23,7 +25,7 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Authentication Successful - {serviceName}</title>
-        <style>{`
+        <style nonce={nonce}>{`
           * {
             margin: 0;
             padding: 0;
@@ -234,7 +236,7 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
             font-size: 14px;
           }
         `}</style>
-        <script dangerouslySetInnerHTML={{
+        <script nonce={nonce} dangerouslySetInnerHTML={{
           __html: `
             function copyToken() {
               const tokenElement = document.getElementById('jwt-token');
@@ -309,7 +311,7 @@ export const TokenReadyPage: React.FC<TokenReadyPageProps> = ({
           </p>
         </div>
         {token && (
-          <script dangerouslySetInnerHTML={{
+          <script nonce={nonce} dangerouslySetInnerHTML={{
             __html: `
               document.getElementById('copy-button').onclick = copyToken;
             `

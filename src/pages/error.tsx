@@ -4,6 +4,7 @@ export interface ErrorPageProps {
   title: string;
   message: string;
   serviceName?: string;
+  nonce?: string;
 }
 
 /**
@@ -12,7 +13,8 @@ export interface ErrorPageProps {
 export const ErrorPage: React.FC<ErrorPageProps> = ({ 
   title, 
   message,
-  serviceName = 'AF Auth' 
+  serviceName = 'AF Auth',
+  nonce 
 }) => {
   return (
     <html lang="en">
@@ -20,7 +22,7 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{title} - {serviceName}</title>
-        <style>{`
+        <style nonce={nonce}>{`
           * {
             margin: 0;
             padding: 0;

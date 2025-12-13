@@ -59,8 +59,9 @@ export interface SecurityHeadersConfig {
 /**
  * Get security headers configuration from environment variables
  * Provides sane defaults with configurable overrides
+ * @param nonce Optional CSP nonce for inline scripts/styles
  */
-function getSecurityHeadersConfig(): SecurityHeadersConfig {
+function getSecurityHeadersConfig(nonce?: string): SecurityHeadersConfig {
   // Parse CSP directives from environment (comma-separated)
   const parseDirective = (envVar: string, defaultValue: string[]): string[] => {
     const value = process.env[envVar];
@@ -101,10 +102,14 @@ function getSecurityHeadersConfig(): SecurityHeadersConfig {
       enabled: cspEnabled,
       directives: {
         defaultSrc: parseDirective('CSP_DEFAULT_SRC', ["'self'"]),
-        // unsafe-inline is required for React SSR pages that include inline scripts and styles
-        // TODO: Consider refactoring to use CSP nonces or external script/style files for better XSS protection
-        scriptSrc: parseDirective('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"]),
-        styleSrc: parseDirective('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"]),
+        // Use nonce-based CSP for inline scripts and styles
+        // Nonce is generated per request and passed to page components
+        scriptSrc: nonce 
+          ? parseDirective('CSP_SCRIPT_SRC', ["'self'", `'nonce-${nonce}'`])
+          : parseDirective('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"]),
+        styleSrc: nonce 
+          ? parseDirective('CSP_STYLE_SRC', ["'self'", `'nonce-${nonce}'`])
+          : parseDirective('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"]),
         imgSrc: parseDirective('CSP_IMG_SRC', ["'self'", 'data:', 'https:']),
         connectSrc: parseDirective('CSP_CONNECT_SRC', ["'self'", githubDomain, 'https://github.com']),
         fontSrc: parseDirective('CSP_FONT_SRC', ["'self'", 'data:']),
@@ -167,67 +172,73 @@ function buildPermissionsPolicyHeader(policy: SecurityHeadersConfig['permissions
 
 /**
  * Create helmet middleware with configuration
+ * Nonce-based CSP is automatically enabled when res.locals.cspNonce is available
  */
 export function createSecurityHeadersMiddleware() {
-  const securityConfig = getSecurityHeadersConfig();
-
-  // Build CSP directives for helmet
-  const cspDirectives: Record<string, string[] | null> = {};
-  if (securityConfig.contentSecurityPolicy.enabled) {
-    Object.entries(securityConfig.contentSecurityPolicy.directives).forEach(([key, value]) => {
-      if (key === 'upgradeInsecureRequests') {
-        // upgrade-insecure-requests is included in helmet defaults
-        // We need to explicitly disable it if not wanted
-        if (value) {
-          cspDirectives.upgradeInsecureRequests = [];
-        } else {
-          cspDirectives.upgradeInsecureRequests = null; // Explicitly disable
-        }
-      } else {
-        // Convert camelCase to kebab-case for CSP directive names
-        const directiveName = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
-        cspDirectives[directiveName] = value as string[];
-      }
-    });
-  }
-
-  // Configure helmet with our security settings
-  const helmetMiddleware = helmet({
-    contentSecurityPolicy: securityConfig.contentSecurityPolicy.enabled
-      ? {
-          directives: cspDirectives,
-        }
-      : false,
-    strictTransportSecurity: securityConfig.strictTransportSecurity.enabled
-      ? {
-          maxAge: securityConfig.strictTransportSecurity.maxAge,
-          includeSubDomains: securityConfig.strictTransportSecurity.includeSubDomains,
-          preload: securityConfig.strictTransportSecurity.preload,
-        }
-      : false,
-    xFrameOptions: {
-      action: securityConfig.xFrameOptions.toLowerCase() as 'deny' | 'sameorigin',
-    },
-    referrerPolicy: {
-      policy: securityConfig.referrerPolicy as
-        | 'no-referrer'
-        | 'no-referrer-when-downgrade'
-        | 'origin'
-        | 'origin-when-cross-origin'
-        | 'same-origin'
-        | 'strict-origin'
-        | 'strict-origin-when-cross-origin'
-        | 'unsafe-url',
-    },
-    // Additional helmet defaults
-    xContentTypeOptions: securityConfig.xContentTypeOptions,
-    dnsPrefetchControl: { allow: false },
-    xDownloadOptions: true,
-    xPermittedCrossDomainPolicies: { permittedPolicies: 'none' },
-  });
 
   // Return middleware that applies helmet and custom Permissions-Policy header
   return (req: Request, res: Response, next: NextFunction) => {
+    // Get nonce from res.locals if available (set by cspNonceMiddleware)
+    const nonce = res.locals.cspNonce as string | undefined;
+    
+    // Get security config with nonce
+    const securityConfig = getSecurityHeadersConfig(nonce);
+    
+    // Build CSP directives for helmet
+    const cspDirectives: Record<string, string[] | null> = {};
+    if (securityConfig.contentSecurityPolicy.enabled) {
+      Object.entries(securityConfig.contentSecurityPolicy.directives).forEach(([key, value]) => {
+        if (key === 'upgradeInsecureRequests') {
+          // upgrade-insecure-requests is included in helmet defaults
+          // We need to explicitly disable it if not wanted
+          if (value) {
+            cspDirectives.upgradeInsecureRequests = [];
+          } else {
+            cspDirectives.upgradeInsecureRequests = null; // Explicitly disable
+          }
+        } else {
+          // Convert camelCase to kebab-case for CSP directive names
+          const directiveName = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+          cspDirectives[directiveName] = value as string[];
+        }
+      });
+    }
+
+    // Configure helmet with our security settings
+    const helmetMiddleware = helmet({
+      contentSecurityPolicy: securityConfig.contentSecurityPolicy.enabled
+        ? {
+            directives: cspDirectives,
+          }
+        : false,
+      strictTransportSecurity: securityConfig.strictTransportSecurity.enabled
+        ? {
+            maxAge: securityConfig.strictTransportSecurity.maxAge,
+            includeSubDomains: securityConfig.strictTransportSecurity.includeSubDomains,
+            preload: securityConfig.strictTransportSecurity.preload,
+          }
+        : false,
+      xFrameOptions: {
+        action: securityConfig.xFrameOptions.toLowerCase() as 'deny' | 'sameorigin',
+      },
+      referrerPolicy: {
+        policy: securityConfig.referrerPolicy as
+          | 'no-referrer'
+          | 'no-referrer-when-downgrade'
+          | 'origin'
+          | 'origin-when-cross-origin'
+          | 'same-origin'
+          | 'strict-origin'
+          | 'strict-origin-when-cross-origin'
+          | 'unsafe-url',
+      },
+      // Additional helmet defaults
+      xContentTypeOptions: securityConfig.xContentTypeOptions,
+      dnsPrefetchControl: { allow: false },
+      xDownloadOptions: true,
+      xPermittedCrossDomainPolicies: { permittedPolicies: 'none' },
+    });
+
     // Apply helmet middleware
     helmetMiddleware(req, res, (err) => {
       if (err) {
