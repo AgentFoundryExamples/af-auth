@@ -19,7 +19,7 @@ locals {
       component   = "cache"
     }
   )
-  
+
   instance_name = var.enable_redis ? "af-auth-redis-${var.environment}" : null
 }
 

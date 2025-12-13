@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -55,11 +55,11 @@ resource "google_sql_database_instance" "postgres" {
   database_version = var.database_version
   region           = var.region
   project          = var.project_id
-  
+
   settings {
     tier              = var.database_tier
     availability_type = var.high_availability ? "REGIONAL" : "ZONAL"
-    
+
     backup_configuration {
       enabled                        = var.backup_enabled
       point_in_time_recovery_enabled = var.backup_enabled
@@ -69,20 +69,20 @@ resource "google_sql_database_instance" "postgres" {
         retained_backups = var.backup_retention_days
       }
     }
-    
+
     ip_configuration {
       ipv4_enabled    = var.enable_private_networking ? false : true
       private_network = var.enable_private_networking ? google_compute_network.vpc[0].id : null
       require_ssl     = var.enable_ssl
     }
-    
+
     insights_config {
       query_insights_enabled  = true
       query_string_length     = 1024
       record_application_tags = true
     }
   }
-  
+
   deletion_protection = var.environment == "production" ? true : false
 }
 
@@ -108,11 +108,11 @@ resource "google_redis_instance" "cache" {
   region         = var.region
   redis_version  = var.redis_version
   project        = var.project_id
-  
+
   authorized_network = var.enable_private_networking ? google_compute_network.vpc[0].id : null
-  
+
   display_name = "AF Auth Redis - ${var.environment}"
-  
+
   labels = local.common_tags
 }
 
@@ -142,44 +142,44 @@ resource "google_cloud_run_v2_service" "auth_service" {
   name     = "${var.service_name}-${var.environment}"
   location = var.region
   project  = var.project_id
-  
+
   template {
     service_account = google_service_account.cloud_run.email
-    
+
     scaling {
       min_instance_count = var.min_instances
       max_instance_count = var.max_instances
     }
-    
+
     vpc_access {
       connector = var.enable_private_networking ? google_vpc_access_connector.connector[0].id : null
       egress    = var.enable_private_networking ? "PRIVATE_RANGES_ONLY" : "ALL_TRAFFIC"
     }
-    
+
     containers {
       image = var.container_image
-      
+
       ports {
         container_port = var.container_port
       }
-      
+
       resources {
         limits = {
           cpu    = var.cpu_limit
           memory = var.memory_limit
         }
       }
-      
+
       # Base environment variables
       dynamic "env" {
         for_each = merge(
           var.environment_variables,
           {
-            NODE_ENV         = var.environment == "production" ? "production" : "development"
-            PORT             = tostring(var.container_port)
-            DATABASE_URL     = "postgresql://${var.database_user}:${var.database_password}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
-            REDIS_HOST       = var.enable_redis ? google_redis_instance.cache[0].host : ""
-            REDIS_PORT       = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""
+            NODE_ENV     = var.environment == "production" ? "production" : "development"
+            PORT         = tostring(var.container_port)
+            DATABASE_URL = "postgresql://${var.database_user}:${var.database_password}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
+            REDIS_HOST   = var.enable_redis ? google_redis_instance.cache[0].host : ""
+            REDIS_PORT   = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""
           }
         )
         content {
@@ -187,7 +187,7 @@ resource "google_cloud_run_v2_service" "auth_service" {
           value = env.value
         }
       }
-      
+
       # Secret environment variables from Secret Manager
       dynamic "env" {
         for_each = var.secret_environment_variables
@@ -202,15 +202,15 @@ resource "google_cloud_run_v2_service" "auth_service" {
         }
       }
     }
-    
+
     timeout = "${var.timeout_seconds}s"
   }
-  
+
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
   }
-  
+
   labels = local.common_tags
 }
 

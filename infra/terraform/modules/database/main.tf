@@ -19,7 +19,7 @@ locals {
       component   = "database"
     }
   )
-  
+
   instance_name = "af-auth-db-${var.environment}"
 }
 
