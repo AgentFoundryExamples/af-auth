@@ -19,24 +19,41 @@ describe('Database Client', () => {
   const shouldRunIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
 
   describe('Connection Management - Unit Tests', () => {
+    let connectSpy: jest.SpyInstance;
+    let disconnectSpy: jest.SpyInstance;
+    let queryRawSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // Mock the underlying prisma client methods
+      connectSpy = jest.spyOn(db.prisma, '$connect').mockResolvedValue(undefined);
+      disconnectSpy = jest.spyOn(db.prisma, '$disconnect').mockResolvedValue(undefined);
+      queryRawSpy = jest.spyOn(db.prisma, '$queryRaw').mockResolvedValue([1]);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('should have a prisma client instance', () => {
       expect(db.prisma).toBeDefined();
     });
 
-    it('should track connection state', () => {
-      expect(typeof db.connected).toBe('boolean');
+    it('should call prisma.$connect when db.connect is invoked', async () => {
+      await db.connect();
+      expect(connectSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should expose connect method', () => {
-      expect(typeof db.connect).toBe('function');
+    it('should call prisma.$disconnect when db.disconnect is invoked', async () => {
+      // Set connected to true to allow disconnect to proceed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (db as any).isConnected = true;
+      await db.disconnect();
+      expect(disconnectSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('should expose disconnect method', () => {
-      expect(typeof db.disconnect).toBe('function');
-    });
-
-    it('should expose healthCheck method', () => {
-      expect(typeof db.healthCheck).toBe('function');
+    it('should call prisma.$queryRaw when db.healthCheck is invoked', async () => {
+      await db.healthCheck();
+      expect(queryRawSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -80,11 +97,18 @@ describe('Database Client', () => {
   });
 
   describe('Error Handling', () => {
-    it('should not crash when health check fails with no connection', async () => {
-      // This test assumes database is not available or connection is closed
-      // It should return false, not throw
+    beforeEach(async () => {
+      // Ensure the db is disconnected before each test in this block.
+      if (db.connected) {
+        await db.disconnect();
+      }
+    });
+
+    it('should return false for a health check when not connected', async () => {
+      // This test ensures that a health check on a closed connection
+      // correctly returns false without throwing an error.
       const healthy = await db.healthCheck();
-      expect(typeof healthy).toBe('boolean');
+      expect(healthy).toBe(false);
     });
   });
 });
