@@ -583,6 +583,89 @@ npm run test:coverage
 - Implement GitHub OAuth flow (see issue tracker)
 - Add JWT token generation (see issue tracker)
 
+## Dependency Management
+
+### Keeping Dependencies Updated
+
+The project follows a regular dependency audit cycle to ensure security and stability.
+
+#### Checking for Updates
+
+Check for outdated packages:
+
+```bash
+npm outdated
+```
+
+Check for security vulnerabilities:
+
+```bash
+npm audit
+```
+
+#### Update Strategy
+
+The project uses a phased approach to dependency updates:
+
+1. **Security-Critical Packages** (Immediate)
+   - Helmet (HTTP security headers)
+   - express-rate-limit and rate-limit-redis (rate limiting)
+   - bcrypt (password hashing)
+   - jsonwebtoken (JWT handling)
+   - ioredis (Redis client)
+   - dotenv (environment configuration)
+
+2. **Type Definitions & Linting** (Low Risk)
+   - @types/* packages
+   - eslint and related plugins
+   - TypeScript compiler
+
+3. **Testing & Validation** (Low Risk)
+   - jest and testing utilities
+   - zod (schema validation)
+   - supertest
+
+4. **Major Version Updates** (Deferred to Dedicated Sprints)
+   - Express 4.x → 5.x
+   - React 18.x → 19.x
+   - Prisma 5.x → 7.x
+   - Jest 29.x → 30.x
+   - Pino 9.x → 10.x
+
+#### Last Dependency Audit
+
+**Date:** 2025-12-13  
+**Auditor:** GitHub Copilot
+
+**Upgrades Applied:**
+- ✅ Helmet: 8.0.0 → 8.1.0
+- ✅ express-rate-limit: 7.5.0 → 7.5.1
+- ✅ rate-limit-redis: 4.2.0 → 4.3.1
+- ✅ dotenv: 16.4.5 → 16.6.1
+- ✅ ioredis: 5.4.1 → 5.8.2
+- ✅ @types/bcrypt: 5.0.2 → 6.0.0
+- ✅ @types/supertest: 6.0.2 → 6.0.3
+- ✅ eslint & @eslint/js: 9.39.1 → 9.39.2
+- ✅ supertest: 7.1.3 → 7.1.4
+- ✅ zod: 3.24.1 → 3.25.76
+
+**Deferred Upgrades:**
+- ⏸️ Express 4.22.1 → 5.2.1 (breaking changes)
+- ⏸️ React 18.3.1 → 19.2.3 (breaking changes)
+- ⏸️ Prisma 5.22.0 → 7.1.0 (DB compatibility check needed)
+- ⏸️ Jest 29.7.0 → 30.2.0 (breaking changes)
+- ⏸️ Pino 9.5.0 → 10.1.0 (breaking changes)
+- ⏸️ @types/node 22.9.3 → 22.x.x (align with current Node.js 22 runtime)
+- ⏸️ express-rate-limit 7.5.1 → 8.2.1 (breaking changes)
+
+**Results:**
+- 🔒 **0 security vulnerabilities** detected
+- ✅ **433/436 tests passing** (3 skipped integration tests)
+- ✅ **Build successful**
+- ✅ **No breaking changes** from applied upgrades
+
+See [Operations Guide](./operations.md) for detailed runbooks on dependency management.
+
 ## Getting Help
 
 - Check the [main README](../README.md) for project overview
