@@ -154,6 +154,66 @@ Expected response:
 }
 ```
 
+### Verifying Security Headers
+
+AF Auth implements comprehensive HTTP security headers powered by Helmet 8.x with nonce-based CSP:
+
+```bash
+# Check security headers are applied
+curl -I http://localhost:3000/health
+
+# Expected headers:
+# Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-...'
+# X-Frame-Options: DENY
+# X-Content-Type-Options: nosniff
+# Referrer-Policy: strict-origin-when-cross-origin
+```
+
+**CSP Nonce Verification:**
+
+```bash
+# Verify unique nonces per request
+for i in {1..3}; do 
+  curl -s -I http://localhost:3000/health | grep "script-src" | grep -oE "nonce-[A-Za-z0-9+/=]{24}"
+done
+# Each line should show a different nonce
+```
+
+**Run Security Header Tests:**
+
+```bash
+# All security header tests (75 tests)
+npm test -- --testPathPattern="security-headers|csp-nonce"
+
+# With coverage report
+npm run test:coverage -- --testPathPattern="security-headers|csp-nonce"
+
+# Individual test suites
+npm test -- security-headers.test.ts              # Unit tests
+npm test -- security-headers.integration.test.ts  # Integration tests
+npm test -- csp-nonce.test.ts                     # Nonce generation tests
+```
+
+**Troubleshooting CSP Issues:**
+
+If you encounter CSP-related errors or pages not rendering:
+
+1. **Check nonce generation:**
+   ```bash
+   curl -v http://localhost:3000/auth/github 2>&1 | grep -i "nonce"
+   ```
+
+2. **Verify CSP configuration** (quotes required for keywords):
+   ```bash
+   # ✅ Correct in .env:
+   CSP_DEFAULT_SRC="'self'"
+   
+   # ❌ Incorrect:
+   CSP_DEFAULT_SRC='self'
+   ```
+
+3. **See detailed troubleshooting:** [Security Guide - Helmet Configuration](./docs/security.md#helmet-configuration-errors)
+
 ## Development
 
 ### Dependency Management
@@ -167,9 +227,17 @@ Expected response:
 
 **Dependency Security**
 - All npm audit vulnerabilities resolved (0 high/critical issues)
+- **Helmet 8.1.0**: Latest security headers middleware with stricter CSP validation
 - Upgraded deprecated packages: axios 1.13.2, express 4.22.1, tsx 4.21.0, bcrypt 6.0.0
 - Remaining transitive deprecations (glob@7, inflight) from jest 29.x - no security impact
 - Updated TypeScript to 5.9.3 for improved compatibility
+
+**Security Features (Helmet 8.x):**
+- ✅ Nonce-based CSP (no `'unsafe-inline'`)
+- ✅ 16-byte cryptographically random nonces per request
+- ✅ Automatic nonce injection in React SSR pages
+- ✅ Strict CSP directive validation (keywords must be quoted)
+- ✅ 75 automated tests for security headers
 
 ### Available Scripts
 
@@ -370,9 +438,23 @@ RUN_INTEGRATION_TESTS=true npm test
 ```
 
 **Test Coverage:**
-- 421+ unit tests covering OAuth, JWT, service registry, middleware, and security
-- 3 integration tests for database connection management
+- 433+ total tests passing (as of 2025-12-13)
+- 75 security header tests (CSP, nonces, Helmet configuration)
+- OAuth, JWT, service registry, middleware, and security tests
+- 3 integration tests for database connection management (skipped by default)
 - All tests can run in CI without external dependencies (default mode)
+
+**Security Header Tests:**
+```bash
+# Run security-specific tests (75 tests)
+npm test -- --testPathPattern="security-headers|csp-nonce"
+
+# Test suites:
+# - security-headers.test.ts (unit tests for CSP, HSTS, X-Frame-Options)
+# - security-headers.integration.test.ts (real endpoint validation)
+# - security-headers.edge-cases.test.ts (malformed configs, error handling)
+# - csp-nonce.test.ts (cryptographic nonce generation)
+```
 
 **Note:** Integration tests are intentionally separated to allow:
 - Fast CI/CD pipelines without infrastructure setup
