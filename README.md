@@ -339,11 +339,36 @@ npm run test:watch
 
 ## Deployment
 
+### Terraform (Recommended)
+
+**Infrastructure as Code** - Deploy with Terraform for reproducible, version-controlled infrastructure.
+
+```bash
+cd infra/terraform/gcp
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your configuration
+terraform init
+terraform plan
+terraform apply
+```
+
+**Provider Support**:
+- ✅ **Google Cloud Platform**: Full implementation (Cloud Run, Cloud SQL, Memorystore)
+- 🚧 **AWS**: Planned (ECS/Fargate, RDS, ElastiCache) - see `infra/terraform/aws/`
+- 🚧 **Azure**: Planned (Container Apps, PostgreSQL, Redis) - see `infra/terraform/azure/`
+
+See [Terraform Documentation](./infra/terraform/README.md) for:
+- Provider-agnostic modules
+- Multi-cloud deployment options
+- State management and backends
+- Cost optimization strategies
+- CI/CD integration
+
 ### Quick Start for Cloud Run
 
-For comprehensive deployment instructions, see the [Cloud Run Deployment Guide](./docs/deployment/cloud-run.md).
+For manual deployment or comprehensive instructions, see the [Cloud Run Deployment Guide](./docs/deployment/cloud-run.md).
 
-Quick deployment workflow:
+Quick manual deployment workflow:
 
 1. **Build and push container**:
    ```bash

@@ -48,3 +48,16 @@ temp/
 src/config/keys/jwt-private*.pem
 *.key
 *.private.pem
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+**/backend.tf
+**/.terraform.tfstate.lock.info
+**/crash.log
+**/crash.*.log
+**/*.tfplan
+**/*.tfplan.json

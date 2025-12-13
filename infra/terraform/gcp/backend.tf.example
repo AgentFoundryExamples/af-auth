@@ -1,0 +1,42 @@
+# Terraform Backend Configuration for Google Cloud Storage
+# 
+# This file configures where Terraform stores its state file.
+# Copy this file to backend.tf and customize for your project.
+# DO NOT commit backend.tf with real credentials to version control.
+#
+# For local development/testing, you can use local backend:
+# terraform {
+#   backend "local" {
+#     path = "terraform.tfstate"
+#   }
+# }
+
+terraform {
+  backend "gcs" {
+    bucket = "your-terraform-state-bucket"  # Create this bucket first
+    prefix = "terraform/af-auth"
+    
+    # Optional: Enable state file encryption
+    # encryption_key = "your-encryption-key"
+  }
+}
+
+# To create the state bucket:
+# gsutil mb -p your-gcp-project-id -c STANDARD -l us-central1 gs://your-terraform-state-bucket
+# gsutil versioning set on gs://your-terraform-state-bucket
+# gsutil lifecycle set lifecycle.json gs://your-terraform-state-bucket
+#
+# lifecycle.json:
+# {
+#   "lifecycle": {
+#     "rule": [
+#       {
+#         "action": {"type": "Delete"},
+#         "condition": {
+#           "numNewerVersions": 10,
+#           "isLive": false
+#         }
+#       }
+#     ]
+#   }
+# }

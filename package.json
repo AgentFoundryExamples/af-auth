@@ -19,7 +19,12 @@
     "service-registry": "tsx scripts/manage-services.ts",
     "migrate:encrypt-tokens": "tsx scripts/migrate-encrypt-tokens.ts",
     "cleanup:revoked-tokens": "tsx scripts/cleanup-revoked-tokens.ts",
-    "check-key-rotation": "tsx scripts/check-key-rotation.ts"
+    "check-key-rotation": "tsx scripts/check-key-rotation.ts",
+    "terraform:fmt": "terraform fmt -recursive infra/terraform",
+    "terraform:validate": "bash infra/terraform/validate.sh",
+    "terraform:validate:gcp": "cd infra/terraform/gcp && terraform init -backend=false && terraform validate",
+    "terraform:plan": "cd infra/terraform/gcp && terraform plan",
+    "terraform:apply": "cd infra/terraform/gcp && terraform apply"
   },
   "keywords": [
     "auth",

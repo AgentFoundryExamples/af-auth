@@ -2,6 +2,42 @@
 
 This guide provides comprehensive instructions for deploying the AF Auth service to Google Cloud Run, including container building, secret management, IAM configuration, and production best practices.
 
+## Deployment Methods
+
+There are two ways to deploy AF Auth to Google Cloud Platform:
+
+### 1. Terraform (Recommended)
+
+**Infrastructure as Code** - Automated, reproducible deployment using Terraform.
+
+- ✅ **Consistent**: Same configuration across environments
+- ✅ **Version Controlled**: Track infrastructure changes in git
+- ✅ **Repeatable**: Destroy and recreate infrastructure easily
+- ✅ **Documented**: Self-documenting infrastructure
+
+See [Terraform GCP Documentation](../../infra/terraform/gcp/README.md) for complete Terraform deployment instructions.
+
+Quick start:
+```bash
+cd infra/terraform/gcp
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform plan
+terraform apply
+```
+
+### 2. Manual Deployment (This Guide)
+
+**Step-by-Step** - Manual deployment using gcloud CLI commands.
+
+Use this approach when:
+- Learning Cloud Run deployment
+- Customizing specific resources
+- Debugging deployment issues
+- One-off or experimental deployments
+
+Continue below for manual deployment instructions.
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
