@@ -45,6 +45,12 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/24"
 }
 
+variable "vpc_connector_cidr" {
+  description = "CIDR block for VPC Access Connector (must not overlap with vpc_cidr, /28 required)"
+  type        = string
+  default     = "10.8.0.0/28"
+}
+
 # Database Configuration
 variable "database_name" {
   description = "Name of the database to create"
@@ -58,10 +64,10 @@ variable "database_user" {
   default     = "af_auth_user"
 }
 
-variable "database_password" {
-  description = "Database password - SECURITY WARNING: For production, create a Secret Manager secret and reference via secret_environment_variables instead of passing directly"
+variable "database_password_secret" {
+  description = "Secret Manager secret name containing the database password (e.g., 'database-password')"
   type        = string
-  sensitive   = true
+  default     = "database-password"
 }
 
 variable "database_tier" {

@@ -45,7 +45,7 @@ resource "google_vpc_access_connector" "connector" {
   name          = "af-auth-${var.environment}-vpc-connector"
   region        = var.region
   network       = google_compute_network.vpc[0].name
-  ip_cidr_range = "10.8.0.0/28"
+  ip_cidr_range = var.vpc_connector_cidr
   project       = var.project_id
 }
 
@@ -95,14 +95,10 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "user" {
   name     = var.database_user
   instance = google_sql_database_instance.postgres.name
-  # ⚠️  SECURITY WARNING: Database password management
-  # This implementation uses var.database_password for simplicity (development/testing).
-  # For PRODUCTION deployments, you MUST use one of these secure alternatives:
-  #   1. Cloud SQL IAM authentication (recommended - no passwords)
-  #   2. Retrieve password from Secret Manager via data source
-  #   3. Store complete DATABASE_URL in Secret Manager
+  # Database password retrieved from Secret Manager
+  # Ensure the secret exists before applying (create with: gcloud secrets create database-password)
   # See SECURITY.md for detailed implementation patterns and migration guide.
-  password = var.database_password
+  password = data.google_secret_manager_secret_version.db_password.secret_data
   project  = var.project_id
 }
 
@@ -123,6 +119,12 @@ resource "google_redis_instance" "cache" {
   labels = local.common_tags
 }
 
+# Data source to get the database password from Secret Manager
+data "google_secret_manager_secret_version" "db_password" {
+  secret  = var.database_password_secret
+  project = var.project_id
+}
+
 # Service Account for Cloud Run
 resource "google_service_account" "cloud_run" {
   account_id   = "af-auth-${var.environment}-run"
@@ -137,11 +139,21 @@ resource "google_project_iam_member" "cloud_sql_client" {
   member  = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
-# IAM binding for Secret Manager Secret Accessor
-resource "google_project_iam_member" "secret_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.cloud_run.email}"
+# IAM binding for Secret Manager Secret Accessor (per-secret)
+resource "google_secret_manager_secret_iam_member" "secret_accessor" {
+  for_each  = var.secret_environment_variables
+  project   = var.project_id
+  secret_id = each.value
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
+# IAM binding for database password secret
+resource "google_secret_manager_secret_iam_member" "db_password_accessor" {
+  project   = var.project_id
+  secret_id = var.database_password_secret
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 
 # Cloud Run Service
@@ -184,11 +196,9 @@ resource "google_cloud_run_v2_service" "auth_service" {
           {
             NODE_ENV = var.environment == "production" ? "production" : "development"
             PORT     = tostring(var.container_port)
-            # ⚠️  SECURITY WARNING: Password embedded in DATABASE_URL
-            # This is acceptable for development/testing but NOT for production.
-            # Production deployments should use Secret Manager or IAM authentication.
-            # See SECURITY.md for secure alternatives and migration procedures.
-            DATABASE_URL = "postgresql://${var.database_user}:${var.database_password}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
+            # Database connection string with password from Secret Manager
+            # Password is retrieved securely via data source rather than passed as variable
+            DATABASE_URL = "postgresql://${var.database_user}:${data.google_secret_manager_secret_version.db_password.secret_data}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
             REDIS_HOST   = var.enable_redis ? google_redis_instance.cache[0].host : ""
             REDIS_PORT   = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""
           }

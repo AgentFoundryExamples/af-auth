@@ -11,12 +11,13 @@ container_image = "us-central1-docker.pkg.dev/your-gcp-project-id/af-auth/af-aut
 # Networking
 enable_private_networking = true
 vpc_cidr                 = "10.0.0.0/24"
+vpc_connector_cidr       = "10.8.0.0/28"  # Must not overlap with vpc_cidr
 
 # Database Configuration
-database_name            = "af_auth"
-database_user            = "af_auth_user"
-database_password        = "CHANGE_ME_USE_SECRET_MANAGER"  # SECURITY: For production, store in Secret Manager and use data source instead
-database_tier            = "db-f1-micro"  # For production, consider db-n1-standard-1 or higher
+database_name              = "af_auth"
+database_user              = "af_auth_user"
+database_password_secret   = "database-password"  # Secret Manager secret name containing the database password
+database_tier              = "db-f1-micro"  # For production, consider db-n1-standard-1 or higher
 database_version         = "POSTGRES_15"
 backup_enabled           = true
 backup_retention_days    = 7

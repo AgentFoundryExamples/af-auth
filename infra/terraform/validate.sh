@@ -56,6 +56,15 @@ echo "=========================================="
 echo ""
 
 FAILED_MODULES=()
+TEMP_FILES=()
+
+# Trap handler to clean up temporary files on exit
+cleanup_temp_files() {
+    for temp_file in "${TEMP_FILES[@]}"; do
+        rm -f "$temp_file" 2>/dev/null
+    done
+}
+trap cleanup_temp_files EXIT INT TERM
 
 for module in "${MODULES[@]}"; do
     echo "Validating: $module"
@@ -66,6 +75,7 @@ for module in "${MODULES[@]}"; do
     # Create temporary files for output
     INIT_LOG=$(mktemp)
     VALIDATE_LOG=$(mktemp)
+    TEMP_FILES+=("$INIT_LOG" "$VALIDATE_LOG")
     
     # Initialize without backend
     if terraform init -backend=false > "$INIT_LOG" 2>&1; then
@@ -74,7 +84,6 @@ for module in "${MODULES[@]}"; do
         echo "  ❌ Initialization failed"
         cat "$INIT_LOG"
         FAILED_MODULES+=("$module (init)")
-        rm -f "$INIT_LOG" "$VALIDATE_LOG"
         cd "$SCRIPT_DIR"
         continue
     fi
@@ -87,9 +96,6 @@ for module in "${MODULES[@]}"; do
         cat "$VALIDATE_LOG"
         FAILED_MODULES+=("$module (validate)")
     fi
-    
-    # Clean up temporary files
-    rm -f "$INIT_LOG" "$VALIDATE_LOG"
     
     echo ""
     cd "$SCRIPT_DIR"

@@ -2,18 +2,20 @@
 
 ## Database Password Security
 
-### ⚠️ Current Implementation
+### ✅ Current Implementation (Secure)
 
-The current implementation accepts database passwords via the `database_password` variable for simplicity and development use. However, this approach has security risks:
+The Terraform configuration now uses **Secret Manager as the default** for database password management:
 
-1. **State File Exposure**: Password stored in Terraform state file (even if encrypted)
-2. **Environment Variable Exposure**: Password embedded in DATABASE_URL environment variable
-3. **Log Exposure**: Password may appear in Cloud Run logs or Terraform output
-4. **Version Control Risk**: If terraform.tfvars is accidentally committed
+- Database password is retrieved from Secret Manager via data source
+- Password is never stored in terraform.tfvars or version control
+- IAM permissions are granted per-secret (least privilege)
+- Password remains encrypted in Secret Manager and is only accessible to the Cloud Run service account
 
-### ✅ Recommended Production Pattern
+The secret `database-password` **must exist** before running `terraform apply`.
 
-For production deployments, use one of these secure alternatives:
+### 🔐 Alternative Secure Patterns
+
+For even higher security, consider these alternatives:
 
 #### Option 1: Cloud SQL IAM Authentication (Most Secure)
 

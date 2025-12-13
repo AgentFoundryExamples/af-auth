@@ -126,7 +126,7 @@ openssl rand -hex 32 | \
 openssl rand -hex 32 | \
   gcloud secrets create metrics-auth-token --data-file=-
 
-# Database password (RECOMMENDED for production)
+# Database password (REQUIRED)
 openssl rand -hex 32 | \
   gcloud secrets create database-password --data-file=-
 
@@ -134,9 +134,7 @@ openssl rand -hex 32 | \
 rm jwt-private.pem jwt-public.pem
 ```
 
-**Security Best Practice**: For production deployments, store the database password in Secret Manager instead of terraform.tfvars. You can either:
-1. Use the secret created above and retrieve it via Terraform data source
-2. Pass it via environment variable: `TF_VAR_database_password=$(gcloud secrets versions access latest --secret=database-password)`
+**Security Best Practice**: The Terraform configuration now retrieves the database password from Secret Manager via a data source. The `database-password` secret **must** be created before running `terraform apply`.
 
 ### 3. Create State Bucket
 
@@ -234,8 +232,8 @@ region          = "us-central1"
 environment     = "production"
 container_image = "us-central1-docker.pkg.dev/your-project/af-auth/af-auth:latest"
 
-# Database password (or use Secret Manager)
-database_password = "CHANGE_ME"
+# Database password secret name (must exist in Secret Manager)
+database_password_secret = "database-password"
 
 # Secret references
 secret_environment_variables = {
