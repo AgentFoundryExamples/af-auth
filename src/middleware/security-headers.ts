@@ -232,9 +232,11 @@ export function createSecurityHeadersMiddleware() {
           
           // Validate directive value is not empty to prevent Helmet errors
           if (!Array.isArray(directiveValue) || directiveValue.length === 0) {
+            // Convert camelCase to SCREAMING_SNAKE_CASE for env var name
+            const envVarName = `CSP_${key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase()}`;
             console.warn(
               `CSP directive "${directiveName}" has empty or invalid value. Skipping directive. ` +
-              `Check your environment configuration for CSP_${key.replace(/[A-Z]/g, m => `_${m}`).toUpperCase()}.`
+              `Check your environment configuration for ${envVarName}.`
             );
             return; // Skip this directive
           }
