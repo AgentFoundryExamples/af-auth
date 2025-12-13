@@ -64,6 +64,8 @@
     ├── index.test.ts
     └── index.ts
   ├── middleware
+    ├── csp-nonce.test.ts
+    ├── csp-nonce.ts
     ├── jwt-auth.test.ts
     ├── jwt-auth.ts
     ├── metrics.test.ts

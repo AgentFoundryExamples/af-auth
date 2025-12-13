@@ -296,6 +296,14 @@
           "children": [
             {
               "type": "file",
+              "name": "csp-nonce.test.ts"
+            },
+            {
+              "type": "file",
+              "name": "csp-nonce.ts"
+            },
+            {
+              "type": "file",
               "name": "jwt-auth.test.ts"
             },
             {

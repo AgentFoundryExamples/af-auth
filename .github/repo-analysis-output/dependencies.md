@@ -8,8 +8,8 @@ Includes classification of external dependencies as stdlib vs third-party.
 
 ## Statistics
 
-- **Total files**: 53
-- **Intra-repo dependencies**: 150
+- **Total files**: 55
+- **Intra-repo dependencies**: 152
 - **External stdlib dependencies**: 4
 - **External third-party dependencies**: 21
 
@@ -65,7 +65,7 @@ Total: 21 unique packages
 
 ## Files with Most Dependencies (Intra-Repo)
 
-- `src/server.ts` (12 dependencies)
+- `src/server.ts` (13 dependencies)
 - `src/routes/auth.ts` (8 dependencies)
 - `src/routes/github-token.ts` (8 dependencies)
 - `src/routes/jwt.ts` (6 dependencies)

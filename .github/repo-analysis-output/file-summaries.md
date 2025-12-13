@@ -4,7 +4,7 @@ Heuristic summaries of source files based on filenames, extensions, and paths.
 
 Schema Version: 2.0
 
-Total files: 53
+Total files: 55
 
 ## eslint.config.js
 **Language:** JavaScript  
@@ -105,6 +105,24 @@ Total files: 53
 **LOC:** 122  
 **TODOs/FIXMEs:** 0  
 
+## src/middleware/csp-nonce.test.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 5.56 KB  
+**LOC:** 111  
+**TODOs/FIXMEs:** 0  
+
+## src/middleware/csp-nonce.ts
+**Language:** TypeScript  
+**Role:** implementation  
+**Role Justification:** general implementation file (default classification)  
+**Summary:** TypeScript core implementation  
+**Size:** 1.63 KB  
+**LOC:** 25  
+**TODOs/FIXMEs:** 0  
+
 ## src/middleware/jwt-auth.test.ts
 **Language:** TypeScript  
 **Role:** implementation  
@@ -164,8 +182,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.47 KB  
-**LOC:** 127  
+**Size:** 8.99 KB  
+**LOC:** 171  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/security-headers.test.ts
@@ -173,8 +191,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 15.95 KB  
-**LOC:** 323  
+**Size:** 20.60 KB  
+**LOC:** 412  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/security-headers.ts
@@ -182,9 +200,9 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 9.24 KB  
-**LOC:** 206  
-**TODOs/FIXMEs:** 1  
+**Size:** 11.02 KB  
+**LOC:** 231  
+**TODOs/FIXMEs:** 0  
 
 ## src/middleware/validation.test.ts
 **Language:** TypeScript  
@@ -218,8 +236,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.80 KB  
-**LOC:** 201  
+**Size:** 9.21 KB  
+**LOC:** 216  
 **TODOs/FIXMEs:** 0  
 
 ## src/routes/github-token.test.ts
@@ -290,8 +308,8 @@ Total files: 53
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 6.83 KB  
-**LOC:** 188  
+**Size:** 7.01 KB  
+**LOC:** 190  
 **TODOs/FIXMEs:** 0  
 
 ## src/services/__mocks__/github-oauth.ts

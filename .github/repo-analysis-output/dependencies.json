@@ -115,6 +115,32 @@
       }
     },
     {
+      "id": "src/middleware/csp-nonce.test.ts",
+      "path": "src/middleware/csp-nonce.test.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto"
+        ],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
+      "id": "src/middleware/csp-nonce.ts",
+      "path": "src/middleware/csp-nonce.ts",
+      "type": "file",
+      "external_dependencies": {
+        "stdlib": [
+          "crypto"
+        ],
+        "third-party": [
+          "express"
+        ]
+      }
+    },
+    {
       "id": "src/middleware/jwt-auth.test.ts",
       "path": "src/middleware/jwt-auth.test.ts",
       "type": "file",
@@ -642,6 +668,10 @@
       "target": "src/utils/logger.ts"
     },
     {
+      "source": "src/middleware/csp-nonce.test.ts",
+      "target": "src/middleware/csp-nonce.ts"
+    },
+    {
       "source": "src/middleware/jwt-auth.test.ts",
       "target": "src/middleware/jwt-auth.ts"
     },
@@ -940,6 +970,10 @@
     {
       "source": "src/server.ts",
       "target": "src/middleware/security-headers.ts"
+    },
+    {
+      "source": "src/server.ts",
+      "target": "src/middleware/csp-nonce.ts"
     },
     {
       "source": "src/server.ts",

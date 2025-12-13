@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "total_files": 53,
+  "total_files": 55,
   "files": [
     {
       "schema_version": "2.0",
@@ -158,6 +158,34 @@
     },
     {
       "schema_version": "2.0",
+      "path": "src/middleware/csp-nonce.test.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 5695,
+        "loc": 111,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
+      "path": "src/middleware/csp-nonce.ts",
+      "language": "TypeScript",
+      "role": "implementation",
+      "role_justification": "general implementation file (default classification)",
+      "summary": "TypeScript core implementation",
+      "summary_text": "TypeScript core implementation",
+      "metrics": {
+        "size_bytes": 1673,
+        "loc": 25,
+        "todo_count": 0
+      }
+    },
+    {
+      "schema_version": "2.0",
       "path": "src/middleware/jwt-auth.test.ts",
       "language": "TypeScript",
       "role": "implementation",
@@ -249,8 +277,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6625,
-        "loc": 127,
+        "size_bytes": 9203,
+        "loc": 171,
         "todo_count": 0
       }
     },
@@ -263,8 +291,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 16336,
-        "loc": 323,
+        "size_bytes": 21099,
+        "loc": 412,
         "todo_count": 0
       }
     },
@@ -277,9 +305,9 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 9460,
-        "loc": 206,
-        "todo_count": 1
+        "size_bytes": 11280,
+        "loc": 231,
+        "todo_count": 0
       }
     },
     {
@@ -333,8 +361,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 9012,
-        "loc": 201,
+        "size_bytes": 9428,
+        "loc": 216,
         "todo_count": 0
       }
     },
@@ -445,8 +473,8 @@
       "summary": "TypeScript core implementation",
       "summary_text": "TypeScript core implementation",
       "metrics": {
-        "size_bytes": 6994,
-        "loc": 188,
+        "size_bytes": 7178,
+        "loc": 190,
         "todo_count": 0
       }
     },
