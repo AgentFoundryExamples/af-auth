@@ -322,10 +322,10 @@ The security headers implementation is validated through comprehensive automated
 
 | Test Suite | File | Purpose | Coverage |
 |------------|------|---------|----------|
-| **Unit Tests** | `security-headers.test.ts` | Validates middleware configuration and directive generation | 90.9% statements |
-| **Integration Tests** | `security-headers.integration.test.ts` | Verifies headers applied across real endpoints | Full endpoint coverage |
-| **Edge Case Tests** | `security-headers.edge-cases.test.ts` | Tests malformed configs and failure scenarios | Defensive code paths |
-| **Nonce Tests** | `csp-nonce.test.ts` | Validates cryptographic nonce generation | 100% coverage |
+| **Unit Tests** | `src/middleware/security-headers.test.ts` | Validates middleware configuration and directive generation | 90.9% statements |
+| **Integration Tests** | `src/middleware/security-headers.integration.test.ts` | Verifies headers applied across real endpoints | Full endpoint coverage |
+| **Edge Case Tests** | `src/middleware/security-headers.edge-cases.test.ts` | Tests malformed configs and failure scenarios | Defensive code paths |
+| **Nonce Tests** | `src/middleware/csp-nonce.test.ts` | Validates cryptographic nonce generation | 100% coverage |
 
 **Total Test Count:** 75 automated tests covering security headers  
 **Overall Coverage:** 92.04% statements, 88.67% branches, 94.44% functions
@@ -2096,12 +2096,12 @@ This comprehensive checklist documents all reviewed components and outcomes for 
 ### Testing & Quality Assurance
 
 #### Test Coverage
-- [x] **Unit tests**: 433 passing tests across all modules
+- [x] **Unit tests**: 433 passing tests across all modules (including 75 security header tests)
 - [x] **Integration tests**: Security headers, health checks, OAuth flow
 - [x] **Security tests**: CSP nonce validation (100% coverage), timing attacks, rate limiting
 - [x] **Database tests**: Connection resilience, error handling
 - [x] **Metrics tests**: Prometheus metrics collection and authentication
-- [x] **Security headers tests**: 75 tests with 92% coverage (see Automated Testing Strategy above)
+- [x] **Security headers**: 75 dedicated tests with 92% coverage (see Automated Testing Strategy section for details)
 
 #### Code Quality
 - [x] **TypeScript**: Full type safety across codebase
