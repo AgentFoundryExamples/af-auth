@@ -132,6 +132,162 @@
     },
     {
       "type": "directory",
+      "name": "infra",
+      "children": [
+        {
+          "type": "directory",
+          "name": "terraform",
+          "children": [
+            {
+              "type": "directory",
+              "name": "aws",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "README.md"
+                }
+              ]
+            },
+            {
+              "type": "directory",
+              "name": "azure",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "README.md"
+                }
+              ]
+            },
+            {
+              "type": "directory",
+              "name": "gcp",
+              "children": [
+                {
+                  "type": "file",
+                  "name": "backend.tf.example"
+                },
+                {
+                  "type": "file",
+                  "name": "main.tf"
+                },
+                {
+                  "type": "file",
+                  "name": "outputs.tf"
+                },
+                {
+                  "type": "file",
+                  "name": "README.md"
+                },
+                {
+                  "type": "file",
+                  "name": "SECURITY.md"
+                },
+                {
+                  "type": "file",
+                  "name": "terraform.tfvars.example"
+                },
+                {
+                  "type": "file",
+                  "name": "variables.tf"
+                }
+              ]
+            },
+            {
+              "type": "directory",
+              "name": "modules",
+              "children": [
+                {
+                  "type": "directory",
+                  "name": "auth-service",
+                  "children": [
+                    {
+                      "type": "file",
+                      "name": "main.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "outputs.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "variables.tf"
+                    }
+                  ]
+                },
+                {
+                  "type": "directory",
+                  "name": "database",
+                  "children": [
+                    {
+                      "type": "file",
+                      "name": "main.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "outputs.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "variables.tf"
+                    }
+                  ]
+                },
+                {
+                  "type": "directory",
+                  "name": "network",
+                  "children": [
+                    {
+                      "type": "file",
+                      "name": "main.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "outputs.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "variables.tf"
+                    }
+                  ]
+                },
+                {
+                  "type": "directory",
+                  "name": "redis",
+                  "children": [
+                    {
+                      "type": "file",
+                      "name": "main.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "outputs.tf"
+                    },
+                    {
+                      "type": "file",
+                      "name": "variables.tf"
+                    }
+                  ]
+                },
+                {
+                  "type": "file",
+                  "name": "README.md"
+                }
+              ]
+            },
+            {
+              "type": "file",
+              "name": "README.md"
+            },
+            {
+              "type": "file",
+              "name": "validate.sh"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "directory",
       "name": "prisma",
       "children": [
         {

@@ -29,6 +29,40 @@
   ├── service-registry.md
   ├── setup.md
   └── ui.md
+├── infra
+  └── terraform
+    ├── aws
+      └── README.md
+    ├── azure
+      └── README.md
+    ├── gcp
+      ├── backend.tf.example
+      ├── main.tf
+      ├── outputs.tf
+      ├── README.md
+      ├── SECURITY.md
+      ├── terraform.tfvars.example
+      └── variables.tf
+    ├── modules
+      ├── auth-service
+        ├── main.tf
+        ├── outputs.tf
+        └── variables.tf
+      ├── database
+        ├── main.tf
+        ├── outputs.tf
+        └── variables.tf
+      ├── network
+        ├── main.tf
+        ├── outputs.tf
+        └── variables.tf
+      ├── redis
+        ├── main.tf
+        ├── outputs.tf
+        └── variables.tf
+      └── README.md
+    ├── README.md
+    └── validate.sh
 ├── prisma
   ├── migrations
     ├── 20241211000000_initial_setup
