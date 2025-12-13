@@ -326,8 +326,14 @@ See [.env.example](./.env.example) for all available configuration options.
 
 ## Testing
 
+The test suite includes both unit tests (with mocks) and optional integration tests (require real services).
+
+### Unit Tests (Default)
+
+Unit tests run by default without requiring database or Redis infrastructure. They use mocks to simulate external dependencies.
+
 ```bash
-# Run all tests
+# Run all unit tests
 npm test
 
 # Run with coverage
@@ -336,6 +342,42 @@ npm run test:coverage
 # Run in watch mode
 npm run test:watch
 ```
+
+### Integration Tests (Optional)
+
+Integration tests validate real database connections and are skipped by default. To run them:
+
+**Requirements:**
+- Running PostgreSQL database (see Quick Start for Docker setup)
+- Valid `DATABASE_URL` in `.env.test`
+
+**Running integration tests:**
+```bash
+# Set up test database
+docker run --name af-auth-postgres-test \
+  -e POSTGRES_PASSWORD=test \
+  -e POSTGRES_USER=test \
+  -e POSTGRES_DB=test \
+  -p 5432:5432 \
+  -d postgres:16-alpine
+
+# Run migrations
+npm run db:generate
+DATABASE_URL=postgresql://test:test@localhost:5432/test npm run db:migrate
+
+# Run all tests including integration tests
+RUN_INTEGRATION_TESTS=true npm test
+```
+
+**Test Coverage:**
+- 421+ unit tests covering OAuth, JWT, service registry, middleware, and security
+- 3 integration tests for database connection management
+- All tests can run in CI without external dependencies (default mode)
+
+**Note:** Integration tests are intentionally separated to allow:
+- Fast CI/CD pipelines without infrastructure setup
+- Local development without requiring full database stack
+- Comprehensive integration validation when needed
 
 ## Deployment
 

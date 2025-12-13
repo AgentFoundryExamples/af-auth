@@ -14,11 +14,37 @@
 import db from './index';
 
 describe('Database Client', () => {
-  // Note: These are integration tests that require a real database
-  // They are skipped by default and should be run when DATABASE_URL is available
+  // Integration tests can be run with RUN_INTEGRATION_TESTS=true for real database validation
+  // By default, tests use mocked database operations to allow CI/local testing without infrastructure
   const shouldRunIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
 
-  describe('Connection Management', () => {
+  describe('Connection Management - Unit Tests', () => {
+    it('should have a prisma client instance', () => {
+      expect(db.prisma).toBeDefined();
+    });
+
+    it('should track connection state', () => {
+      expect(typeof db.connected).toBe('boolean');
+    });
+
+    it('should expose connect method', () => {
+      expect(typeof db.connect).toBe('function');
+    });
+
+    it('should expose disconnect method', () => {
+      expect(typeof db.disconnect).toBe('function');
+    });
+
+    it('should expose healthCheck method', () => {
+      expect(typeof db.healthCheck).toBe('function');
+    });
+  });
+
+  describe('Connection Management - Integration Tests', () => {
+    // These tests require a real PostgreSQL database
+    // Run with: RUN_INTEGRATION_TESTS=true npm test
+    // See README.md Testing section for setup instructions
+    
     beforeAll(async () => {
       if (shouldRunIntegrationTests && !db.connected) {
         await db.connect();
@@ -29,14 +55,6 @@ describe('Database Client', () => {
       if (shouldRunIntegrationTests && db.connected) {
         await db.disconnect();
       }
-    });
-
-    it('should have a prisma client instance', () => {
-      expect(db.prisma).toBeDefined();
-    });
-
-    it('should track connection state', () => {
-      expect(typeof db.connected).toBe('boolean');
     });
 
     (shouldRunIntegrationTests ? it : it.skip)('should connect to database', async () => {
