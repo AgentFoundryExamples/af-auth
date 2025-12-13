@@ -63,25 +63,33 @@ for module in "${MODULES[@]}"; do
     
     cd "$SCRIPT_DIR/$module"
     
+    # Create temporary files for output
+    INIT_LOG=$(mktemp)
+    VALIDATE_LOG=$(mktemp)
+    
     # Initialize without backend
-    if terraform init -backend=false > /tmp/tf-init.log 2>&1; then
+    if terraform init -backend=false > "$INIT_LOG" 2>&1; then
         echo "  ✓ Initialization successful"
     else
         echo "  ❌ Initialization failed"
-        cat /tmp/tf-init.log
+        cat "$INIT_LOG"
         FAILED_MODULES+=("$module (init)")
+        rm -f "$INIT_LOG" "$VALIDATE_LOG"
         cd "$SCRIPT_DIR"
         continue
     fi
     
     # Validate configuration
-    if terraform validate > /tmp/tf-validate.log 2>&1; then
+    if terraform validate > "$VALIDATE_LOG" 2>&1; then
         echo "  ✓ Validation successful"
     else
         echo "  ❌ Validation failed"
-        cat /tmp/tf-validate.log
+        cat "$VALIDATE_LOG"
         FAILED_MODULES+=("$module (validate)")
     fi
+    
+    # Clean up temporary files
+    rm -f "$INIT_LOG" "$VALIDATE_LOG"
     
     echo ""
     cd "$SCRIPT_DIR"

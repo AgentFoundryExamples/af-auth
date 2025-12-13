@@ -95,9 +95,13 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "user" {
   name     = var.database_user
   instance = google_sql_database_instance.postgres.name
-  # SECURITY NOTE: For production, consider using a data source to retrieve
-  # password from Secret Manager instead of var.database_password
-  # Example: password = data.google_secret_manager_secret_version.db_password.secret_data
+  # ⚠️  SECURITY WARNING: Database password management
+  # This implementation uses var.database_password for simplicity (development/testing).
+  # For PRODUCTION deployments, you MUST use one of these secure alternatives:
+  #   1. Cloud SQL IAM authentication (recommended - no passwords)
+  #   2. Retrieve password from Secret Manager via data source
+  #   3. Store complete DATABASE_URL in Secret Manager
+  # See SECURITY.md for detailed implementation patterns and migration guide.
   password = var.database_password
   project  = var.project_id
 }
@@ -180,9 +184,10 @@ resource "google_cloud_run_v2_service" "auth_service" {
           {
             NODE_ENV = var.environment == "production" ? "production" : "development"
             PORT     = tostring(var.container_port)
-            # SECURITY NOTE: Database password is embedded in connection string
-            # For production, consider using Cloud SQL proxy with IAM authentication
-            # or storing full DATABASE_URL in Secret Manager
+            # ⚠️  SECURITY WARNING: Password embedded in DATABASE_URL
+            # This is acceptable for development/testing but NOT for production.
+            # Production deployments should use Secret Manager or IAM authentication.
+            # See SECURITY.md for secure alternatives and migration procedures.
             DATABASE_URL = "postgresql://${var.database_user}:${var.database_password}@localhost/${var.database_name}?host=/cloudsql/${google_sql_database_instance.postgres.connection_name}"
             REDIS_HOST   = var.enable_redis ? google_redis_instance.cache[0].host : ""
             REDIS_PORT   = var.enable_redis ? tostring(google_redis_instance.cache[0].port) : ""

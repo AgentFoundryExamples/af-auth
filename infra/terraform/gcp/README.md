@@ -495,16 +495,20 @@ gcloud secrets add-iam-policy-binding github-client-id \
 
 ## Security Best Practices
 
-1. **Use Private Networking**: Set `enable_private_networking = true`
-2. **Enable SSL**: Set `enable_ssl = true` for database connections
-3. **Rotate Secrets**: Regularly rotate secrets in Secret Manager
-4. **Least Privilege IAM**: Service account only has required permissions
-5. **Audit Logging**: Enable Cloud Audit Logs for all resources
-6. **Restrict Database Access**: Use private IP and firewall rules
-7. **Enable Deletion Protection**: Set for production databases
-8. **Use HTTPS**: Cloud Run provides HTTPS by default
-9. **Rate Limiting**: Configure appropriate rate limits
-10. **Monitor Alerts**: Set up Cloud Monitoring alerts for errors
+⚠️ **IMPORTANT**: See [SECURITY.md](./SECURITY.md) for comprehensive security guidance, especially regarding database password management for production deployments.
+
+1. **Database Authentication**: Use Cloud SQL IAM authentication or Secret Manager for production (see SECURITY.md)
+2. **Use Private Networking**: Set `enable_private_networking = true`
+3. **Enable SSL**: Set `enable_ssl = true` for database connections
+4. **Rotate Secrets**: Regularly rotate secrets in Secret Manager
+5. **Least Privilege IAM**: Service account only has required permissions
+6. **Audit Logging**: Enable Cloud Audit Logs for all resources
+7. **Restrict Database Access**: Use private IP and firewall rules
+8. **Enable Deletion Protection**: Set for production databases
+9. **Use HTTPS**: Cloud Run provides HTTPS by default
+10. **Rate Limiting**: Configure appropriate rate limits
+11. **Monitor Alerts**: Set up Cloud Monitoring alerts for errors
+12. **State File Encryption**: Enable encryption for Terraform state bucket
 
 ## Cleanup
 
