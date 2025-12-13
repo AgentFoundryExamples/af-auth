@@ -71,8 +71,8 @@ describe('Security Headers Middleware', () => {
       // Create app with nonce middleware
       const appWithNonce = express();
       appWithNonce.use((_req: Request, res: Response, next) => {
-        // Use valid base64-encoded nonce
-        res.locals.cspNonce = 'dGVzdE5vbmNlMTIzNDU2'; // "testNonce123456" in base64
+        // Use valid 16-byte base64-encoded nonce (24 chars with padding)
+        res.locals.cspNonce = 'HkT+21q9qnvdn+GGnmfFGw==';
         next();
       });
       appWithNonce.use(createSecurityHeadersMiddleware());
@@ -83,16 +83,16 @@ describe('Security Headers Middleware', () => {
       const response = await request(appWithNonce).get('/test').expect(200);
 
       const csp = response.headers['content-security-policy'];
-      expect(csp).toContain("script-src 'self' 'nonce-dGVzdE5vbmNlMTIzNDU2'");
-      expect(csp).toContain("style-src 'self' 'nonce-dGVzdE5vbmNlMTIzNDU2'");
+      expect(csp).toContain("script-src 'self' 'nonce-HkT+21q9qnvdn+GGnmfFGw=='");
+      expect(csp).toContain("style-src 'self' 'nonce-HkT+21q9qnvdn+GGnmfFGw=='");
       expect(csp).not.toContain("'unsafe-inline'");
     });
 
     it('should not include unsafe-inline when nonce is present', async () => {
       const appWithNonce = express();
       appWithNonce.use((_req: Request, res: Response, next) => {
-        // Use valid base64-encoded nonce
-        res.locals.cspNonce = 'c2VjdXJlTm9uY2VhYmMxMjM='; // "secureNonceabc123" in base64
+        // Use valid 16-byte base64-encoded nonce
+        res.locals.cspNonce = 'tPLznCYaUJXF8cKxTRlwvA==';
         next();
       });
       appWithNonce.use(createSecurityHeadersMiddleware());
@@ -110,8 +110,10 @@ describe('Security Headers Middleware', () => {
       const appWithNonce = express();
       let requestCount = 0;
       appWithNonce.use((_req: Request, res: Response, next) => {
-        // Generate valid base64 nonces
-        res.locals.cspNonce = requestCount === 0 ? 'bm9uY2UxMjM0NTY3OA==' : 'bm9uY2U5ODc2NTQzMjE=';
+        // Use different valid 16-byte base64 nonces for each request
+        res.locals.cspNonce = requestCount === 0 
+          ? 'FJqqE0HD38eMoGSTgmSgKw==' 
+          : 'gCPoZAldkpvepB7lFdcF3A==';
         requestCount++;
         next();
       });
@@ -126,8 +128,8 @@ describe('Security Headers Middleware', () => {
       const csp1 = response1.headers['content-security-policy'];
       const csp2 = response2.headers['content-security-policy'];
       
-      expect(csp1).toContain("'nonce-bm9uY2UxMjM0NTY3OA=='");
-      expect(csp2).toContain("'nonce-bm9uY2U5ODc2NTQzMjE='");
+      expect(csp1).toContain("'nonce-FJqqE0HD38eMoGSTgmSgKw=='");
+      expect(csp2).toContain("'nonce-gCPoZAldkpvepB7lFdcF3A=='");
     });
 
     it('should reject invalid nonce format to prevent header injection', async () => {

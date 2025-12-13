@@ -182,8 +182,12 @@ export function createSecurityHeadersMiddleware() {
     let nonce = res.locals.cspNonce as string | undefined;
     
     // Validate nonce format to prevent header injection attacks
-    if (nonce && !/^[A-Za-z0-9+/]+=*$/.test(nonce)) {
-      console.warn('Invalid nonce format detected, ignoring', { nonce });
+    // Nonce must be exactly 24 characters (16 bytes base64-encoded with padding)
+    if (nonce && !/^[A-Za-z0-9+/]{22}==$/.test(nonce)) {
+      console.warn('Invalid nonce format detected, ignoring', { 
+        nonceLength: nonce.length,
+        noncePrefix: nonce.substring(0, 4)  // Log only prefix for security
+      });
       nonce = undefined;
     }
     
