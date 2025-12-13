@@ -2,8 +2,162 @@
 
 This guide provides operational runbooks for managing the AF Auth service, including logging, monitoring, whitelist management, and troubleshooting common issues.
 
+## Infrastructure Management
+
+### Terraform State Management
+
+If you deployed using Terraform (recommended), manage your infrastructure with Terraform commands.
+
+#### View Current State
+
+```bash
+cd infra/terraform/gcp
+
+# List all resources
+terraform state list
+
+# Show specific resource
+terraform state show google_cloud_run_v2_service.auth_service
+
+# View all outputs
+terraform output
+
+# View specific output
+terraform output service_url
+```
+
+#### Update Infrastructure
+
+```bash
+# Check for drift between state and actual infrastructure
+terraform refresh
+
+# Plan changes before applying
+terraform plan
+
+# Apply configuration changes
+terraform apply
+
+# Apply with specific variable override
+terraform apply -var="min_instances=2"
+```
+
+#### State Operations
+
+```bash
+# Pull state to local file (backup)
+terraform state pull > terraform.tfstate.backup
+
+# Import existing resource into state
+terraform import google_cloud_run_v2_service.auth_service projects/PROJECT/locations/REGION/services/SERVICE
+
+# Remove resource from state (without destroying)
+terraform state rm google_cloud_run_v2_service.auth_service
+
+# Move resource to different state location
+terraform state mv google_cloud_run_v2_service.auth_service \
+  module.auth_service.google_cloud_run_v2_service.auth_service
+```
+
+#### Backend State Storage
+
+Terraform state is stored remotely in Google Cloud Storage. To configure or migrate:
+
+```bash
+# View backend configuration
+terraform init -backend-config=backend.tf
+
+# Migrate state to new backend
+terraform init -migrate-state
+
+# Force state unlock (if locked from failed apply)
+terraform force-unlock LOCK_ID
+```
+
+#### State Recovery
+
+If state file is corrupted or lost:
+
+```bash
+# Option 1: Restore from GCS bucket version
+gsutil ls -a gs://your-terraform-state-bucket/terraform/af-auth/default.tfstate
+gsutil cp gs://your-terraform-state-bucket/terraform/af-auth/default.tfstate#VERSION \
+  terraform.tfstate
+
+# Option 2: Import existing resources
+terraform import google_cloud_run_v2_service.auth_service \
+  projects/PROJECT/locations/REGION/services/af-auth-production
+```
+
+See [Terraform Documentation](../../infra/terraform/README.md) for more details on state management.
+
+### Infrastructure Updates
+
+#### Scaling Changes
+
+Update scaling configuration:
+
+```bash
+# Edit terraform.tfvars
+min_instances = 2
+max_instances = 20
+
+# Apply changes
+terraform plan
+terraform apply
+```
+
+#### Container Image Updates
+
+Deploy new application version:
+
+```bash
+# Build and push new image
+docker build -t af-auth:v2.0.0 .
+docker push us-central1-docker.pkg.dev/PROJECT/af-auth/af-auth:v2.0.0
+
+# Update terraform.tfvars
+container_image = "us-central1-docker.pkg.dev/PROJECT/af-auth/af-auth:v2.0.0"
+
+# Deploy
+terraform apply
+```
+
+#### Database Configuration Changes
+
+Modify database settings:
+
+```bash
+# Edit terraform.tfvars for tier upgrade
+database_tier = "db-n1-standard-2"
+high_availability = true
+
+# Plan and review changes (database changes may cause downtime)
+terraform plan
+
+# Apply during maintenance window
+terraform apply
+```
+
+#### Resource Destruction
+
+To destroy specific resources or entire stack:
+
+```bash
+# Destroy specific resource
+terraform destroy -target=google_redis_instance.cache
+
+# Destroy entire stack (use with caution)
+terraform plan -destroy
+terraform destroy
+
+# Note: Production databases have deletion_protection=true
+# Edit main.tf to set deletion_protection=false before destroying
+```
+
 ## Table of Contents
 
+- [Infrastructure Management](#infrastructure-management)
 - [Daily Operations](#daily-operations)
 - [Key Rotation Monitoring](#key-rotation-monitoring)
 - [Logging and Monitoring](#logging-and-monitoring)
