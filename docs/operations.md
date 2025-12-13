@@ -839,7 +839,8 @@ This section provides step-by-step procedures for common operational tasks.
 
 7. **Record rotation in tracking system**
    ```sql
-   -- Connect to database
+   -- Connect to PostgreSQL database
+   -- Note: This SQL uses PostgreSQL-specific functions (gen_random_uuid(), INTERVAL)
    INSERT INTO jwt_key_rotation (
      id,
      key_identifier,
