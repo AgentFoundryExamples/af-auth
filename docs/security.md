@@ -60,8 +60,8 @@ Mitigates cross-site scripting (XSS) and data injection attacks by restricting r
 **Default Policy:**
 ```
 default-src 'self';
-script-src 'self' 'unsafe-inline';
-style-src 'self' 'unsafe-inline';
+script-src 'self' 'nonce-{random}';
+style-src 'self' 'nonce-{random}';
 img-src 'self' data: https:;
 connect-src 'self' https://github.com;
 font-src 'self' data:;
@@ -74,10 +74,22 @@ base-uri 'self';
 ```
 
 **Key Features:**
-- Allows inline scripts and styles for React-rendered pages
+- **Nonce-based inline protection**: Uses cryptographically random nonces for inline scripts and styles instead of `'unsafe-inline'`
+- **Per-request nonces**: Each request generates a unique 16-byte base64-encoded nonce
+- **Automatic nonce injection**: Nonces are automatically applied to all React-rendered pages
 - Includes GitHub OAuth domains in `connect-src` and `form-action`
 - Blocks framing via `frame-ancestors 'none'`
 - Automatically upgrades HTTP to HTTPS in production via `upgrade-insecure-requests`
+
+**Nonce Implementation:**
+
+The service generates a cryptographically secure nonce for each request using `crypto.randomBytes(16)`. This nonce is:
+1. Generated once per request in `cspNonceMiddleware`
+2. Stored in `res.locals.cspNonce` for access across middleware/routes
+3. Injected into CSP headers via `script-src` and `style-src` directives
+4. Applied to all inline `<script>` and `<style>` tags in rendered pages
+
+This approach eliminates the need for `'unsafe-inline'`, significantly reducing XSS attack surface while maintaining compatibility with React SSR pages.
 
 #### Strict-Transport-Security (HSTS)
 
@@ -242,10 +254,42 @@ curl -I http://localhost:3000/health
 # Expected headers:
 # X-Frame-Options: DENY
 # X-Content-Type-Options: nosniff
-# Content-Security-Policy: default-src 'self'; ...
+# Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-...'; ...
 # Referrer-Policy: strict-origin-when-cross-origin
 # Permissions-Policy: camera=(), microphone=(), ...
 ```
+
+#### Verifying CSP Nonces
+
+Check that nonces are properly generated and applied:
+
+```bash
+# Get full CSP header with nonce
+curl -s http://localhost:3000/auth/github | grep -o "nonce-[A-Za-z0-9+/=]*"
+
+# Should output a base64-encoded nonce like:
+# nonce-AbC123XyZ456789+/==
+
+# Verify nonces are unique per request
+for i in {1..5}; do
+  curl -s -I http://localhost:3000/health | grep "script-src" | grep -o "nonce-[A-Za-z0-9+/=]*"
+done
+# Each request should show a different nonce
+```
+
+#### Monitoring CSP in Production
+
+To enable CSP violation reporting, configure a report-uri or report-to directive:
+
+```bash
+# Add CSP reporting endpoint (future enhancement)
+CSP_REPORT_URI=https://your-csp-report-collector.example.com/report
+```
+
+Monitor for CSP violations in application logs or external reporting services to detect:
+- Attempted XSS attacks
+- Misconfigured third-party scripts
+- Browser extensions injecting content
 
 ### Browser Compatibility
 
@@ -266,6 +310,62 @@ Legacy browsers gracefully ignore unsupported headers without breaking functiona
 4. **Use frame-ancestors 'none'** unless embedding is required
 5. **Review Permissions-Policy** - Only enable needed features
 6. **Monitor CSP violations** in production via reporting endpoints
+7. **Nonces are automatic** - No manual configuration needed for inline scripts/styles
+
+### CSP Nonce Troubleshooting
+
+#### Issue: Pages not rendering inline styles
+
+**Symptoms:**
+- Unstyled login/token pages
+- Browser console shows CSP violations for inline styles
+
+**Diagnosis:**
+```bash
+# Check if nonce is in CSP header
+curl -I http://localhost:3000/health | grep "style-src"
+
+# Verify page HTML includes nonce attributes
+curl -s http://localhost:3000/auth/github | grep 'nonce='
+```
+
+**Resolution:**
+1. Ensure `cspNonceMiddleware` is registered before route handlers in `server.ts`
+2. Verify `res.locals.cspNonce` is passed to all page components
+3. Check that `<style>` tags include `nonce={nonce}` attribute
+
+#### Issue: Nonce mismatch between header and page
+
+**Symptoms:**
+- CSP violations in browser console
+- Nonce in page HTML doesn't match CSP header
+
+**Cause:**
+Multiple middleware instances or response caching
+
+**Resolution:**
+```bash
+# Verify middleware order in server.ts
+# cspNonceMiddleware must run before securityHeadersMiddleware
+
+# Disable caching for auth pages (already implemented)
+Cache-Control: no-store, no-cache, must-revalidate, private
+```
+
+#### Rollback to unsafe-inline
+
+**Emergency rollback if nonce implementation causes issues:**
+
+1. Comment out `cspNonceMiddleware` in `server.ts`:
+```typescript
+// app.use(cspNonceMiddleware);
+```
+
+2. Restart the service - CSP will automatically fall back to `'unsafe-inline'`
+
+3. Monitor for continued issues and investigate nonce implementation
+
+**Note:** This fallback is automatic - when no nonce is present in `res.locals`, the security headers middleware uses `'unsafe-inline'` for backward compatibility.
 7. **Test across browsers** after configuration changes
 
 ### Troubleshooting

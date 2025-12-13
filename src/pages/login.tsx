@@ -3,6 +3,7 @@ import React from 'react';
 export interface LoginPageProps {
   authUrl: string;
   serviceName?: string;
+  nonce?: string;
 }
 
 /**
@@ -10,7 +11,8 @@ export interface LoginPageProps {
  */
 export const LoginPage: React.FC<LoginPageProps> = ({ 
   authUrl, 
-  serviceName = 'AF Auth' 
+  serviceName = 'AF Auth',
+  nonce 
 }) => {
   return (
     <html lang="en">
@@ -18,7 +20,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Login - {serviceName}</title>
-        <style>{`
+        <style nonce={nonce}>{`
           * {
             margin: 0;
             padding: 0;

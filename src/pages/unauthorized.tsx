@@ -4,6 +4,7 @@ export interface UnauthorizedPageProps {
   adminContactEmail: string;
   adminContactName: string;
   serviceName?: string;
+  nonce?: string;
 }
 
 /**
@@ -12,7 +13,8 @@ export interface UnauthorizedPageProps {
 export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({ 
   adminContactEmail, 
   adminContactName,
-  serviceName = 'AF Auth' 
+  serviceName = 'AF Auth',
+  nonce 
 }) => {
   return (
     <html lang="en">
@@ -20,7 +22,7 @@ export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Access Denied - {serviceName}</title>
-        <style>{`
+        <style nonce={nonce}>{`
           * {
             margin: 0;
             padding: 0;

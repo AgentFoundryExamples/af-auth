@@ -22,6 +22,7 @@ import { performHealthCheck, performReadinessCheck, HealthStatus } from './servi
 import { initializeMetrics } from './services/metrics';
 import { metricsMiddleware } from './middleware/metrics';
 import { securityHeadersMiddleware } from './middleware/security-headers';
+import { cspNonceMiddleware } from './middleware/csp-nonce';
 
 const app = express();
 const server = http.createServer(app);
@@ -29,7 +30,10 @@ const server = http.createServer(app);
 // Initialize Prometheus metrics
 initializeMetrics();
 
-// Security headers middleware (applied first to cover all responses)
+// CSP nonce generation middleware (must be before security headers)
+app.use(cspNonceMiddleware);
+
+// Security headers middleware (applied after nonce generation to access res.locals.cspNonce)
 app.use(securityHeadersMiddleware);
 
 // Middleware

@@ -740,6 +740,84 @@ gcloud alpha monitoring policies create \
   --condition-threshold-duration=300s
 ```
 
+### CSP Monitoring and Violation Tracking
+
+The service uses nonce-based Content Security Policy to prevent XSS attacks. Monitor CSP effectiveness and violations to detect security issues.
+
+#### Verifying CSP Nonce Implementation
+
+Check that nonces are properly generated:
+
+```bash
+# Verify nonce is present in CSP headers
+curl -s -I https://your-service-url/health | grep "script-src"
+
+# Expected output should contain: script-src 'self' 'nonce-...'
+# NOT: script-src 'self' 'unsafe-inline'
+```
+
+#### Monitoring for CSP Violations
+
+CSP violations indicate potential XSS attempts or misconfigured inline scripts. Set up log-based alerts:
+
+```bash
+# Query for CSP-related errors in logs
+gcloud logging read 'resource.type="cloud_run_revision" 
+  AND resource.labels.service_name="af-auth"
+  AND (textPayload=~"CSP" OR textPayload=~"nonce")' \
+  --limit=50
+
+# Create log-based metric for CSP errors
+gcloud logging metrics create csp_errors \
+  --description="CSP-related errors" \
+  --log-filter='resource.type="cloud_run_revision"
+    AND resource.labels.service_name="af-auth"
+    AND severity>=ERROR
+    AND textPayload=~"CSP"'
+
+# Create alert on CSP errors
+gcloud alpha monitoring policies create \
+  --notification-channels=CHANNEL_ID \
+  --display-name="AF Auth CSP Errors" \
+  --condition-display-name="CSP errors detected" \
+  --condition-threshold-value=1 \
+  --condition-threshold-duration=60s
+```
+
+#### Browser-side CSP Violation Monitoring
+
+While the service doesn't currently implement CSP reporting endpoints, you can monitor violations client-side:
+
+1. **Browser DevTools**: Check console for CSP violations during testing
+2. **External CSP Reporting Services**: Consider integrating services like report-uri.com
+3. **Future Enhancement**: Add `report-uri` or `report-to` directive to CSP configuration
+
+#### Troubleshooting CSP Issues
+
+If pages fail to load styles/scripts:
+
+```bash
+# 1. Verify nonce middleware is active
+curl -s https://your-service-url/health -v 2>&1 | grep "nonce-"
+
+# 2. Check for nonce mismatch in rendered HTML
+curl -s https://your-service-url/auth/github | grep -o 'nonce="[^"]*"'
+
+# 3. Review logs for CSP-related warnings
+gcloud logging read 'severity>=WARNING AND textPayload=~"CSP"' --limit=10
+
+# 4. Test emergency rollback (disable nonces)
+# Comment out cspNonceMiddleware in server.ts and redeploy
+```
+
+#### Security Best Practices
+
+1. **Never disable CSP in production** - Critical security control
+2. **Monitor for violations** - May indicate attack attempts
+3. **Test OAuth flows** after CSP changes
+4. **Keep nonce implementation** - Don't fallback to unsafe-inline permanently
+5. **Regular audits** - Verify CSP headers in production weekly
+
 ## Prometheus Metrics
 
 The service exposes Prometheus metrics for monitoring authentication flows, operations, and system health. Metrics are available at a protected endpoint and provide deep visibility into service behavior.
