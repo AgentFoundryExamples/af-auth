@@ -233,8 +233,8 @@ export function createSecurityHeadersMiddleware() {
           // Validate directive value is not empty to prevent Helmet errors
           if (!Array.isArray(directiveValue) || directiveValue.length === 0) {
             console.warn(
-              `CSP directive "${directiveName}" has empty or invalid value. Skipping directive.`,
-              { directive: directiveName, value: directiveValue }
+              `CSP directive "${directiveName}" has empty or invalid value. Skipping directive. ` +
+              `Check your environment configuration for CSP_${key.replace(/[A-Z]/g, m => `_${m}`).toUpperCase()}.`
             );
             return; // Skip this directive
           }
