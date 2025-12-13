@@ -654,8 +654,8 @@ The project includes 75 automated tests covering security headers and CSP:
 npm test -- --testPathPattern="security-headers|csp-nonce"
 
 # Test suites breakdown:
-# - security-headers.test.ts (25 tests): Unit tests for middleware
-# - security-headers.integration.test.ts (30 tests): Real endpoint validation
+# - security-headers.test.ts (35 tests): Unit tests for middleware
+# - security-headers.integration.test.ts (20 tests): Real endpoint validation
 # - security-headers.edge-cases.test.ts (10 tests): Error handling & malformed configs
 # - csp-nonce.test.ts (10 tests): Cryptographic nonce generation
 
@@ -799,9 +799,10 @@ Common CSP environment variables for local development:
 CSP_ENABLED=true
 
 # Customize directives (comma-separated, keywords must be quoted)
+# Note: Nonces are automatically added by middleware - do not specify manually
 CSP_DEFAULT_SRC="'self'"
-CSP_SCRIPT_SRC="'self','nonce-{random}'"
-CSP_STYLE_SRC="'self','nonce-{random}'"
+CSP_SCRIPT_SRC="'self'"
+CSP_STYLE_SRC="'self'"
 CSP_IMG_SRC="'self',data:,https:"
 CSP_CONNECT_SRC="'self',https://github.com"
 CSP_FORM_ACTION="'self',https://github.com"
