@@ -44,15 +44,16 @@ describe('CSP Nonce Middleware', () => {
 
     it('should generate cryptographically random nonces', () => {
       // Generate multiple nonces and check they don't follow patterns
-      const nonces = new Set<string | undefined>();
+      const nonces = new Set<string>();
       for (let i = 0; i < 100; i++) {
         const nonce = generateNonce();
-        if (nonce) {
+        expect(nonce).toBeDefined(); // Explicitly check for generation failure
+        if (nonce) { // This check is now for type safety
           nonces.add(nonce);
         }
       }
       
-      // All should be unique (assuming no crypto failures)
+      // All 100 should be unique
       expect(nonces.size).toBe(100);
     });
 
