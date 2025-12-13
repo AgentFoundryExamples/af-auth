@@ -110,8 +110,8 @@ Total files: 56
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 5.56 KB  
-**LOC:** 111  
+**Size:** 5.64 KB  
+**LOC:** 112  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/csp-nonce.ts
@@ -182,8 +182,8 @@ Total files: 56
 **Role:** implementation  
 **Role Justification:** general implementation file (default classification)  
 **Summary:** TypeScript core implementation  
-**Size:** 8.61 KB  
-**LOC:** 166  
+**Size:** 8.77 KB  
+**LOC:** 171  
 **TODOs/FIXMEs:** 0  
 
 ## src/middleware/security-headers.integration.test.ts
