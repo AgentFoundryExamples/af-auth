@@ -91,6 +91,29 @@ The service generates a cryptographically secure nonce for each request using `c
 
 This approach eliminates the need for `'unsafe-inline'`, significantly reducing XSS attack surface while maintaining compatibility with React SSR pages.
 
+**Configuration Notes:**
+
+⚠️ **IMPORTANT**: When configuring CSP directives via environment variables, CSP keywords like `'self'`, `'none'`, and `'unsafe-inline'` MUST be quoted as part of the value. In `.env` files, use double quotes to wrap the entire value including the single quotes:
+
+```bash
+# ✅ CORRECT - Keywords are quoted within the value
+CSP_DEFAULT_SRC="'self'"
+CSP_OBJECT_SRC="'none'"
+
+# ❌ INCORRECT - Missing quotes around keywords
+CSP_DEFAULT_SRC='self'
+CSP_OBJECT_SRC='none'
+```
+
+The middleware includes validation guards that:
+- Skip empty or invalid directive values with warnings
+- Prevent Helmet initialization failures from malformed configurations
+- Provide actionable error messages without leaking sensitive configuration
+
+**Helmet 8.0.0 Compatibility:**
+
+This service uses Helmet 8.0.0, which enforces stricter CSP validation than previous versions. If you encounter errors like "Content-Security-Policy received an invalid directive value", ensure all CSP keywords are properly quoted in your environment configuration.
+
 #### Strict-Transport-Security (HSTS)
 
 Forces browsers to use HTTPS connections only, protecting against protocol downgrade attacks.

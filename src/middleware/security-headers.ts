@@ -226,7 +226,18 @@ export function createSecurityHeadersMiddleware() {
         } else {
           // Convert camelCase to kebab-case for CSP directive names
           const directiveName = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
-          cspDirectives[directiveName] = value as string[];
+          const directiveValue = value as string[];
+          
+          // Validate directive value is not empty to prevent Helmet errors
+          if (!Array.isArray(directiveValue) || directiveValue.length === 0) {
+            console.warn(
+              `CSP directive "${directiveName}" has empty or invalid value. Skipping directive.`,
+              { directive: directiveName, value: directiveValue }
+            );
+            return; // Skip this directive
+          }
+          
+          cspDirectives[directiveName] = directiveValue;
         }
       });
     }
