@@ -66,7 +66,9 @@ function getSecurityHeadersConfig(nonce?: string): SecurityHeadersConfig {
   const parseDirective = (envVar: string, defaultValue: string[]): string[] => {
     const value = process.env[envVar];
     if (!value) return defaultValue;
-    return value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    const parsed = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+    // If parsing resulted in empty array (e.g., whitespace only), use default
+    return parsed.length > 0 ? parsed : defaultValue;
   };
 
   // Determine if we're in production
@@ -226,7 +228,20 @@ export function createSecurityHeadersMiddleware() {
         } else {
           // Convert camelCase to kebab-case for CSP directive names
           const directiveName = key.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
-          cspDirectives[directiveName] = value as string[];
+          const directiveValue = value as string[];
+          
+          // Validate directive value is not empty to prevent Helmet errors
+          if (!Array.isArray(directiveValue) || directiveValue.length === 0) {
+            // Convert camelCase to SCREAMING_SNAKE_CASE for env var name
+            const envVarName = `CSP_${key.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase()}`;
+            console.warn(
+              `CSP directive "${directiveName}" has empty or invalid value. Skipping directive. ` +
+              `Check your environment configuration for ${envVarName}.`
+            );
+            return; // Skip this directive
+          }
+          
+          cspDirectives[directiveName] = directiveValue;
         }
       });
     }
