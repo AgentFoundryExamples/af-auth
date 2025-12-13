@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security & Documentation
 
-#### Comprehensive Security Audit Completed (2024-12-13)
+#### Comprehensive Security Audit Completed (2025-12-13)
 - **Code Review**: Verified no outstanding TODO/FIXME/security annotations in src/** and docs/**
 - **Security Summary**: Updated SECURITY_SUMMARY.md with comprehensive Terraform deployment posture
   - Infrastructure-as-code security analysis
@@ -68,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ Integration tests verify health checks and OAuth flow
 - ✅ No regressions introduced
 
-**Audit Date:** 2024-12-13  
+**Audit Date:** 2025-12-13  
 **Audit Scope:** Code, infrastructure, documentation, operations  
 **Audit Status:** ✅ Complete - Production ready  
 **Next Audit:** Quarterly or after major infrastructure/security changes

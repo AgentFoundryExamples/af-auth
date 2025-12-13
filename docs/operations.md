@@ -830,8 +830,8 @@ This section provides step-by-step procedures for common operational tasks.
 
 6. **Distribute new public key to downstream services**
    ```bash
-   # Download new public key
-   curl https://YOUR_SERVICE_URL/api/jwks > jwt-public-new.pem
+   # Download new public key set (JWKS format is JSON)
+   curl https://YOUR_SERVICE_URL/api/jwks > jwks-new.json
    
    # Send to downstream service teams
    # Update their JWT verification configuration
@@ -911,7 +911,7 @@ This section provides step-by-step procedures for common operational tasks.
 
 2. **Prepare re-encryption script**
    ```bash
-   # Create temporary re-encryption script
+   # Create temporary re-encryption script with batch processing
    cat > /tmp/reencrypt-tokens.ts << 'EOF'
    import { PrismaClient } from '@prisma/client';
    import { decrypt, encrypt } from '../src/utils/encryption';
@@ -922,49 +922,64 @@ This section provides step-by-step procedures for common operational tasks.
    const prisma = new PrismaClient();
    
    async function reencryptTokens() {
-     const users = await prisma.user.findMany({
-       where: {
-         OR: [
-           { githubAccessToken: { not: null } },
-           { githubRefreshToken: { not: null } },
-         ],
-       },
-     });
-     
-     console.log(`Found ${users.length} users with tokens to re-encrypt`);
-     
-     for (const user of users) {
-       try {
-         let newAccessToken = null;
-         let newRefreshToken = null;
-         
-         if (user.githubAccessToken) {
-           const decrypted = decrypt(user.githubAccessToken, OLD_KEY);
-           newAccessToken = encrypt(decrypted, NEW_KEY);
-         }
-         
-         if (user.githubRefreshToken) {
-           const decrypted = decrypt(user.githubRefreshToken, OLD_KEY);
-           newRefreshToken = encrypt(decrypted, NEW_KEY);
-         }
-         
-         await prisma.user.update({
-           where: { id: user.id },
-           data: {
-             githubAccessToken: newAccessToken,
-             githubRefreshToken: newRefreshToken,
-           },
-         });
-         
-         console.log(`Re-encrypted tokens for user ${user.id}`);
-       } catch (error) {
-         console.error(`Failed to re-encrypt tokens for user ${user.id}:`, error);
-         throw error; // Stop on first error
+     const BATCH_SIZE = 1000;
+     let cursor: string | undefined;
+     let totalReencrypted = 0;
+   
+     while (true) {
+       const users = await prisma.user.findMany({
+         take: BATCH_SIZE,
+         ...(cursor && { skip: 1, cursor: { id: cursor } }),
+         where: {
+           OR: [
+             { githubAccessToken: { not: null } },
+             { githubRefreshToken: { not: null } },
+           ],
+         },
+         orderBy: {
+           id: 'asc',
+         },
+       });
+   
+       if (users.length === 0) {
+         break;
        }
+   
+       console.log(`Processing batch of ${users.length} users...`);
+   
+       for (const user of users) {
+         try {
+           let newAccessToken: string | null = user.githubAccessToken;
+           let newRefreshToken: string | null = user.githubRefreshToken;
+   
+           if (user.githubAccessToken) {
+             const decrypted = decrypt(user.githubAccessToken, OLD_KEY);
+             newAccessToken = encrypt(decrypted, NEW_KEY);
+           }
+   
+           if (user.githubRefreshToken) {
+             const decrypted = decrypt(user.githubRefreshToken, OLD_KEY);
+             newRefreshToken = encrypt(decrypted, NEW_KEY);
+           }
+   
+           await prisma.user.update({
+             where: { id: user.id },
+             data: {
+               githubAccessToken: newAccessToken,
+               githubRefreshToken: newRefreshToken,
+             },
+           });
+         } catch (error) {
+           console.error(`Failed to re-encrypt tokens for user ${user.id}:`, error);
+           throw error; // Stop on first error
+         }
+       }
+       totalReencrypted += users.length;
+       cursor = users[users.length - 1].id;
      }
-     
+   
      await prisma.$disconnect();
-     console.log('Re-encryption complete');
+     console.log(`Re-encryption complete. Total users updated: ${totalReencrypted}`);
    }
    
    reencryptTokens().catch(console.error);
@@ -973,8 +988,18 @@ This section provides step-by-step procedures for common operational tasks.
 
 3. **Get both encryption keys**
    ```bash
-   # Get old key (current version)
-   OLD_KEY=$(gcloud secrets versions access 1 --secret=github-token-encryption-key)
+   # Get the latest version number
+   LATEST_VERSION=$(gcloud secrets versions list github-token-encryption-key \
+     --filter="state=ENABLED" \
+     --sort-by=~name \
+     --limit=1 \
+     --format="value(name)")
+   
+   # The old key is the version before the latest
+   OLD_VERSION=$((LATEST_VERSION - 1))
+   
+   # Get old key (previous version)
+   OLD_KEY=$(gcloud secrets versions access "${OLD_VERSION}" --secret=github-token-encryption-key)
    
    # Get new key (latest version)
    NEW_KEY=$(gcloud secrets versions access latest --secret=github-token-encryption-key)
@@ -1007,7 +1032,16 @@ This section provides step-by-step procedures for common operational tasks.
 
 7. **Disable old encryption key version (after 24h grace period)**
    ```bash
-   gcloud secrets versions disable 1 --secret=github-token-encryption-key
+   # Find the latest version number
+   LATEST_VERSION=$(gcloud secrets versions list github-token-encryption-key \
+     --filter="state=ENABLED" \
+     --sort-by=~name \
+     --limit=1 \
+     --format="value(name)")
+   OLD_VERSION=$((LATEST_VERSION - 1))
+   
+   # Disable the old version
+   gcloud secrets versions disable "${OLD_VERSION}" --secret=github-token-encryption-key
    ```
 
 8. **Clean up**
