@@ -177,6 +177,28 @@ describe('Security Headers Middleware', () => {
       expect(csp).toContain("img-src 'self' https://cdn.example.com");
     });
 
+    it('should add nonce to custom CSP_SCRIPT_SRC from environment', async () => {
+      process.env.CSP_SCRIPT_SRC = "'self',https://trusted-cdn.com";
+      
+      const appWithNonce = express();
+      appWithNonce.use((_req: Request, res: Response, next) => {
+        res.locals.cspNonce = 'testNonceABCD1234567==';
+        next();
+      });
+      appWithNonce.use(createSecurityHeadersMiddleware());
+      appWithNonce.get('/test', (_req: Request, res: Response) => {
+        res.status(200).json({ success: true });
+      });
+
+      const response = await request(appWithNonce).get('/test').expect(200);
+
+      const csp = response.headers['content-security-policy'];
+      expect(csp).toContain("script-src 'self' https://trusted-cdn.com 'nonce-testNonceABCD1234567=='");
+      expect(csp).not.toContain("'unsafe-inline'");
+      
+      delete process.env.CSP_SCRIPT_SRC;
+    });
+
     it('should disable CSP when CSP_ENABLED is false', async () => {
       process.env.CSP_ENABLED = 'false';
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();

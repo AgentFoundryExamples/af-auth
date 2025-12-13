@@ -8,13 +8,15 @@ describe('CSP Nonce Middleware', () => {
       
       expect(nonce).toBeDefined();
       expect(typeof nonce).toBe('string');
-      expect(nonce.length).toBeGreaterThan(0);
-      
-      // Base64 encoded 16 bytes should be 24 characters (with padding)
-      expect(nonce.length).toBe(24);
-      
-      // Should be valid base64
-      expect(nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
+      if (nonce) {
+        expect(nonce.length).toBeGreaterThan(0);
+        
+        // Base64 encoded 16 bytes should be 24 characters (with padding)
+        expect(nonce.length).toBe(24);
+        
+        // Should be valid base64
+        expect(nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
+      }
     });
 
     it('should generate unique nonces on each call', () => {
@@ -29,13 +31,39 @@ describe('CSP Nonce Middleware', () => {
 
     it('should generate cryptographically random nonces', () => {
       // Generate multiple nonces and check they don't follow patterns
-      const nonces = new Set<string>();
+      const nonces = new Set<string | undefined>();
       for (let i = 0; i < 100; i++) {
-        nonces.add(generateNonce());
+        const nonce = generateNonce();
+        if (nonce) {
+          nonces.add(nonce);
+        }
       }
       
-      // All should be unique
+      // All should be unique (assuming no crypto failures)
       expect(nonces.size).toBe(100);
+    });
+
+    it('should return undefined on crypto failure', () => {
+      // Mock randomBytes to throw an error
+      const crypto = require('crypto');
+      const originalRandomBytes = crypto.randomBytes;
+      crypto.randomBytes = jest.fn().mockImplementation(() => {
+        throw new Error('Crypto failure');
+      });
+      
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      const nonce = generateNonce();
+      
+      expect(nonce).toBeUndefined();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to generate CSP nonce, falling back to unsafe-inline',
+        expect.any(Object)
+      );
+      
+      // Restore
+      crypto.randomBytes = originalRandomBytes;
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -96,7 +124,30 @@ describe('CSP Nonce Middleware', () => {
       
       expect(mockRes.locals.cspNonce).toBeDefined();
       expect(mockRes.locals.cspNonce).not.toBe('old-nonce');
-      expect(mockRes.locals.cspNonce.length).toBe(24);
+      if (mockRes.locals.cspNonce) {
+        expect(mockRes.locals.cspNonce.length).toBe(24);
+      }
+    });
+
+    it('should not set cspNonce if nonce generation fails', () => {
+      // Mock randomBytes to throw an error
+      const crypto = require('crypto');
+      const originalRandomBytes = crypto.randomBytes;
+      crypto.randomBytes = jest.fn().mockImplementation(() => {
+        throw new Error('Crypto failure');
+      });
+      
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockRes.locals = {};
+      
+      cspNonceMiddleware(mockReq as Request, mockRes as Response, nextFn);
+      
+      expect(mockRes.locals.cspNonce).toBeUndefined();
+      expect(nextFn).toHaveBeenCalledTimes(1);
+      
+      // Restore
+      crypto.randomBytes = originalRandomBytes;
+      consoleErrorSpy.mockRestore();
     });
   });
 });

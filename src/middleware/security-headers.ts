@@ -104,12 +104,27 @@ function getSecurityHeadersConfig(nonce?: string): SecurityHeadersConfig {
         defaultSrc: parseDirective('CSP_DEFAULT_SRC', ["'self'"]),
         // Use nonce-based CSP for inline scripts and styles
         // Nonce is generated per request and passed to page components
-        scriptSrc: nonce 
-          ? parseDirective('CSP_SCRIPT_SRC', ["'self'", `'nonce-${nonce}'`])
-          : parseDirective('CSP_SCRIPT_SRC', ["'self'", "'unsafe-inline'"]),
-        styleSrc: nonce 
-          ? parseDirective('CSP_STYLE_SRC', ["'self'", `'nonce-${nonce}'`])
-          : parseDirective('CSP_STYLE_SRC', ["'self'", "'unsafe-inline'"]),
+        // If env var is set, add nonce to it; otherwise use defaults with nonce
+        scriptSrc: (() => {
+          const envValue = process.env.CSP_SCRIPT_SRC;
+          if (envValue) {
+            // If environment variable is set, parse it and add nonce if present
+            const parsed = parseDirective('CSP_SCRIPT_SRC', []);
+            return nonce ? [...parsed, `'nonce-${nonce}'`] : [...parsed, "'unsafe-inline'"];
+          }
+          // Use defaults with nonce or unsafe-inline
+          return nonce ? ["'self'", `'nonce-${nonce}'`] : ["'self'", "'unsafe-inline'"];
+        })(),
+        styleSrc: (() => {
+          const envValue = process.env.CSP_STYLE_SRC;
+          if (envValue) {
+            // If environment variable is set, parse it and add nonce if present
+            const parsed = parseDirective('CSP_STYLE_SRC', []);
+            return nonce ? [...parsed, `'nonce-${nonce}'`] : [...parsed, "'unsafe-inline'"];
+          }
+          // Use defaults with nonce or unsafe-inline
+          return nonce ? ["'self'", `'nonce-${nonce}'`] : ["'self'", "'unsafe-inline'"];
+        })(),
         imgSrc: parseDirective('CSP_IMG_SRC', ["'self'", 'data:', 'https:']),
         connectSrc: parseDirective('CSP_CONNECT_SRC', ["'self'", githubDomain, 'https://github.com']),
         fontSrc: parseDirective('CSP_FONT_SRC', ["'self'", 'data:']),
@@ -175,6 +190,8 @@ function buildPermissionsPolicyHeader(policy: SecurityHeadersConfig['permissions
  * Nonce-based CSP is automatically enabled when res.locals.cspNonce is available
  */
 export function createSecurityHeadersMiddleware() {
+  // Get static security config (without nonce) for non-CSP headers
+  const staticConfig = getSecurityHeadersConfig();
 
   // Return middleware that applies helmet and custom Permissions-Policy header
   return (req: Request, res: Response, next: NextFunction) => {
@@ -182,8 +199,8 @@ export function createSecurityHeadersMiddleware() {
     let nonce = res.locals.cspNonce as string | undefined;
     
     // Validate nonce format to prevent header injection attacks
-    // Nonce must be exactly 24 characters (16 bytes base64-encoded with padding)
-    if (nonce && !/^[A-Za-z0-9+/]{22}==$/.test(nonce)) {
+    // Base64 encoding can have 0-2 padding characters
+    if (nonce && !/^[A-Za-z0-9+/]+=*$/.test(nonce)) {
       console.warn('Invalid nonce format detected, ignoring', { 
         nonceLength: nonce.length,
         noncePrefix: nonce.substring(0, 4)  // Log only prefix for security
@@ -221,18 +238,18 @@ export function createSecurityHeadersMiddleware() {
             directives: cspDirectives,
           }
         : false,
-      strictTransportSecurity: securityConfig.strictTransportSecurity.enabled
+      strictTransportSecurity: staticConfig.strictTransportSecurity.enabled
         ? {
-            maxAge: securityConfig.strictTransportSecurity.maxAge,
-            includeSubDomains: securityConfig.strictTransportSecurity.includeSubDomains,
-            preload: securityConfig.strictTransportSecurity.preload,
+            maxAge: staticConfig.strictTransportSecurity.maxAge,
+            includeSubDomains: staticConfig.strictTransportSecurity.includeSubDomains,
+            preload: staticConfig.strictTransportSecurity.preload,
           }
         : false,
       xFrameOptions: {
-        action: securityConfig.xFrameOptions.toLowerCase() as 'deny' | 'sameorigin',
+        action: staticConfig.xFrameOptions.toLowerCase() as 'deny' | 'sameorigin',
       },
       referrerPolicy: {
-        policy: securityConfig.referrerPolicy as
+        policy: staticConfig.referrerPolicy as
           | 'no-referrer'
           | 'no-referrer-when-downgrade'
           | 'origin'
@@ -243,7 +260,7 @@ export function createSecurityHeadersMiddleware() {
           | 'unsafe-url',
       },
       // Additional helmet defaults
-      xContentTypeOptions: securityConfig.xContentTypeOptions,
+      xContentTypeOptions: staticConfig.xContentTypeOptions,
       dnsPrefetchControl: { allow: false },
       xDownloadOptions: true,
       xPermittedCrossDomainPolicies: { permittedPolicies: 'none' },
@@ -256,7 +273,7 @@ export function createSecurityHeadersMiddleware() {
       }
 
       // Add Permissions-Policy header
-      const permissionsPolicyHeader = buildPermissionsPolicyHeader(securityConfig.permissionsPolicy);
+      const permissionsPolicyHeader = buildPermissionsPolicyHeader(staticConfig.permissionsPolicy);
       if (permissionsPolicyHeader) {
         res.setHeader('Permissions-Policy', permissionsPolicyHeader);
       }
