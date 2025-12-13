@@ -14,11 +14,53 @@
 import db from './index';
 
 describe('Database Client', () => {
-  // Note: These are integration tests that require a real database
-  // They are skipped by default and should be run when DATABASE_URL is available
+  // Integration tests can be run with RUN_INTEGRATION_TESTS=true for real database validation
+  // By default, tests use mocked database operations to allow CI/local testing without infrastructure
   const shouldRunIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
 
-  describe('Connection Management', () => {
+  describe('Connection Management - Unit Tests', () => {
+    let connectSpy: jest.SpyInstance;
+    let disconnectSpy: jest.SpyInstance;
+    let queryRawSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // Mock the underlying prisma client methods
+      connectSpy = jest.spyOn(db.prisma, '$connect').mockResolvedValue(undefined);
+      disconnectSpy = jest.spyOn(db.prisma, '$disconnect').mockResolvedValue(undefined);
+      queryRawSpy = jest.spyOn(db.prisma, '$queryRaw').mockResolvedValue([1]);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should have a prisma client instance', () => {
+      expect(db.prisma).toBeDefined();
+    });
+
+    it('should call prisma.$connect when db.connect is invoked', async () => {
+      await db.connect();
+      expect(connectSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call prisma.$disconnect when db.disconnect is invoked', async () => {
+      // First connect to set the state, then disconnect
+      await db.connect();
+      await db.disconnect();
+      expect(disconnectSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call prisma.$queryRaw when db.healthCheck is invoked', async () => {
+      await db.healthCheck();
+      expect(queryRawSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Connection Management - Integration Tests', () => {
+    // These tests require a real PostgreSQL database
+    // Run with: RUN_INTEGRATION_TESTS=true npm test
+    // See README.md Testing section for setup instructions
+
     beforeAll(async () => {
       if (shouldRunIntegrationTests && !db.connected) {
         await db.connect();
@@ -29,14 +71,6 @@ describe('Database Client', () => {
       if (shouldRunIntegrationTests && db.connected) {
         await db.disconnect();
       }
-    });
-
-    it('should have a prisma client instance', () => {
-      expect(db.prisma).toBeDefined();
-    });
-
-    it('should track connection state', () => {
-      expect(typeof db.connected).toBe('boolean');
     });
 
     (shouldRunIntegrationTests ? it : it.skip)('should connect to database', async () => {
@@ -62,11 +96,18 @@ describe('Database Client', () => {
   });
 
   describe('Error Handling', () => {
-    it('should not crash when health check fails with no connection', async () => {
-      // This test assumes database is not available or connection is closed
-      // It should return false, not throw
+    beforeEach(async () => {
+      // Ensure the db is disconnected before each test in this block.
+      if (db.connected) {
+        await db.disconnect();
+      }
+    });
+
+    it('should return false for a health check when not connected', async () => {
+      // This test ensures that a health check on a closed connection
+      // correctly returns false without throwing an error.
       const healthy = await db.healthCheck();
-      expect(typeof healthy).toBe('boolean');
+      expect(healthy).toBe(false);
     });
   });
 });
