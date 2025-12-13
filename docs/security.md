@@ -402,6 +402,9 @@ it('should generate unique nonces per request', async () => {
   const nonceMatch1 = csp1.match(/'nonce-([A-Za-z0-9+/=]+)'/);
   const nonceMatch2 = csp2.match(/'nonce-([A-Za-z0-9+/=]+)'/);
   
+  expect(nonceMatch1).not.toBeNull();
+  expect(nonceMatch2).not.toBeNull();
+  
   expect(nonceMatch1![1]).not.toBe(nonceMatch2![1]);
 });
 ```
@@ -424,13 +427,18 @@ Tests validate defensive coding and error handling:
 **Example Test:**
 ```typescript
 it('should handle empty string CSP directive gracefully', async () => {
+  const originalEnv = process.env.CSP_DEFAULT_SRC;
   process.env.CSP_DEFAULT_SRC = '';
   
-  app = express();
-  app.use(createSecurityHeadersMiddleware());
-  
-  const response = await request(app).get('/test').expect(200);
-  expect(response.headers['content-security-policy']).toBeDefined();
+  try {
+    app = express();
+    app.use(createSecurityHeadersMiddleware());
+    
+    const response = await request(app).get('/test').expect(200);
+    expect(response.headers['content-security-policy']).toBeDefined();
+  } finally {
+    process.env.CSP_DEFAULT_SRC = originalEnv;
+  }
 });
 ```
 
@@ -452,10 +460,11 @@ Tests validate cryptographic nonce generation:
 **Example Test:**
 ```typescript
 it('should generate cryptographically random nonces', () => {
-  const nonces = new Set<string | undefined>();
+  const nonces = new Set<string>();
   for (let i = 0; i < 100; i++) {
     const nonce = generateNonce();
-    if (nonce) {
+    expect(nonce).toBeDefined(); // Explicitly check for generation failure
+    if (nonce) { // This check is now for type safety
       nonces.add(nonce);
     }
   }

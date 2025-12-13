@@ -32,17 +32,22 @@ describe('Security Headers Edge Cases', () => {
 
   describe('Malformed Environment Variables', () => {
     it('should handle empty string CSP directive gracefully', async () => {
+      const originalEnv = process.env.CSP_DEFAULT_SRC;
       process.env.CSP_DEFAULT_SRC = '';
       
-      app = express();
-      app.use(createSecurityHeadersMiddleware());
-      app.get('/test', (_req: Request, res: Response) => {
-        res.status(200).json({ success: true });
-      });
+      try {
+        app = express();
+        app.use(createSecurityHeadersMiddleware());
+        app.get('/test', (_req: Request, res: Response) => {
+          res.status(200).json({ success: true });
+        });
 
-      // Should not crash, should use defaults
-      const response = await request(app).get('/test').expect(200);
-      expect(response.headers['content-security-policy']).toBeDefined();
+        // Should not crash, should use defaults
+        const response = await request(app).get('/test').expect(200);
+        expect(response.headers['content-security-policy']).toBeDefined();
+      } finally {
+        process.env.CSP_DEFAULT_SRC = originalEnv;
+      }
     });
 
     it('should handle whitespace-only CSP directive gracefully', async () => {
