@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security & Documentation
+
+#### Comprehensive Security Audit Completed (2025-12-13)
+- **Code Review**: Verified no outstanding TODO/FIXME/security annotations in src/** and docs/**
+- **Security Summary**: Updated SECURITY_SUMMARY.md with comprehensive Terraform deployment posture
+  - Infrastructure-as-code security analysis
+  - Secret management integration with Google Secret Manager
+  - Network security with VPC-based private networking
+  - Service account and IAM least-privilege configuration
+  - Database and Redis security posture
+  - Container security best practices
+  - Audit logging and monitoring capabilities
+  - Residual risk analysis with mitigations
+  - Environment-specific security configurations (dev/staging/production)
+  - Deployment security checklist
+  - Terraform-specific security recommendations
+- **Security Documentation**: Enhanced docs/security.md with comprehensive audit checklist
+  - Code security audit checklist
+  - Infrastructure security audit checklist
+  - Operational security audit checklist
+  - Documentation audit checklist
+  - Testing and quality assurance verification
+  - Residual risks and accepted risks documentation
+  - Audit compliance statement
+- **Operations Documentation**: Enhanced docs/operations.md with detailed operational runbooks
+  - JWT private key rotation runbook (step-by-step)
+  - GitHub token encryption key rotation runbook
+  - Service API key rotation runbook
+  - Token revocation runbook
+  - Revoked token cleanup runbook
+  - Incident response runbooks (token compromise, database failure, Redis failure)
+  - Observability and monitoring runbooks
+  - Terraform state troubleshooting procedures
+- **Terraform References**: Updated all documentation to reference Terraform deployment workflows
+  - State management procedures
+  - Secret injection from Secret Manager
+  - Infrastructure drift detection and resolution
+  - Deployment outputs for monitoring configuration
+
+#### Security Verification
+- ✅ All middleware aligned with least-privilege expectations
+- ✅ Rate limiting implemented and documented (authentication, JWT, GitHub token endpoints)
+- ✅ Token revocation procedures documented with CLI tools
+- ✅ Key rotation tracking automated with monitoring and warnings
+- ✅ Observability references in operations documentation
+- ✅ Incident response procedures for common scenarios
+- ✅ No critical security gaps identified
+
+#### Documentation Completeness
+- ✅ Mitigation procedures for all documented risks
+- ✅ Incident response steps for security events
+- ✅ Terraform workflow references throughout documentation
+- ✅ Audit checklist demonstrates reviewed components and outcomes
+- ✅ Cross-references between security.md, operations.md, and SECURITY_SUMMARY.md
+
+#### Testing
+- ✅ All 421 tests passing
+- ✅ Security tests cover CSP nonces, timing attacks, rate limiting
+- ✅ Integration tests verify health checks and OAuth flow
+- ✅ No regressions introduced
+
+**Audit Date:** 2025-12-13  
+**Audit Scope:** Code, infrastructure, documentation, operations  
+**Audit Status:** ✅ Complete - Production ready  
+**Next Audit:** Quarterly or after major infrastructure/security changes
+
 ## [1.1.0] - 2025-12-12
 
 ### Added

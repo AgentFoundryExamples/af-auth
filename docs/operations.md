@@ -759,6 +759,622 @@ Configure alerts in your monitoring system:
     description: "Key has been overdue for {{ abs($value) }} days"
 ```
 
+## Operational Runbooks
+
+This section provides step-by-step procedures for common operational tasks.
+
+### Key Rotation Runbooks
+
+#### JWT Private Key Rotation
+
+**When:** Every 180 days or when compromised
+
+**Prerequisites:**
+- Access to Secret Manager
+- OpenSSL installed
+- Permission to update Cloud Run service
+- Coordination with downstream services
+
+**Steps:**
+
+1. **Generate new key pair**
+   ```bash
+   # Generate new RSA key pair
+   openssl genpkey -algorithm RSA -out jwt-private-new.pem \
+     -pkeyopt rsa_keygen_bits:2048
+   openssl rsa -pubout -in jwt-private-new.pem -out jwt-public-new.pem
+   
+   # Verify key generation
+   openssl rsa -in jwt-private-new.pem -check
+   ```
+
+2. **Base64 encode keys for Secret Manager**
+   ```bash
+   # Encode private key
+   base64 -w 0 jwt-private-new.pem > jwt-private-new.b64
+   
+   # Encode public key
+   base64 -w 0 jwt-public-new.pem > jwt-public-new.b64
+   ```
+
+3. **Add new versions to Secret Manager**
+   ```bash
+   # Add new private key version
+   cat jwt-private-new.b64 | \
+     gcloud secrets versions add jwt-private-key --data-file=-
+   
+   # Add new public key version
+   cat jwt-public-new.b64 | \
+     gcloud secrets versions add jwt-public-key --data-file=-
+   ```
+
+4. **Update Cloud Run service (Terraform)**
+   ```bash
+   cd infra/terraform/gcp
+   
+   # Terraform automatically uses latest secret version
+   # Just restart the service to pick up new secrets
+   terraform apply -var="force_redeploy=$(date +%s)"
+   ```
+
+5. **Verify service health**
+   ```bash
+   # Check health endpoint
+   curl https://YOUR_SERVICE_URL/health
+   
+   # Verify encryption component is healthy
+   # Check logs for JWT key loading messages
+   gcloud logging read 'jsonPayload.msg=~"JWT"' \
+     --limit=10 --format=json
+   ```
+
+6. **Distribute new public key to downstream services**
+   ```bash
+   # Download new public key set (JWKS format is JSON)
+   curl https://YOUR_SERVICE_URL/api/jwks > jwks-new.json
+   
+   # Send to downstream service teams
+   # Update their JWT verification configuration
+   ```
+
+7. **Record rotation in tracking system**
+   ```sql
+   -- Connect to PostgreSQL database
+   -- Note: This SQL uses PostgreSQL-specific functions (gen_random_uuid(), INTERVAL)
+   INSERT INTO jwt_key_rotation (
+     id,
+     key_identifier,
+     key_type,
+     last_rotated_at,
+     next_rotation_due,
+     is_active,
+     rotation_interval_days,
+     metadata
+   ) VALUES (
+     gen_random_uuid(),
+     'jwt_signing_key',
+     'jwt_signing',
+     NOW(),
+     NOW() + INTERVAL '180 days',
+     true,
+     180,
+     'Scheduled rotation - ' || CURRENT_DATE::TEXT
+   )
+   ON CONFLICT (key_identifier) 
+   DO UPDATE SET
+     last_rotated_at = EXCLUDED.last_rotated_at,
+     next_rotation_due = EXCLUDED.next_rotation_due,
+     metadata = EXCLUDED.metadata,
+     updated_at = NOW();
+   ```
+
+8. **Verify rotation recorded**
+   ```bash
+   npm run check-key-rotation
+   ```
+
+9. **Monitor for errors (24 hours)**
+   ```bash
+   # Watch for JWT verification errors
+   gcloud logging read 'severity>=ERROR AND jsonPayload.msg=~"JWT"' \
+     --freshness=1d --format=json
+   ```
+
+10. **Clean up temporary files**
+    ```bash
+    rm jwt-private-new.pem jwt-public-new.pem
+    rm jwt-private-new.b64 jwt-public-new.b64
+    ```
+
+**Grace Period:** Old public keys remain valid for up to 7 days to allow downstream services to update.
+
+**Rollback:** If issues arise, revert Secret Manager to previous version and redeploy.
+
+#### GitHub Token Encryption Key Rotation
+
+**When:** Every 90 days or when compromised
+
+**Prerequisites:**
+- Database access for re-encryption
+- Maintenance window (minimal downtime for re-encryption)
+- Both old and new encryption keys available
+
+**Steps:**
+
+1. **Generate new encryption key**
+   ```bash
+   # Generate 32-byte (256-bit) key
+   NEW_KEY=$(openssl rand -hex 32)
+   echo -n "${NEW_KEY}" | \
+     gcloud secrets versions add github-token-encryption-key --data-file=-
+   ```
+
+2. **Prepare re-encryption script**
+   ```bash
+   # Create temporary re-encryption script with batch processing
+   cat > /tmp/reencrypt-tokens.ts << 'EOF'
+   import { PrismaClient } from '@prisma/client';
+   import { decrypt, encrypt } from '../src/utils/encryption';
+   
+   const OLD_KEY = process.env.OLD_ENCRYPTION_KEY!;
+   const NEW_KEY = process.env.NEW_ENCRYPTION_KEY!;
+   
+   const prisma = new PrismaClient();
+   
+   async function reencryptTokens() {
+     const BATCH_SIZE = 1000;
+     let cursor: string | undefined;
+     let totalReencrypted = 0;
+   
+     while (true) {
+       const users = await prisma.user.findMany({
+         take: BATCH_SIZE,
+         ...(cursor && { skip: 1, cursor: { id: cursor } }),
+         where: {
+           OR: [
+             { githubAccessToken: { not: null } },
+             { githubRefreshToken: { not: null } },
+           ],
+         },
+         orderBy: {
+           id: 'asc',
+         },
+       });
+   
+       if (users.length === 0) {
+         break;
+       }
+   
+       console.log(`Processing batch of ${users.length} users...`);
+   
+       for (const user of users) {
+         try {
+           let newAccessToken: string | null = user.githubAccessToken;
+           let newRefreshToken: string | null = user.githubRefreshToken;
+   
+           if (user.githubAccessToken) {
+             const decrypted = decrypt(user.githubAccessToken, OLD_KEY);
+             newAccessToken = encrypt(decrypted, NEW_KEY);
+           }
+   
+           if (user.githubRefreshToken) {
+             const decrypted = decrypt(user.githubRefreshToken, OLD_KEY);
+             newRefreshToken = encrypt(decrypted, NEW_KEY);
+           }
+   
+           await prisma.user.update({
+             where: { id: user.id },
+             data: {
+               githubAccessToken: newAccessToken,
+               githubRefreshToken: newRefreshToken,
+             },
+           });
+         } catch (error) {
+           console.error(`Failed to re-encrypt tokens for user ${user.id}:`, error);
+           throw error; // Stop on first error
+         }
+       }
+       totalReencrypted += users.length;
+       cursor = users[users.length - 1].id;
+     }
+   
+     await prisma.$disconnect();
+     console.log(`Re-encryption complete. Total users updated: ${totalReencrypted}`);
+   }
+   
+   reencryptTokens().catch(console.error);
+   EOF
+   ```
+
+3. **Get both encryption keys**
+   ```bash
+   # Get the latest version number
+   LATEST_VERSION=$(gcloud secrets versions list github-token-encryption-key \
+     --filter="state=ENABLED" \
+     --sort-by=~name \
+     --limit=1 \
+     --format="value(name)")
+   
+   # The old key is the version before the latest
+   OLD_VERSION=$((LATEST_VERSION - 1))
+   
+   # Get old key (previous version)
+   OLD_KEY=$(gcloud secrets versions access "${OLD_VERSION}" --secret=github-token-encryption-key)
+   
+   # Get new key (latest version)
+   NEW_KEY=$(gcloud secrets versions access latest --secret=github-token-encryption-key)
+   ```
+
+4. **Run re-encryption (in maintenance window)**
+   ```bash
+   # Run re-encryption script with both keys
+   OLD_ENCRYPTION_KEY="${OLD_KEY}" \
+   NEW_ENCRYPTION_KEY="${NEW_KEY}" \
+     tsx /tmp/reencrypt-tokens.ts
+   ```
+
+5. **Deploy service with new key**
+   ```bash
+   cd infra/terraform/gcp
+   
+   # Service will automatically use latest secret version
+   terraform apply
+   ```
+
+6. **Verify service health**
+   ```bash
+   # Test token retrieval
+   curl -X POST https://YOUR_SERVICE_URL/api/github-token \
+     -H "Authorization: Bearer SERVICE_ID:API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"userId":"test-user-uuid"}'
+   ```
+
+7. **Disable old encryption key version (after 24h grace period)**
+   ```bash
+   # Find the latest version number
+   LATEST_VERSION=$(gcloud secrets versions list github-token-encryption-key \
+     --filter="state=ENABLED" \
+     --sort-by=~name \
+     --limit=1 \
+     --format="value(name)")
+   OLD_VERSION=$((LATEST_VERSION - 1))
+   
+   # Disable the old version
+   gcloud secrets versions disable "${OLD_VERSION}" --secret=github-token-encryption-key
+   ```
+
+8. **Clean up**
+   ```bash
+   rm /tmp/reencrypt-tokens.ts
+   unset OLD_KEY NEW_KEY
+   ```
+
+**Rollback:** Keep previous encryption key version enabled for at least 24 hours for emergency rollback.
+
+#### Service API Key Rotation
+
+**When:** Every 365 days or when compromised
+
+**Steps:**
+
+1. **Rotate using CLI tool**
+   ```bash
+   npm run service-registry -- rotate my-service
+   ```
+
+2. **Update downstream service**
+   ```bash
+   # Provide new API key to service owner
+   # Coordinate deployment window
+   ```
+
+3. **Verify rotation recorded**
+   ```bash
+   npm run check-key-rotation
+   ```
+
+4. **Monitor for authentication failures**
+   ```bash
+   gcloud logging read 'jsonPayload.action="service_authentication_failed"' \
+     --freshness=1h
+   ```
+
+### Token Revocation Runbook
+
+**When:** Security incident, compromised token, or user request
+
+**Steps:**
+
+1. **Identify token to revoke**
+   ```bash
+   # If you have the JWT
+   TOKEN="eyJhbGc..."
+   
+   # Or find by user
+   # Query database for active JWTs
+   ```
+
+2. **Revoke token via API**
+   ```bash
+   curl -X POST https://YOUR_SERVICE_URL/api/token/revoke \
+     -H "Content-Type: application/json" \
+     -d '{
+       "token": "'"${TOKEN}"'",
+       "reason": "Security incident - suspected compromise",
+       "revokedBy": "ops-team"
+     }'
+   ```
+
+3. **Verify revocation**
+   ```bash
+   # Extract JTI from token
+   JTI=$(echo "${TOKEN}" | cut -d'.' -f2 | base64 -d | jq -r '.jti')
+   
+   # Check revocation status
+   curl "https://YOUR_SERVICE_URL/api/token/revocation-status?jti=${JTI}"
+   ```
+
+4. **Verify in database**
+   ```sql
+   SELECT * FROM revoked_tokens 
+   WHERE jti = 'token-jti-value'
+   ORDER BY revoked_at DESC;
+   ```
+
+5. **Monitor for attempted use**
+   ```bash
+   gcloud logging read "jsonPayload.jti=\"${JTI}\" \
+     AND jsonPayload.msg=~\"revoked\"" \
+     --freshness=1d
+   ```
+
+6. **Document incident**
+   - Record in security incident log
+   - Note reason for revocation
+   - Document any follow-up actions
+
+### Revoked Token Cleanup Runbook
+
+**When:** Monthly as part of regular maintenance
+
+**Purpose:** Remove expired revoked tokens to prevent database bloat
+
+**Steps:**
+
+1. **Dry run to preview cleanup**
+   ```bash
+   npm run cleanup:revoked-tokens -- --dry-run
+   
+   # Review output showing tokens to be deleted
+   ```
+
+2. **Run cleanup with default retention (7 days)**
+   ```bash
+   npm run cleanup:revoked-tokens
+   ```
+
+3. **Or specify custom retention period**
+   ```bash
+   # Retain for 30 days after expiry
+   npm run cleanup:revoked-tokens -- --retention=30
+   ```
+
+4. **Verify cleanup**
+   ```sql
+   -- Check count of revoked tokens
+   SELECT 
+     COUNT(*) as total_revoked,
+     COUNT(*) FILTER (WHERE expired_at < NOW()) as expired_revoked
+   FROM revoked_tokens;
+   ```
+
+5. **Schedule regular cleanup**
+   ```bash
+   # Add to cron (daily at 2 AM)
+   0 2 * * * cd /app && npm run cleanup:revoked-tokens >> /var/log/cleanup.log 2>&1
+   ```
+
+### Incident Response Runbook
+
+#### Suspected Token Compromise
+
+**Steps:**
+
+1. **Immediate action - Revoke token**
+   ```bash
+   # Follow Token Revocation Runbook
+   ```
+
+2. **Identify affected user**
+   ```bash
+   # Extract user ID from token
+   USER_ID=$(echo "${TOKEN}" | cut -d'.' -f2 | base64 -d | jq -r '.sub')
+   ```
+
+3. **Review user activity**
+   ```bash
+   gcloud logging read "jsonPayload.userId=\"${USER_ID}\"" \
+     --limit=100 --format=json
+   ```
+
+4. **Check for suspicious patterns**
+   - Unusual IP addresses
+   - High request rates
+   - Access to unexpected resources
+
+5. **Consider additional actions**
+   - Remove user from whitelist (temporarily)
+   - Revoke all tokens for user
+   - Notify user of potential compromise
+
+6. **Document incident**
+   - Timeline of events
+   - Actions taken
+   - Follow-up required
+
+#### Database Connection Failure
+
+**Steps:**
+
+1. **Check database status**
+   ```bash
+   gcloud sql instances describe af-auth-db --format=json
+   ```
+
+2. **Check recent operations**
+   ```bash
+   gcloud sql operations list --instance=af-auth-db --limit=10
+   ```
+
+3. **Verify network connectivity**
+   ```bash
+   # From Cloud Run, test database connection
+   gcloud run services describe af-auth --format=json | \
+     jq '.spec.template.spec.containers[0].env[] | select(.name=="DATABASE_URL")'
+   ```
+
+4. **Check Cloud SQL logs**
+   ```bash
+   gcloud logging read 'resource.type="cloudsql_database" \
+     AND resource.labels.database_id="PROJECT_ID:af-auth-db"' \
+     --limit=50
+   ```
+
+5. **Restart Cloud SQL if necessary**
+   ```bash
+   gcloud sql instances restart af-auth-db
+   ```
+
+6. **Monitor service recovery**
+   ```bash
+   # Watch health endpoint
+   watch -n 5 'curl -s https://YOUR_SERVICE_URL/health | jq ".components.database"'
+   ```
+
+#### Redis Connection Failure
+
+**Steps:**
+
+1. **Check Redis instance status**
+   ```bash
+   gcloud redis instances describe af-auth-redis \
+     --region=us-central1 --format=json
+   ```
+
+2. **Verify service falls back to in-memory**
+   ```bash
+   gcloud logging read 'jsonPayload.msg=~"in-memory" \
+     AND jsonPayload.msg=~"Redis"' \
+     --limit=10
+   ```
+
+3. **Check network connectivity**
+   ```bash
+   # Verify VPC connector configuration
+   gcloud compute networks vpc-access connectors describe \
+     af-auth-connector --region=us-central1
+   ```
+
+4. **Test Redis connectivity**
+   ```bash
+   # From Cloud Shell or instance in same VPC
+   redis-cli -h REDIS_IP -p 6379 -a REDIS_PASSWORD ping
+   ```
+
+5. **Monitor for automatic reconnection**
+   ```bash
+   # Service retries with exponential backoff
+   gcloud logging read 'jsonPayload.msg=~"Redis.*reconnect"' \
+     --freshness=5m
+   ```
+
+6. **Consider scaling or restarting Redis**
+   ```bash
+   # For Memorystore Standard, trigger failover to replica
+   gcloud redis instances failover af-auth-redis --region=us-central1
+   ```
+
+### Observability and Monitoring Runbooks
+
+#### Setting Up Alerts
+
+**Terraform Outputs Alert**
+
+After deploying with Terraform, use outputs to configure monitoring:
+
+```bash
+cd infra/terraform/gcp
+
+# Get service URL
+SERVICE_URL=$(terraform output -raw service_url)
+
+# Get database connection name
+DB_CONNECTION=$(terraform output -raw database_connection_name)
+
+# Configure uptime check
+gcloud monitoring uptime-configs create af-auth-health \
+  --resource-type=uptime-url \
+  --hostname=${SERVICE_URL#https://} \
+  --path=/health \
+  --period=60 \
+  --timeout=10
+```
+
+#### Reviewing Terraform State for Troubleshooting
+
+**When:** Investigating infrastructure misconfigurations or drift
+
+**Steps:**
+
+1. **View current Terraform state**
+   ```bash
+   cd infra/terraform/gcp
+   terraform show
+   ```
+
+2. **List all managed resources**
+   ```bash
+   terraform state list
+   ```
+
+3. **Inspect specific resource**
+   ```bash
+   # Cloud Run service
+   terraform state show google_cloud_run_v2_service.auth_service
+   
+   # Database
+   terraform state show google_sql_database_instance.main
+   
+   # Redis
+   terraform state show google_redis_instance.cache
+   ```
+
+4. **Check for drift between state and actual infrastructure**
+   ```bash
+   terraform refresh
+   terraform plan
+   ```
+
+5. **Compare with expected configuration**
+   ```bash
+   # Review terraform.tfvars
+   cat terraform.tfvars
+   
+   # Review current values
+   terraform show -json | jq '.values'
+   ```
+
+6. **Resolve drift**
+   ```bash
+   # Option 1: Update infrastructure to match state
+   terraform apply
+   
+   # Option 2: Import actual state (if resources modified outside Terraform)
+   terraform import google_cloud_run_v2_service.auth_service \
+     projects/PROJECT/locations/REGION/services/af-auth
+   ```
+
 ## Logging and Monitoring
 
 ### Cloud Logging Configuration
